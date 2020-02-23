@@ -20,12 +20,12 @@
     var CONFIG = {"hostname":"l3yx.github.io","root":"/","scheme":"Gemini","version":"7.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":-1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
   </script>
 
-  <meta name="description" content="前言一开始是学习FastJson反序列化的POC，然后发现欠缺不少知识，遂来补一下，收获良多，总结下笔记 所谓JDK反序列化Gadgets就是不同于利用Apache-CommonsCollections这种外部库，而是只利用JDK自带的类所构造的 先下载并配置好JDK7u21 Javassist为了理解POC构造过程，还需要学习一些前置知识，Java 字节码以二进制的形式存储在 .class 文件">
+  <meta name="description" content="一开始是学习FastJson反序列化的POC，然后发现欠缺不少知识，遂来补一下，收获良多，总结下笔记 所谓JDK反序列化Gadgets就是不同于利用Apache-CommonsCollections这种外部库，而是只利用JDK自带的类所构造的">
 <meta property="og:type" content="article">
 <meta property="og:title" content="JDK7u21反序列化Gadgets">
 <meta property="og:url" content="https://l3yx.github.io/2020/02/22/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/index.html">
 <meta property="og:site_name" content="l3yx&#39;s blog">
-<meta property="og:description" content="前言一开始是学习FastJson反序列化的POC，然后发现欠缺不少知识，遂来补一下，收获良多，总结下笔记 所谓JDK反序列化Gadgets就是不同于利用Apache-CommonsCollections这种外部库，而是只利用JDK自带的类所构造的 先下载并配置好JDK7u21 Javassist为了理解POC构造过程，还需要学习一些前置知识，Java 字节码以二进制的形式存储在 .class 文件">
+<meta property="og:description" content="一开始是学习FastJson反序列化的POC，然后发现欠缺不少知识，遂来补一下，收获良多，总结下笔记 所谓JDK反序列化Gadgets就是不同于利用Apache-CommonsCollections这种外部库，而是只利用JDK自带的类所构造的">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://l3yx.github.io/2020/02/22/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222150342279.png">
 <meta property="og:image" content="https://l3yx.github.io/2020/02/22/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222155450171.png">
@@ -57,7 +57,7 @@
 <meta property="og:image" content="https://l3yx.github.io/2020/02/22/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200223000741750.png">
 <meta property="og:image" content="https://l3yx.github.io/2020/02/22/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200223001156031.png">
 <meta property="article:published_time" content="2020-02-22T06:01:00.000Z">
-<meta property="article:modified_time" content="2020-02-23T05:40:42.123Z">
+<meta property="article:modified_time" content="2020-02-23T07:41:25.860Z">
 <meta property="article:author" content="淚笑">
 <meta property="article:tag" content="Java">
 <meta property="article:tag" content="反序列化">
@@ -216,7 +216,7 @@
     <link itemprop="mainEntityOfPage" href="https://l3yx.github.io/2020/02/22/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="image" content="/images/Avatar.jpg">
       <meta itemprop="name" content="淚笑">
       <meta itemprop="description" content="不忘初心,方得始终">
     </span>
@@ -243,7 +243,7 @@
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-02-23 13:40:42" itemprop="dateModified" datetime="2020-02-23T13:40:42+08:00">2020-02-23</time>
+                <time title="修改时间：2020-02-23 15:41:25" itemprop="dateModified" datetime="2020-02-23T15:41:25+08:00">2020-02-23</time>
               </span>
 
           
@@ -278,8 +278,10 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>一开始是学习FastJson反序列化的POC，然后发现欠缺不少知识，遂来补一下，收获良多，总结下笔记</p>
+        <p>一开始是学习FastJson反序列化的POC，然后发现欠缺不少知识，遂来补一下，收获良多，总结下笔记</p>
 <p>所谓JDK反序列化Gadgets就是不同于利用Apache-CommonsCollections这种外部库，而是只利用JDK自带的类所构造的</p>
+<a id="more"></a>
+
 <p>先下载并配置好<a href="https://www.oracle.com/java/technologies/javase/javase7-archive-downloads.html" target="_blank" rel="noopener">JDK7u21</a></p>
 <h2 id="Javassist"><a href="#Javassist" class="headerlink" title="Javassist"></a>Javassist</h2><p>为了理解POC构造过程，还需要学习一些前置知识，Java 字节码以二进制的形式存储在 .class 文件中，每一个 .class 文件包含 Java 类或接口，Javassist 就是一个用来 处理 Java 字节码的类库</p>
 <p>pom.xml</p>
@@ -315,7 +317,7 @@
 <p><code>defineTransletClasses()</code>执行完以后，回到<code>getTransletInstance()</code>,此时<code>_class[_transletIndex]</code>已经为<code>Evil</code>类的一个类对象，调用<code>newInstance()</code>实例化<code>Evil</code>即可触发该类构造函数或者静态代码块中的代码</p>
 <p><img src="/2020/02/22/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222160756476.png" alt="image-20200222160756476"></p>
 <p>所以总结以上条件，便可理解<code>TemplatesImpl</code>的构造</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">byte</span>[][] targetByteCodes = <span class="keyword">new</span> <span class="keyword">byte</span>[][]&#123;evilByteCodes&#125;;</span><br><span class="line">TemplatesImpl templates = TemplatesImpl<span class="class">.<span class="keyword">class</span>.<span class="title">newInstance</span>()</span>;</span><br><span class="line">setFieldValue(templates,<span class="string">"_bytecodes"</span>,targetByteCodes);</span><br><span class="line">setFieldValue(templates,<span class="string">"_class"</span>,<span class="keyword">null</span>);</span><br><span class="line">setFieldValue(templates,<span class="string">"_name"</span>,<span class="string">"xx"</span>);</span><br><span class="line">setFieldValue(templates,<span class="string">"_tfactory"</span>,<span class="keyword">new</span> TransformerFactoryImpl());</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">setFieldValue(templates,<span class="string">"_bytecodes"</span>,targetByteCodes);</span><br><span class="line">setFieldValue(templates,<span class="string">"_class"</span>,<span class="keyword">null</span>);</span><br><span class="line">setFieldValue(templates,<span class="string">"_name"</span>,<span class="string">"xx"</span>);</span><br><span class="line">setFieldValue(templates,<span class="string">"_tfactory"</span>,<span class="keyword">new</span> TransformerFactoryImpl());</span><br></pre></td></tr></table></figure>
 
 
 
@@ -431,10 +433,7 @@
     <a href="/2020/02/18/Hello-World/" rel="prev" title="Hello World">
       <i class="fa fa-chevron-left"></i> Hello World
     </a></div>
-      <div class="post-nav-item">
-    <a href="/2020/02/23/FastJson-1-2-24-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/" rel="next" title="FastJson 1.2.24 反序列化">
-      FastJson 1.2.24 反序列化 <i class="fa fa-chevron-right"></i>
-    </a></div>
+      <div class="post-nav-item"></div>
     </div>
       </footer>
     
@@ -495,12 +494,14 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Javassist"><span class="nav-number">2.</span> <span class="nav-text">Javassist</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#TemplatesImpl"><span class="nav-number">3.</span> <span class="nav-text">TemplatesImpl</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#动态代理"><span class="nav-number">4.</span> <span class="nav-text">动态代理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#AnnotationInvocationHandler"><span class="nav-number">5.</span> <span class="nav-text">AnnotationInvocationHandler</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Hash绕过"><span class="nav-number">6.</span> <span class="nav-text">Hash绕过</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#map-put的位置问题"><span class="nav-number">7.</span> <span class="nav-text">map.put的位置问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考"><span class="nav-number">8.</span> <span class="nav-text">参考</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Javassist"><span class="nav-number">1.</span> <span class="nav-text">Javassist</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#TemplatesImpl"><span class="nav-number">2.</span> <span class="nav-text">TemplatesImpl</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#动态代理"><span class="nav-number">3.</span> <span class="nav-text">动态代理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#AnnotationInvocationHandler"><span class="nav-number">4.</span> <span class="nav-text">AnnotationInvocationHandler</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Hash绕过"><span class="nav-number">5.</span> <span class="nav-text">Hash绕过</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#map-put的位置问题"><span class="nav-number">6.</span> <span class="nav-text">map.put的位置问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考"><span class="nav-number">7.</span> <span class="nav-text">参考</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
       <div class="site-overview-wrap sidebar-panel">
         <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="淚笑"
+      src="/images/Avatar.jpg">
   <p class="site-author-name" itemprop="name">淚笑</p>
   <div class="site-description" itemprop="description">不忘初心,方得始终</div>
 </div>
@@ -509,18 +510,26 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">3</span>
+          <span class="site-state-item-count">2</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">5</span>
+        <span class="site-state-item-count">3</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
 </div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/l3yx" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;l3yx" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1729888211@qq.com" title="E-Mail → mailto:1729888211@qq.com" rel="noopener" target="_blank"><i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+      </span>
+  </div>
 
 
 
