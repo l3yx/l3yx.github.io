@@ -1,6 +1,80 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>APlayer 跳转页面保持音乐播放进度</title>
+    <url>/2020/04/29/APlayer-%E8%B7%B3%E8%BD%AC%E9%A1%B5%E9%9D%A2%E4%BF%9D%E6%8C%81%E9%9F%B3%E4%B9%90%E6%92%AD%E6%94%BE%E8%BF%9B%E5%BA%A6/</url>
+    <content><![CDATA[<p>想给博客加个音频播放的插件作为背景音乐，但是在博客内跳转的时候音乐会中断并重新加载，参考了网易云音乐网页版的解决办法就是所有页面都在前端通过Ajax动态加载，并不会跳转网页，所以音乐播放不会中断。但是改Hexo源码的话不太可行，想到一个办法就是每次跳转前记录进度并在下次加载网页时读取</p>
+<a id="more"></a>
+
+<p>添加APlayer部分参考<a href="https://asdfv1929.github.io/2018/05/26/next-add-music/" target="_blank" rel="noopener">Hexo NexT主题中添加网页音乐播放器功能</a></p>
+<p>后来发现个很好用的插件<a href="https://github.com/metowolf/MetingJS" target="_blank" rel="noopener">MetingJS</a>，可以直接解析网易云音乐等各网络平台的歌曲</p>
+<p>在 themes/next/layout/_layout.swig 添加</p>
+<figure class="highlight html"><table><tr><td class="code"><pre><span class="line"><span class="comment">&lt;!-- require APlayer --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">link</span> <span class="attr">rel</span>=<span class="string">"stylesheet"</span> <span class="attr">href</span>=<span class="string">"https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css"</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">"https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.js"</span>&gt;</span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- require MetingJS --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">"https://cdn.jsdelivr.net/npm/meting@2/dist/Meting.min.js"</span>&gt;</span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">div</span> <span class="attr">style</span>=<span class="string">"opacity:0.7"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">meting-js</span></span></span><br><span class="line"><span class="tag">        <span class="attr">server</span>=<span class="string">"netease"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">type</span>=<span class="string">"playlist"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">id</span>=<span class="string">"2486559481"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">fixed</span>=<span class="string">"true"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">volume</span>=<span class="string">"0.3"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">order</span>=<span class="string">"random"</span></span></span><br><span class="line"><span class="tag">        &gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">meting-js</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>id对应歌单，其他配置项详见文档</p>
+<p><img src="/2020/04/29/APlayer-%E8%B7%B3%E8%BD%AC%E9%A1%B5%E9%9D%A2%E4%BF%9D%E6%8C%81%E9%9F%B3%E4%B9%90%E6%92%AD%E6%94%BE%E8%BF%9B%E5%BA%A6/image-20200429222458927.png" alt="image-20200429222458927"></p>
+<p>然后要获取APlayer对象来控制音乐播放，<code>document.querySelector(&#39;meting-js&#39;).aplayer</code>，在浏览器控制台可以成功获取，但写在HTML源码中就无法获得，应该是执行该代码时meting还未来得及初始化aplayer对象，后来试了很多办法，终于解决，即监听对象值的变化</p>
+<figure class="highlight javascript"><table><tr><td class="code"><pre><span class="line">ap = <span class="literal">null</span></span><br><span class="line"><span class="built_in">Object</span>.defineProperty(<span class="built_in">document</span>.querySelector(<span class="string">'meting-js'</span>),<span class="string">"aplayer"</span>,&#123;</span><br><span class="line">    <span class="keyword">set</span>: function(aplayer) &#123;</span><br><span class="line">        ap=aplayer</span><br><span class="line">        ready();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">ready</span>(<span class="params"></span>)</span>&#123;</span><br><span class="line">    ap.list.switch(<span class="number">0</span>);</span><br><span class="line">    ap.play();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>还有个小坑：<a href="https://www.jarviswang.me/?p=889" target="_blank" rel="noopener">HTML5中Audio元素在chrome中自动播放报错Uncaught (in promise) DOMException的解决方法</a></p>
+<p>最后完整添加到 themes/next/layout/_layout.swig 的代码如下</p>
+<figure class="highlight html"><table><tr><td class="code"><pre><span class="line"><span class="comment">&lt;!-- require APlayer --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">link</span> <span class="attr">rel</span>=<span class="string">"stylesheet"</span> <span class="attr">href</span>=<span class="string">"https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css"</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">"https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.js"</span>&gt;</span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- require MetingJS --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">"https://cdn.jsdelivr.net/npm/meting@2/dist/Meting.min.js"</span>&gt;</span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">div</span> <span class="attr">style</span>=<span class="string">"opacity:0.7"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">meting-js</span></span></span><br><span class="line"><span class="tag">        <span class="attr">server</span>=<span class="string">"netease"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">type</span>=<span class="string">"playlist"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">id</span>=<span class="string">"2486559481"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">fixed</span>=<span class="string">"true"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">volume</span>=<span class="string">"0.3"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">order</span>=<span class="string">"random"</span></span></span><br><span class="line"><span class="tag">        &gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">meting-js</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="actionscript">    ap = <span class="literal">null</span></span></span><br><span class="line"><span class="javascript">    <span class="built_in">Object</span>.defineProperty(<span class="built_in">document</span>.querySelector(<span class="string">'meting-js'</span>),<span class="string">"aplayer"</span>,&#123;</span></span><br><span class="line"><span class="actionscript">        <span class="keyword">set</span>: <span class="function"><span class="keyword">function</span><span class="params">(aplayer)</span> </span>&#123;</span></span><br><span class="line">            ap=aplayer</span><br><span class="line">            ready();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;);</span><br><span class="line">    </span><br><span class="line"><span class="actionscript">    isRecover = <span class="literal">false</span>;</span></span><br><span class="line"><span class="actionscript">    <span class="function"><span class="keyword">function</span> <span class="title">ready</span><span class="params">()</span></span>&#123;</span></span><br><span class="line"><span class="actionscript">        ap.on(<span class="string">'canplay'</span>, <span class="function"><span class="keyword">function</span> <span class="params">()</span> </span>&#123;</span></span><br><span class="line">            if(!isRecover)&#123;</span><br><span class="line"><span class="actionscript">                <span class="keyword">if</span>(localStorage.getItem(<span class="string">"musicIndex"</span>) != <span class="literal">null</span>)&#123;</span></span><br><span class="line"><span class="actionscript">                    musicIndex = localStorage.getItem(<span class="string">"musicIndex"</span>);</span></span><br><span class="line"><span class="actionscript">                    musicTime = localStorage.getItem(<span class="string">"musicTime"</span>);</span></span><br><span class="line">                if(ap.list.index != musicIndex)&#123;</span><br><span class="line">                    ap.list.switch(musicIndex);</span><br><span class="line"><span class="actionscript">                &#125;<span class="keyword">else</span>&#123;</span></span><br><span class="line">                    ap.seek(musicTime);</span><br><span class="line">                    ap.play();</span><br><span class="line">                    localStorage.clear();</span><br><span class="line"><span class="actionscript">                    isRecover = <span class="literal">true</span>;</span></span><br><span class="line">                &#125;</span><br><span class="line"><span class="actionscript">                &#125;<span class="keyword">else</span>&#123;</span></span><br><span class="line"><span class="actionscript">                    isRecover = <span class="literal">true</span>;</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"><span class="javascript">    <span class="built_in">window</span>.onbeforeunload = <span class="function"><span class="keyword">function</span>(<span class="params">event</span>) </span>&#123;</span></span><br><span class="line">        if(!ap.audio.paused)&#123;</span><br><span class="line">            musicIndex = ap.list.index;</span><br><span class="line">            musicTime = ap.audio.currentTime;</span><br><span class="line"><span class="actionscript">            localStorage.setItem(<span class="string">"musicIndex"</span>,musicIndex);</span></span><br><span class="line"><span class="actionscript">            localStorage.setItem(<span class="string">"musicTime"</span>,musicTime);</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;;</span><br><span class="line"><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+
+
+
+
+
+
+
+
+
+
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://asdfv1929.github.io/2018/05/26/next-add-music/" target="_blank" rel="noopener">Hexo NexT主题中添加网页音乐播放器功能</a></p>
+<p><a href="https://aplayer.js.org/" target="_blank" rel="noopener">APlayer</a></p>
+<p><a href="https://github.com/metowolf/MetingJS" target="_blank" rel="noopener">MetingJS</a></p>
+]]></content>
+      <tags>
+        <tag>APlayer</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>通达OA 任意用户登录漏洞</title>
+    <url>/2020/04/27/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/</url>
+    <content><![CDATA[<p>通达 OA 存在认证绕过漏洞，由外部可控的参数可登录任意用户</p>
+<a id="more"></a>
+
+<h2 id="漏洞描述"><a href="#漏洞描述" class="headerlink" title="漏洞描述"></a>漏洞描述</h2><p>通达 OA 是一套国内常用的办公系统，2020年4月17日，通达OA官方发布了最新的<a href="https://www.tongda2000.com/download/sp2019.php" target="_blank" rel="noopener">通达OA 11.5.200417</a>版本，该版本修复了若干安全问题。</p>
+<p>对于部分版本，存在一个认证绕过漏洞，利用该漏洞可以实现任意用户登录，包括管理员</p>
+<p>影响范围</p>
+<ul>
+<li>通达 OA 2017 版</li>
+<li>通达 OA V11.X &lt; V11.5</li>
+</ul>
+<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p><a href="https://cdndown.tongda2000.com/oa/2019/TDOA11.4.exe" target="_blank" rel="noopener">通达 OA V11.4</a></p>
+<p>访问/general/login_code.php获取code_uid</p>
+<p><img src="/2020/04/27/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/image-20200427163951605.png" alt="image-20200427163951605"></p>
+<p>POST传递CODEUID和被伪造用户的UID到/logincheck_code.php，返回的SESSID即其身份</p>
+<p><img src="/2020/04/27/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/image-20200427164027214.png" alt="image-20200427164027214"></p>
+<p>携带SESSID访问</p>
+<p><img src="/2020/04/27/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/image-20200427164111745.png" alt="image-20200427164111745"></p>
+<h2 id="漏洞分析"><a href="#漏洞分析" class="headerlink" title="漏洞分析"></a>漏洞分析</h2><p>源码在程序安装目录的webroot目录下，用<a href="https://paper.seebug.org/203/" target="_blank" rel="noopener">工具</a>解密</p>
+<p>/logincheck_code.php</p>
+<p><img src="/2020/04/27/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/image-20200427172040437.png" alt="image-20200427172040437"></p>
+<p>UID参数可控，在通过15行对login_codeuid的判断后，该值会被直接代入SQL语句进行查询，最后会返回对应UID的用户的信息，通达OA默认的第一个用户是管理员admin账户，所以可以设置UID为1，即可获取到admin管理员的信息，要通过15行的判断需要获取code_uid</p>
+<p>/general/login_code.php</p>
+<p><img src="/2020/04/27/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/image-20200427172441588.png" alt="image-20200427172441588"></p>
+<p>当login_codeuid为空时会生成一个存入redis缓存并在最后输出</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://paper.seebug.org/203/" target="_blank" rel="noopener">实用工具：免费Zend 5.2 5.3 5.4解密工具</a></p>
+<p><a href="https://github.com/NS-Sp4ce/TongDaOA-Fake-User" target="_blank" rel="noopener">TongDaOA-Fake-User</a></p>
+<p><a href="https://mp.weixin.qq.com/s/VlZUU6bnC8XEsLdIDUhUIQ" target="_blank" rel="noopener">漏洞安全公告|通达OA 任意用户登录漏洞</a></p>
+]]></content>
+      <tags>
+        <tag>通达OA</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Weblogic IIOP 反序列化漏洞</title>
     <url>/2020/04/22/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/</url>
     <content><![CDATA[<p>Weblogic IIOP协议默认开启，跟T3协议一起默认监听在7001端口，利用IIOP协议向Weblogic申请注册远程对象，这个对象由JtaTransactionManager构造，而JtaTransactionManager类存在JNDI注入，Weblogic服务端在获取到请求的字节流时候进行反序列化操作触发漏洞</p>
@@ -28,6 +102,26 @@
 <h4 id="IDL"><a href="#IDL" class="headerlink" title="IDL"></a>IDL</h4><p>IDL全称接口定义语言，是用来描述软件组件接口的一种规范语言。用户可以定义模块、接口、属性、方法、输入输出参数，甚至异常等等，它完成了与各种编程语言无关的方式描述接口，从而实现了不同语言之间的通信，这样就保证了跨语言跨环境的远程对象调用</p>
 <p>就如上文所说，IDL是与编程语言无关的一种规范化描述性语言，不同的编程语言为了将其转化成IDL，都制定了一套自用的编译器用于将可读取的OMG IDL文件转换或映射成相应的接口或类型</p>
 <p>Java Standard Edition CORBA/IIOP 实现被称为 Java IDL。 与 IDL 到 Java (idlj) 编译器一起，Java IDL 可用于定义、实现和访问 Java 编程语言中的 CORBA 对象</p>
+<h3 id="通信流程"><a href="#通信流程" class="headerlink" title="通信流程"></a>通信流程</h3><ol>
+<li><p>启动orbd作为naming service，会创建name service服务。</p>
+<p>ORBD可以理解为ORB的守护进程，其主要负责建立客户端(client side)与服务端(servant side)的关系，同时负责查找指定的IOR(可互操作对象引用，是一种数据结构，是CORBA标准的一部分)。ORBD是由Java原生支持的一个服务，其在整个CORBA通信中充当着naming service的作用，所以客户端和服务端要使用ORB，都要指定ORBD的端口和地址</p>
+</li>
+<li><p>corba server向orbd发送请求获取name service，协商好通信格式</p>
+</li>
+<li><p>orbd返回保存的name service</p>
+</li>
+<li><p>corba server拿到name service后将具体的实现类绑定到name service上，这个时候orbd会拿到注册后的信息，这个信息就是IOR</p>
+</li>
+<li><p>corba client向orbd发起请求获取name service。</p>
+</li>
+<li><p>orbd返回保存的name service。</p>
+</li>
+<li><p>corba client在name service中查找已经注册的信息获取到“引用”的信息(corba server的地址等)，通过orb的连接功能将远程方法调用的请求转发到corba server。</p>
+</li>
+<li><p>corba server通过orb接收请求，并利用POA拦截请求，将请求中所指定的类封装好，同样通过orb的连接功能返回给corba client</p>
+<p>Stub是client side调用orb的媒介，POA是servant side用于拦截client请求的媒介，而两者在结构上其实都是客户端/服务端调用orb的媒介</p>
+</li>
+</ol>
 <h3 id="RMI-IIOP"><a href="#RMI-IIOP" class="headerlink" title="RMI-IIOP"></a>RMI-IIOP</h3><p>RMI-IIOP出现以前，只有RMI和CORBA两种选择来进行分布式程序设计，二者之间不能协作。RMI-IIOP综合了RMI的简单性和CORBA的多语言兼容性，克服了RMI只能用于Java的缺点和CORBA的复杂性（可以不用掌握IDL），稍微修改代码即可实现RMI客户端使用IIOP协议操作服务端CORBA对象，使得程序员能更方便的编写分布式程序设计，实现分布式计算</p>
 <p>在Weblogic中实现了RMI-IIOP模型</p>
 <p><img src="/2020/04/22/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200423103837351.png" alt="image-20200423103837351"></p>
@@ -255,10 +349,8 @@
 <p><a href="https://paper.seebug.org/1105/" target="_blank" rel="noopener">关于 Java 中的 RMI-IIOP</a></p>
 ]]></content>
       <tags>
-        <tag>Java</tag>
         <tag>Weblogic</tag>
         <tag>IIOP</tag>
-        <tag>Corba</tag>
       </tags>
   </entry>
   <entry>
@@ -350,7 +442,6 @@
 ]]></content>
       <tags>
         <tag>QQ机器人</tag>
-        <tag>Python</tag>
       </tags>
   </entry>
   <entry>
@@ -394,9 +485,8 @@
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://www.open-open.com/news/view/1225d07" target="_blank" rel="noopener">Spring framework deserialization RCE漏洞分析以及利用</a></p>
 ]]></content>
       <tags>
-        <tag>Java</tag>
         <tag>Spring</tag>
-        <tag>反序列化漏洞</tag>
+        <tag>Java反序列化漏洞</tag>
       </tags>
   </entry>
   <entry>
@@ -858,7 +948,6 @@
 <p><a href="http://www.liuhaihua.cn/archives/665301.html" target="_blank" rel="noopener">Tomcat-Ajp协议漏洞分析(CVE-2020-1938)</a></p>
 ]]></content>
       <tags>
-        <tag>Java</tag>
         <tag>Tomcat</tag>
         <tag>ajp</tag>
       </tags>
@@ -1070,9 +1159,8 @@
 <p><a href="http://redteam.today/2019/09/20/shiro%20%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E5%A4%8D%E7%8E%B0/" target="_blank" rel="noopener">shiro 反序列化复现</a></p>
 ]]></content>
       <tags>
-        <tag>Java</tag>
         <tag>Shiro</tag>
-        <tag>反序列化漏洞</tag>
+        <tag>Java反序列化漏洞</tag>
       </tags>
   </entry>
   <entry>
@@ -1239,10 +1327,8 @@
 <p><a href="http://www.lmxspace.com/2019/06/29/FastJson-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E5%AD%A6%E4%B9%A0/" target="_blank" rel="noopener">FastJson 反序列化学习</a></p>
 ]]></content>
       <tags>
-        <tag>Java</tag>
-        <tag>反序列化漏洞</tag>
+        <tag>Java反序列化漏洞</tag>
         <tag>FastJson</tag>
-        <tag>JNDI注入</tag>
       </tags>
   </entry>
   <entry>
@@ -1382,8 +1468,7 @@
 <p><a href="https://www.jianshu.com/p/6e962d1e7ddd" target="_blank" rel="noopener">Java动态代理-实战</a></p>
 ]]></content>
       <tags>
-        <tag>Java</tag>
-        <tag>反序列化漏洞</tag>
+        <tag>Java反序列化漏洞</tag>
         <tag>JDK7u21</tag>
       </tags>
   </entry>

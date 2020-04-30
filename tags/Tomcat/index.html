@@ -127,11 +127,6 @@
     <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
 
   </li>
-        <li class="menu-item menu-item-碎念">
-
-    <a href="/diary" rel="section"><i class="fa fa-fw fa-comments"></i>碎念</a>
-
-  </li>
       <li class="menu-item menu-item-search">
         <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
         </a>
@@ -287,14 +282,14 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">10</span>
+          <span class="site-state-item-count">12</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-count">14</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -425,6 +420,68 @@ NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
   }, window.Valine);
 });
 </script>
+
+
+  <!-- music -->
+    <!-- require APlayer -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.js"></script>
+    <!-- require MetingJS -->
+    <script src="https://cdn.jsdelivr.net/npm/meting@2/dist/Meting.min.js"></script>
+
+    <div style="opacity:0.7">
+        <meting-js
+            server="netease"
+            type="playlist"
+            id="2486559481"
+            fixed="true"
+            volume="0.3"
+            order="random"
+            >
+        </meting-js>
+    </div>
+
+    <script>
+        ap = null
+        Object.defineProperty(document.querySelector('meting-js'),"aplayer",{
+            set: function(aplayer) {
+                ap=aplayer
+                ready();
+            }
+        });
+        
+        isRecover = false;
+        function ready(){
+            ap.on('canplay', function () {
+                if(!isRecover){
+                    if(localStorage.getItem("musicIndex") != null){
+                        musicIndex = localStorage.getItem("musicIndex");
+                        musicTime = localStorage.getItem("musicTime");
+                    if(ap.list.index != musicIndex){
+                        ap.list.switch(musicIndex);
+                    }else{
+                        ap.seek(musicTime);
+                        ap.play();
+                        localStorage.clear();
+                        isRecover = true;
+                    }
+                    }else{
+                        isRecover = true;
+                    }
+                }
+            });
+        }
+
+        window.onbeforeunload = function(event) {
+            if(!ap.audio.paused){
+                musicIndex = ap.list.index;
+                musicTime = ap.audio.currentTime;
+                localStorage.setItem("musicIndex",musicIndex);
+                localStorage.setItem("musicTime",musicTime);
+            }
+        };
+    </script>
+  <!-- music -->
 
 </body>
 </html>
