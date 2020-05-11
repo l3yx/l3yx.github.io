@@ -1,6 +1,67 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>记一次XSS挖掘过程</title>
+    <url>/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/</url>
+    <content><![CDATA[<p>最近在挖SRC，记录一下一些有趣的漏洞</p>
+<a id="more"></a>
+
+<p>这个站整体安全性挺高，测了许久也不见有什么问题，就把精力放在了可能遗漏的接口上，遂在一个接口页面引入的js文件里面又找出一个接口地址（目录扫描没有发现），简单浏览了下该页面，发现是个功能已经被废弃的API，既然没有功能，那只能找找诸如XSS一类的漏洞</p>
+<p>然后发现url中的地址被拼接进了HTML页面中</p>
+<p>首先是被拼入到了div的id属性，然后就是一个标签名称的后半部分，显然是个自定义的标签名</p>
+<p><img src="/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/image-20200510230041071.png" alt="image-20200510230041071"></p>
+<p>还作为了一个js文件名的一部分</p>
+<p><img src="/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/image-20200510230311329.png" alt="image-20200510230311329"></p>
+<p>特殊符号在所有输出点没有例外都做了转义，当然XSS这样防御完全没有问题</p>
+<p><img src="/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/image-20200510230521285.png" alt="image-20200510230521285"></p>
+<p>但是有一部分输出在HTML标签名处</p>
+<blockquote>
+<p><code>&lt;exxx-xxxs-[输出点]&gt;</code></p>
+</blockquote>
+<p>那么突破口就来了，可以用标签的属性来触发事件，如这里的onmouseover</p>
+<blockquote>
+<p><code>&lt;a onmouseover=&#39;alert(document.cookie)&#39;&gt;xxs link&lt;/a&gt;</code></p>
+</blockquote>
+<p>但是<code>exxx-xxxs-[输出点]</code> 显然不是一个规范的HTML标签，那也能触发onmouseover吗？答案是肯定的</p>
+<p>尝试构造 <code>[空格]onmouseover=&#39;alert(document.cookie)&#39;</code></p>
+<p>没有成功，可以看见谷歌浏览器拦截了此payload</p>
+<p><img src="/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/image-20200510231640593.png" alt="image-20200510231640593"></p>
+<p><img src="/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/image-20200510231739324.png" alt="image-20200510231739324"></p>
+<p>不仅拦截，而且可见单引号也未正常工作，如何绕过这里的XSS Auditor以及单引号？其实只要删去这一对单引号即可</p>
+<p> <code>[空格]onmouseover=alert(document.cookie)</code></p>
+<p>这样payload也是可以正常工作的</p>
+<p>但是页面显示空白，弹窗也未出现</p>
+<p><img src="/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/image-20200510232104562.png" alt="image-20200510232104562"></p>
+<p>这是因为之前提到的输出点不仅在标签名内，也在一个外部js文件名中，这个js引入失败，页面即加载失败</p>
+<p><img src="/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/image-20200510232312189.png" alt="image-20200510232312189"></p>
+<p>马上想到的绕过方法是利用../向上级目录跳，然后再指向正常的js文件</p>
+<p>原文件名是</p>
+<p><code>/exxx-xxxs-your-name.min.js</code></p>
+<p>所以构造</p>
+<p><code>%20onmouseover=alert(document.cookie)%20%2F..%2Fexxx-xxxs-your-name</code></p>
+<p>其实构造的时候就发现问题了，%2F即/显然直接被当做路径分隔符了</p>
+<p>那双编码？这里也不行回显出来是%25</p>
+<p><img src="/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/image-20200510233022389.png" alt="image-20200510233022389"></p>
+<p>其实正斜线不行，那用反斜线同样可以的</p>
+<p><code>%20onmouseover=alert(document.cookie)%20%5c..%5cexxx-xxxs-your-name</code></p>
+<p>如此，js文件路径问题也解决了</p>
+<p><img src="/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/image-20200510233403304.png" alt="image-20200510233403304"></p>
+<p>但网页依旧空白，并且控制台没有报错</p>
+<p><img src="/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/image-20200510233515448.png" alt="image-20200510233515448"></p>
+<p>这让我回想起之前的自定义标签，应该是标签名变了，这里页面无处渲染</p>
+<p><img src="/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/image-20200510233716259.png" alt="image-20200510233716259"></p>
+<p>那么接着改payload，将标签名同时复原</p>
+<p><code>your-name%20onmouseover=alert(document.cookie)%20%5c..%5cexxx-xxxs-your-name</code></p>
+<p><img src="/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/image-20200510233900628.png" alt="image-20200510233900628"></p>
+<p>拿起鼠标在页面一晃，good job！</p>
+<p><img src="/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/image-20200510234044653.png" alt="image-20200510234044653"></p>
+]]></content>
+      <tags>
+        <tag>XSS</tag>
+        <tag>挖洞</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>APlayer 跳转页面保持音乐播放进度</title>
     <url>/2020/04/29/APlayer-%E8%B7%B3%E8%BD%AC%E9%A1%B5%E9%9D%A2%E4%BF%9D%E6%8C%81%E9%9F%B3%E4%B9%90%E6%92%AD%E6%94%BE%E8%BF%9B%E5%BA%A6/</url>
     <content><![CDATA[<p>想给博客加个音频播放的插件作为背景音乐，但是在博客内跳转的时候音乐会中断并重新加载，参考了网易云音乐网页版的解决办法就是所有页面都在前端通过Ajax动态加载，并不会跳转网页，所以音乐播放不会中断。但是改Hexo源码的话不太可行，想到一个办法就是每次跳转前记录进度并在下次加载网页时读取</p>

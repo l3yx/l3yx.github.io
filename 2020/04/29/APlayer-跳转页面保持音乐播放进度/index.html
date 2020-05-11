@@ -300,7 +300,10 @@
     <a href="/2020/04/27/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/" rel="prev" title="通达OA 任意用户登录漏洞">
       <i class="fa fa-chevron-left"></i> 通达OA 任意用户登录漏洞
     </a></div>
-      <div class="post-nav-item"></div>
+      <div class="post-nav-item">
+    <a href="/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/" rel="next" title="记一次XSS挖掘过程">
+      记一次XSS挖掘过程 <i class="fa fa-chevron-right"></i>
+    </a></div>
     </div>
       </footer>
     
@@ -377,14 +380,14 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">12</span>
+          <span class="site-state-item-count">13</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">14</span>
+        <span class="site-state-item-count">16</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -538,7 +541,7 @@ NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
 
     <script>
         ap = null
-        Object.defineProperty(document.querySelector('meting-js'),"aplayer",{
+        Object.defineProperty(document.getElementById('2486559481'),"aplayer",{
             set: function(aplayer) {
                 ap=aplayer
                 ready();
@@ -569,6 +572,7 @@ NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
 
         window.onbeforeunload = function(event) {
             if(!ap.audio.paused){
+				ap.pause();
                 musicIndex = ap.list.index;
                 musicTime = ap.audio.currentTime;
                 localStorage.setItem("musicIndex",musicIndex);
