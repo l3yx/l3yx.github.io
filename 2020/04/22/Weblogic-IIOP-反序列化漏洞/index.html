@@ -20,12 +20,12 @@
     var CONFIG = {"hostname":"l3yx.github.io","root":"/","scheme":"Gemini","version":"7.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":-1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
   </script>
 
-  <meta name="description" content="Weblogic IIOP协议默认开启，跟T3协议一起默认监听在7001端口，利用IIOP协议向Weblogic申请注册远程对象，这个对象由JtaTransactionManager构造，而JtaTransactionManager类存在JNDI注入，Weblogic服务端在获取到请求的字节流时候进行反序列化操作触发漏洞">
+  <meta name="description" content="Weblogic IIOP协议默认开启，跟T3协议一起监听在7001端口，这次漏洞主要原因是错误的过滤JtaTransactionManager类，JtaTransactionManager父类AbstractPlatformTransactionManager在之前的补丁里面就加入到黑名单列表了，T3协议使用的是resolveClass方法去过滤，resolveClass方法是会读取父类的，所以">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Weblogic IIOP 反序列化漏洞">
+<meta property="og:title" content="Weblogic IIOP 反序列化漏洞学习笔记(CVE-2020-2551)">
 <meta property="og:url" content="https://l3yx.github.io/2020/04/22/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/index.html">
 <meta property="og:site_name" content="l3yx&#39;s blog">
-<meta property="og:description" content="Weblogic IIOP协议默认开启，跟T3协议一起默认监听在7001端口，利用IIOP协议向Weblogic申请注册远程对象，这个对象由JtaTransactionManager构造，而JtaTransactionManager类存在JNDI注入，Weblogic服务端在获取到请求的字节流时候进行反序列化操作触发漏洞">
+<meta property="og:description" content="Weblogic IIOP协议默认开启，跟T3协议一起监听在7001端口，这次漏洞主要原因是错误的过滤JtaTransactionManager类，JtaTransactionManager父类AbstractPlatformTransactionManager在之前的补丁里面就加入到黑名单列表了，T3协议使用的是resolveClass方法去过滤，resolveClass方法是会读取父类的，所以">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://l3yx.github.io/2020/04/22/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200423103837351.png">
 <meta property="og:image" content="https://l3yx.github.io/2020/04/22/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200421141257107.png">
@@ -83,7 +83,7 @@
 <meta property="og:image" content="https://l3yx.github.io/2020/04/22/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422220334597.png">
 <meta property="og:image" content="https://l3yx.github.io/2020/04/22/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422220347793.png">
 <meta property="article:published_time" content="2020-04-22T03:19:33.000Z">
-<meta property="article:modified_time" content="2020-04-28T10:19:22.000Z">
+<meta property="article:modified_time" content="2020-08-12T03:30:51.419Z">
 <meta property="article:author" content="淚笑">
 <meta property="article:tag" content="Weblogic">
 <meta property="article:tag" content="IIOP">
@@ -102,7 +102,7 @@
   };
 </script>
 
-  <title>Weblogic IIOP 反序列化漏洞 | l3yx's blog</title>
+  <title>Weblogic IIOP 反序列化漏洞学习笔记(CVE-2020-2551) | l3yx's blog</title>
   
 
 
@@ -133,6 +133,7 @@
   </style>
 </noscript>
 
+<link rel="alternate" href="/atom.xml" title="l3yx's blog" type="application/atom+xml">
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage">
@@ -251,7 +252,7 @@
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          Weblogic IIOP 反序列化漏洞
+          Weblogic IIOP 反序列化漏洞学习笔记(CVE-2020-2551)
         </h1>
 
         <div class="post-meta">
@@ -268,11 +269,11 @@
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-04-28 18:19:22" itemprop="dateModified" datetime="2020-04-28T18:19:22+08:00">2020-04-28</time>
+                <time title="修改时间：2020-08-12 11:30:51" itemprop="dateModified" datetime="2020-08-12T11:30:51+08:00">2020-08-12</time>
               </span>
 
           
-            <span id="/2020/04/22/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/" class="post-meta-item leancloud_visitors" data-flag-title="Weblogic IIOP 反序列化漏洞" title="阅读次数">
+            <span id="/2020/04/22/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/" class="post-meta-item leancloud_visitors" data-flag-title="Weblogic IIOP 反序列化漏洞学习笔记(CVE-2020-2551)" title="阅读次数">
               <span class="post-meta-item-icon">
                 <i class="fa fa-eye"></i>
               </span>
@@ -303,7 +304,7 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <p>Weblogic IIOP协议默认开启，跟T3协议一起默认监听在7001端口，利用IIOP协议向Weblogic申请注册远程对象，这个对象由JtaTransactionManager构造，而JtaTransactionManager类存在JNDI注入，Weblogic服务端在获取到请求的字节流时候进行反序列化操作触发漏洞</p>
+        <p>Weblogic IIOP协议默认开启，跟T3协议一起监听在7001端口，这次漏洞主要原因是错误的过滤JtaTransactionManager类，JtaTransactionManager父类AbstractPlatformTransactionManager在之前的补丁里面就加入到黑名单列表了，T3协议使用的是resolveClass方法去过滤，resolveClass方法是会读取父类的，所以T3协议这样过滤没问题。但是IIOP协议这块虽然也是使用的这个黑名单列表，但不是使用resolveClass方法去判断，默认只会判断本类的类名，而JtaTransactionManager类不在黑名单列表里面并且存在jndi注入</p>
 <a id="more"></a>
 
 <h2 id="前置知识"><a href="#前置知识" class="headerlink" title="前置知识"></a>前置知识</h2><h3 id="Corba概念"><a href="#Corba概念" class="headerlink" title="Corba概念"></a>Corba概念</h3><h4 id="CORBA"><a href="#CORBA" class="headerlink" title="CORBA"></a>CORBA</h4><p>公用对象请求代理体系结构（Common Object Request Broker Architecture），缩写为 CORBA，是对象管理组织（Object Management Group）制定的一种标准分布式对象结构</p>
@@ -675,14 +676,14 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">17</span>
+          <span class="site-state-item-count">19</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">17</span>
+        <span class="site-state-item-count">19</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -699,6 +700,9 @@
       </span>
       <span class="links-of-author-item">
         <a href="https://twitter.com/l3yx_" title="Twitter → https:&#x2F;&#x2F;twitter.com&#x2F;l3yx_" rel="noopener" target="_blank"><i class="fa fa-fw fa-twitter"></i>Twitter</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-fw fa-rss"></i>RSS</a>
       </span>
   </div>
 
