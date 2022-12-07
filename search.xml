@@ -149,12 +149,11 @@
 <p>对比漏洞版本5.5.6和已修复版本5.5.7<a href="https://github.com/spring-projects/spring-security/compare/5.5.6..5.5.7" target="_blank" rel="noopener">https://github.com/spring-projects/spring-security/compare/5.5.6..5.5.7</a></p>
 <p><img src="/2022/07/16/Spring-Security-%E6%9D%83%E9%99%90%E7%BB%95%E8%BF%87-CVE-2022-22978/image-20220716184215116.png" alt="image-20220716184215116"></p>
 <p><img src="/2022/07/16/Spring-Security-%E6%9D%83%E9%99%90%E7%BB%95%E8%BF%87-CVE-2022-22978/image-20220716184242715.png" alt="image-20220716184242715"></p>
-<p>在Java中正则表达式<code>.</code>默认不包含<code>\n</code> 和<code>\r</code>，需要设置<code>DOTALL</code>才会匹配所有字符。</p>
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://github.com/advisories/GHSA-hh32-7344-cg2f" target="_blank" rel="noopener">Authorization bypass in Spring Security</a></p>
 ]]></content>
       <tags>
-        <tag>Spring Security</tag>
         <tag>漏洞分析</tag>
+        <tag>Spring Security</tag>
       </tags>
   </entry>
   <entry>
