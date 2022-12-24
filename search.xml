@@ -330,11 +330,12 @@
 
 <h3 id="安装VSCode-CodeQL扩展"><a href="#安装VSCode-CodeQL扩展" class="headerlink" title="安装VSCode CodeQL扩展"></a>安装VSCode CodeQL扩展</h3><p>VSCode商店搜索安装CodeQL，并在扩展设置中设置CodeQL引擎路径<code>/xxx/CodeQL/codeql/codeql</code></p>
 <h3 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h3><p>在VSCode 中，单击文件 &gt; 打开工作区，选择<code>vscode-codeql-starter</code>目录下的<code>vscode-codeql-starter.code-workspace</code>文件<br>在VSCode左侧选择CodeQL插件页面，选择一个CodeQL数据库，然后在文件<code>vscode-codeql-starter/codeql-custom-queries-java/example.ql</code>单击右键选择<code>CodeQL:Run Query</code></p>
-<h2 id="基础命令"><a href="#基础命令" class="headerlink" title="基础命令"></a>基础命令</h2><h3 id="生成数据库"><a href="#生成数据库" class="headerlink" title="生成数据库"></a>生成数据库</h3><figure class="highlight sh"><table><tr><td class="code"><pre><span class="line">codeql database create /xxx/CodeQL/databases/Test --language=<span class="string">"java"</span> --<span class="built_in">source</span>-root=/xxx/Demo --<span class="built_in">command</span>=<span class="string">"mvn clean compile -Dmaven.test.skip=true"</span></span><br></pre></td></tr></table></figure>
+<h2 id="基础命令"><a href="#基础命令" class="headerlink" title="基础命令"></a>基础命令</h2><h3 id="生成数据库"><a href="#生成数据库" class="headerlink" title="生成数据库"></a>生成数据库</h3><figure class="highlight sh"><table><tr><td class="code"><pre><span class="line">codeql database create /xxx/CodeQL/databases/Test --language=<span class="string">"java"</span> --<span class="built_in">source</span>-root=/xxx/Demo --<span class="built_in">command</span>=<span class="string">"mvn clean package -Dmaven.test.skip=true"</span></span><br></pre></td></tr></table></figure>
 
 <blockquote>
-<p>/xxx/CodeQL/databases/Test    指定生成的数据库位置<br>–source-root    项目源码路径<br>–command    编译命令，PHP和Python等不需要</p>
+<p>/xxx/CodeQL/databases/Test    指定生成的数据库位置<br>–source-root    项目源码路径<br>–command    编译命令，PHP和Python等不需要。对于Maven，Ant等项目也可以省略</p>
 </blockquote>
+<p>如果没有指定<code>--command</code>，CodeQL会根据平台的不同，调用<code>./java/tools/autobuild.cmd</code>或<code>./java/tools/autobuild.sh</code>对项目进行分析。如果该项目的编译工具为Gradle、Maven或Ant，且能找到相应的配置文件。程序就会进入相应的流程，调用相关的编译指令对项目进行编译。CodeQL会收集项目编译过程中产生的信息，并以此生成数据库。如果不属于Gradle、Maven、Ant中任意一种，则报错退出。</p>
 <h2 id="CodeQL元数据"><a href="#CodeQL元数据" class="headerlink" title="CodeQL元数据"></a>CodeQL元数据</h2><p><a href="https://codeql.github.com/docs/writing-codeql-queries/metadata-for-codeql-queries/" target="_blank" rel="noopener">CodeQL查询的元数据</a>作为 QLDoc 注释的内容包含在每个查询文件的顶部。此元数据告诉 LGTM 和<a href="https://codeql.github.com/docs/codeql-for-visual-studio-code/#codeql-for-visual-studio-code" target="_blank" rel="noopener">VSCode 的 CodeQL 插件</a>如何处理查询并正确显示其结果。</p>
 <p>例:</p>
 <figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * @name Empty block</span></span><br><span class="line"><span class="comment"> * @kind problem</span></span><br><span class="line"><span class="comment"> * @problem.severity warning</span></span><br><span class="line"><span class="comment"> * @id java/example/empty-block</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"></span><br><span class="line">import java</span><br><span class="line"></span><br><span class="line">from BlockStmt b</span><br><span class="line">where b.getNumStmt() = 0</span><br><span class="line"><span class="keyword">select</span> b, <span class="string">"This is an empty block."</span></span><br></pre></td></tr></table></figure>
@@ -1584,8 +1585,8 @@
 <p><a href="https://www.sevenyuan.cn/2020/07/21/java/2020-07-21-dubbo-cve-2020-1948/" target="_blank" rel="noopener">Dubbo 漏洞 CVE-2020-1948 复现+简单修复</a></p>
 ]]></content>
       <tags>
-        <tag>Dubbo</tag>
         <tag>Java反序列化漏洞</tag>
+        <tag>Dubbo</tag>
       </tags>
   </entry>
   <entry>
