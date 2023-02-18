@@ -678,7 +678,9 @@
 
 
 
-<h5 id="使用全局污点跟踪"><a href="#使用全局污点跟踪" class="headerlink" title="使用全局污点跟踪"></a>使用全局污点跟踪</h5><p>就像局部污点跟踪是对局部数据流的跟踪一样，全局污点跟踪是对全局数据流的跟踪。也就是说，全局污点跟踪通过额外的非保值步骤扩展了全局数据流。可以通过扩展类 <code>TaintTracking::Configuration</code>来使用全局污点跟踪库：</p>
+<h5 id="使用全局污点跟踪"><a href="#使用全局污点跟踪" class="headerlink" title="使用全局污点跟踪"></a>使用全局污点跟踪</h5><p>就像局部污点跟踪是对局部数据流的跟踪一样，全局污点跟踪是对全局数据流的跟踪。也就是说，全局污点跟踪通过额外的非保值步骤扩展了全局数据流。</p>
+<p><a href="https://github.com/github/codeql/discussions/8460" target="_blank" rel="noopener">Difference between DataFlow::Configuration and TaintTracking::Configuration</a></p>
+<p>可以通过扩展类 <code>TaintTracking::Configuration</code>来使用全局污点跟踪库：</p>
 <figure class="highlight"><table><tr><td class="code"><pre><span class="line">import semmle.code.java.dataflow.TaintTracking</span><br><span class="line"></span><br><span class="line">class MyTaintTrackingConfiguration extends TaintTracking::Configuration &#123;</span><br><span class="line">  MyTaintTrackingConfiguration() &#123; this = "MyTaintTrackingConfiguration" &#125;</span><br><span class="line"></span><br><span class="line">  override predicate isSource(DataFlow::Node source) &#123;</span><br><span class="line">    ...</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  override predicate isSink(DataFlow::Node sink) &#123;</span><br><span class="line">    ...</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <p>这些谓词在配置中定义：</p>
@@ -1667,8 +1669,8 @@
 <p><a href="https://www.sevenyuan.cn/2020/07/21/java/2020-07-21-dubbo-cve-2020-1948/" target="_blank" rel="noopener">Dubbo 漏洞 CVE-2020-1948 复现+简单修复</a></p>
 ]]></content>
       <tags>
-        <tag>Java反序列化漏洞</tag>
         <tag>Dubbo</tag>
+        <tag>Java反序列化漏洞</tag>
       </tags>
   </entry>
   <entry>
