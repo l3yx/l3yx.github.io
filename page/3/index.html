@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
 <meta name="theme-color" content="#222">
-<meta name="generator" content="Hexo 4.2.0">
+<meta name="generator" content="Hexo 4.2.1">
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
@@ -176,6 +176,99 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://l3yx.github.io/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/Avatar.jpg">
+      <meta itemprop="name" content="淚笑">
+      <meta itemprop="description" content="不忘初心,方得始终">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="l3yx's blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/" class="post-title-link" itemprop="url">Spring JtaTransactionManager 反序列化漏洞</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-04-14 10:14:16" itemprop="dateCreated datePublished" datetime="2020-04-14T10:14:16+08:00">2020-04-14</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-04-28 18:19:48" itemprop="dateModified" datetime="2020-04-28T18:19:48+08:00">2020-04-28</time>
+              </span>
+
+          
+            <span id="/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/" class="post-meta-item leancloud_visitors" data-flag-title="Spring JtaTransactionManager 反序列化漏洞" title="阅读次数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="fa fa-comment-o"></i>
+      </span>
+      <span class="post-meta-item-text">Valine：</span>
+    
+    <a title="valine" href="/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>该漏洞存在于spring-tx.jar包的org.springframework.transaction.jta.JtaTransactionManager类，该类实现了Java Transaction API，主要功能是处理分布式的事务管理，其重写了readObject方法，导致反序列化时该类时产生JNDI注入的问题从而RCE。但并不是spring最基本的包，默认不使用，所以并不是所有使用了spring框架的应用都受影响，需要具体检查是否包含了spring-tx.jar包</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -888,7 +981,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">27</span>
+          <span class="site-state-item-count">28</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -943,7 +1036,7 @@
   </span>
   <span class="author" itemprop="copyrightHolder">淚笑</span>
 </div>
-  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v4.2.0
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v4.2.1
   </div>
   <span class="post-meta-divider">|</span>
   <div class="theme-info">主题 – <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v7.7.1
