@@ -6,7 +6,7 @@
   <link href="https://l3yx.github.io/atom.xml" rel="self"/>
   
   <link href="https://l3yx.github.io/"/>
-  <updated>2023-08-26T01:55:30.128Z</updated>
+  <updated>2023-09-09T02:45:34.219Z</updated>
   <id>https://l3yx.github.io/</id>
   
   <author>
@@ -15,6 +15,25 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>Docker编译OpenJDK CodeQL数据库</title>
+    <link href="https://l3yx.github.io/2023/09/06/Docker%E7%BC%96%E8%AF%91OpenJDK-CodeQL%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    <id>https://l3yx.github.io/2023/09/06/Docker%E7%BC%96%E8%AF%91OpenJDK-CodeQL%E6%95%B0%E6%8D%AE%E5%BA%93/</id>
+    <published>2023-09-06T14:38:37.000Z</published>
+    <updated>2023-09-09T02:45:34.219Z</updated>
+    
+    <content type="html"><![CDATA[<p>通过Docker编译OpenJDK源码，并生成CodeQL数据库。之前编译过JDK，不过没留存环境，重复手动构建编译环境有点麻烦，这次顺便记录一下编译过程及Dockerfile</p><a id="more"></a><p>编译方法参考<a href="https://openjdk.org/groups/build/doc/building.html" target="_blank" rel="noopener">OpenJDK官方文档</a>，构建 JDK 需要预先存在的 JDK ，即 boot JDK，一般 boot JDK 的主版本需要低于编译版本。boot JDK 可在<a href="https://www.oracle.com/java/technologies/javase/javase7-archive-downloads.html" target="_blank" rel="noopener">oracle</a>下载，JDK 源码在 <a href="https://github.com/openjdk/jdk8u/tags" target="_blank" rel="noopener">OpenJDK 的代码仓库</a>下载。另外还需要下载Linux版本的<a href="https://github.com/github/codeql-cli-binaries/releases" target="_blank" rel="noopener">CodeQL CLI</a></p><p>最后目录结构如下：</p><p><img src="/2023/09/06/Docker%E7%BC%96%E8%AF%91OpenJDK-CodeQL%E6%95%B0%E6%8D%AE%E5%BA%93/image-20230908132515211.png" alt="image-20230908132515211"></p><p>bootJDK，codeqlCLI，source 目录下均放对应资源的已解压的文件夹</p><p>Dockerfile</p><figure class="highlight dockerfile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">FROM</span> --platform=linux/amd64 centos:centos7</span><br><span class="line"></span><br><span class="line"><span class="keyword">RUN</span><span class="bash"> yum groupinstall <span class="string">"Development Tools"</span> -y &amp;&amp; \</span></span><br><span class="line"><span class="bash">    yum install <span class="built_in">which</span> -y &amp;&amp; \</span></span><br><span class="line"><span class="bash">    yum install libXtst-devel libXt-devel libXrender-devel -y &amp;&amp; \</span></span><br><span class="line"><span class="bash">    yum install cups-devel -y &amp;&amp; \</span></span><br><span class="line"><span class="bash">    yum install freetype-devel -y &amp;&amp; \</span></span><br><span class="line"><span class="bash">    yum install alsa-lib-devel -y &amp;&amp; \</span></span><br><span class="line"><span class="bash">    yum install fontconfig-devel -y</span></span><br></pre></td></tr></table></figure><p>docker-compose.yml</p><figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">version:</span> <span class="string">'3'</span></span><br><span class="line"></span><br><span class="line"><span class="attr">services:</span></span><br><span class="line">  <span class="attr">jdk_compiler:</span></span><br><span class="line">    <span class="attr">build:</span> <span class="string">.</span></span><br><span class="line">    <span class="attr">container_name:</span> <span class="string">jdk_compiler</span></span><br><span class="line">    <span class="attr">environment:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">TZ=Asia/Shanghai</span></span><br><span class="line">    <span class="attr">volumes:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">./bootJDK:/root/bootJDK</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">./source:/root/source</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">./codeqlCLI:/root/codeqlCLI</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">./database:/root/database</span></span><br><span class="line">    <span class="attr">command:</span> </span><br><span class="line">      <span class="bullet">-</span> <span class="string">/bin/bash</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">-c</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">|</span></span><br><span class="line">        <span class="string">cd</span> <span class="string">/root/source/*/</span></span><br><span class="line">        <span class="string">make</span> <span class="string">dist-clean</span></span><br><span class="line">        <span class="string">bash</span> <span class="string">configure</span> <span class="string">--with-boot-jdk=`echo</span> <span class="string">/root/bootJDK/*/`</span></span><br><span class="line">        <span class="string">export</span> <span class="string">DISABLE_HOTSPOT_OS_VERSION_CHECK=ok</span></span><br><span class="line">        <span class="string">/root/codeqlCLI/*/codeql</span> <span class="string">database</span> <span class="string">create</span> <span class="string">/root/database/`basename</span> <span class="string">\`pwd\``</span> <span class="string">--language="java"</span> <span class="string">--command="make</span> <span class="string">images"</span></span><br></pre></td></tr></table></figure><p>cd到docker-compose.yml所在目录，执行<code>docker compose up</code>即可，编译时间可能会很长，几十分钟到一小时左右，编译好的数据在database目录下</p><p>我在ARM架构的Mac上运行该容器，总会在CodeQL编译数据库的时候卡住，不知道是否是因为架构问题，转译或者模拟运行太慢还是bug，后面换成AMD64的机器可以正常编译</p>]]></content>
+    
+    
+    <summary type="html">&lt;p&gt;通过Docker编译OpenJDK源码，并生成CodeQL数据库。之前编译过JDK，不过没留存环境，重复手动构建编译环境有点麻烦，这次顺便记录一下编译过程及Dockerfile&lt;/p&gt;</summary>
+    
+    
+    
+    
+    <category term="CodeQL" scheme="https://l3yx.github.io/tags/CodeQL/"/>
+    
+  </entry>
   
   <entry>
     <title>Grafana 历史漏洞分析</title>
@@ -307,9 +326,9 @@
     
     
     
-    <category term="JSON CSRF" scheme="https://l3yx.github.io/tags/JSON-CSRF/"/>
-    
     <category term="漏洞挖掘" scheme="https://l3yx.github.io/tags/%E6%BC%8F%E6%B4%9E%E6%8C%96%E6%8E%98/"/>
+    
+    <category term="JSON CSRF" scheme="https://l3yx.github.io/tags/JSON-CSRF/"/>
     
   </entry>
   
@@ -409,30 +428,9 @@
     
     
     
-    <category term="漏洞挖掘" scheme="https://l3yx.github.io/tags/%E6%BC%8F%E6%B4%9E%E6%8C%96%E6%8E%98/"/>
-    
     <category term="XSS" scheme="https://l3yx.github.io/tags/XSS/"/>
     
-  </entry>
-  
-  <entry>
-    <title>记一次XSS挖掘过程</title>
-    <link href="https://l3yx.github.io/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/"/>
-    <id>https://l3yx.github.io/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/</id>
-    <published>2020-05-10T14:51:21.000Z</published>
-    <updated>2020-05-12T09:29:04.000Z</updated>
-    
-    <content type="html"><![CDATA[<p>最近在挖SRC，记录一下一些有趣的漏洞</p><a id="more"></a><p>这个站整体安全性挺高，测了许久也不见有什么问题，就把精力放在了可能遗漏的接口上，遂在一个接口页面引入的js文件里面又找出一个接口地址（目录扫描没有发现），简单浏览了下该页面，发现是个功能已经被废弃的API，既然没有功能，那只能找找诸如XSS一类的漏洞</p><p>然后发现url中的地址被拼接进了HTML页面中</p><p>首先是被拼入到了div的id属性，然后就是一个标签名称的后半部分，显然是个自定义的标签名</p><p><img src="/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/image-20200510230041071.png" alt="image-20200510230041071"></p><p>还作为了一个js文件名的一部分</p><p><img src="/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/image-20200510230311329.png" alt="image-20200510230311329"></p><p>特殊符号在所有输出点没有例外都做了转义，当然XSS这样防御完全没有问题</p><p><img src="/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/image-20200510230521285.png" alt="image-20200510230521285"></p><p>但是有一部分输出在HTML标签名处</p><blockquote><p><code>&lt;exxx-xxxs-[输出点]&gt;</code></p></blockquote><p>那么突破口就来了，可以用标签的属性来触发事件，如这里的onmouseover</p><blockquote><p><code>&lt;a onmouseover=&#39;alert(document.cookie)&#39;&gt;xxs link&lt;/a&gt;</code></p></blockquote><p>但是<code>exxx-xxxs-[输出点]</code> 显然不是一个规范的HTML标签，那也能触发onmouseover吗？答案是肯定的</p><p>尝试构造 <code>[空格]onmouseover=&#39;alert(document.cookie)&#39;</code></p><p>没有成功，可以看见谷歌浏览器拦截了此payload</p><p><img src="/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/image-20200510231640593.png" alt="image-20200510231640593"></p><p><img src="/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/image-20200510231739324.png" alt="image-20200510231739324"></p><p>不仅拦截，而且可见单引号也未正常工作，如何绕过这里的XSS Auditor以及单引号？其实只要删去这一对单引号即可</p><p> <code>[空格]onmouseover=alert(document.cookie)</code></p><p>这样payload也是可以正常工作的</p><p>但是页面显示空白，弹窗也未出现</p><p><img src="/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/image-20200510232104562.png" alt="image-20200510232104562"></p><p>这是因为之前提到的输出点不仅在标签名内，也在一个外部js文件名中，这个js引入失败，页面即加载失败</p><p><img src="/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/image-20200510232312189.png" alt="image-20200510232312189"></p><p>马上想到的绕过方法是利用../向上级目录跳，然后再指向正常的js文件</p><p>原文件名是</p><p><code>/exxx-xxxs-your-name.min.js</code></p><p>所以构造</p><p><code>%20onmouseover=alert(document.cookie)%20%2F..%2Fexxx-xxxs-your-name</code></p><p>其实构造的时候就发现问题了，%2F即/显然直接被当做路径分隔符了</p><p>那双编码？这里也不行回显出来是%25</p><p><img src="/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/image-20200510233022389.png" alt="image-20200510233022389"></p><p>其实正斜线不行，那用反斜线同样可以的</p><p><code>%20onmouseover=alert(document.cookie)%20%5c..%5cexxx-xxxs-your-name</code></p><p>如此，js文件路径问题也解决了</p><p><img src="/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/image-20200510233403304.png" alt="image-20200510233403304"></p><p>但网页依旧空白，并且控制台没有报错</p><p><img src="/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/image-20200510233515448.png" alt="image-20200510233515448"></p><p>这让我回想起之前的自定义标签，应该是标签名变了，这里页面无处渲染</p><p><img src="/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/image-20200510233716259.png" alt="image-20200510233716259"></p><p>那么接着改payload，将标签名同时复原</p><p><code>your-name%20onmouseover=alert(document.cookie)%20%5c..%5cexxx-xxxs-your-name</code></p><p><img src="/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/image-20200510233900628.png" alt="image-20200510233900628"></p><p>拿起鼠标在页面一晃，good job！</p><p><img src="/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/image-20200510234044653.png" alt="image-20200510234044653"></p>]]></content>
-    
-    
-    <summary type="html">&lt;p&gt;最近在挖SRC，记录一下一些有趣的漏洞&lt;/p&gt;</summary>
-    
-    
-    
-    
     <category term="漏洞挖掘" scheme="https://l3yx.github.io/tags/%E6%BC%8F%E6%B4%9E%E6%8C%96%E6%8E%98/"/>
-    
-    <category term="XSS" scheme="https://l3yx.github.io/tags/XSS/"/>
     
   </entry>
   

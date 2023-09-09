@@ -1,6 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>Docker编译OpenJDK CodeQL数据库</title>
+    <url>/2023/09/06/Docker%E7%BC%96%E8%AF%91OpenJDK-CodeQL%E6%95%B0%E6%8D%AE%E5%BA%93/</url>
+    <content><![CDATA[<p>通过Docker编译OpenJDK源码，并生成CodeQL数据库。之前编译过JDK，不过没留存环境，重复手动构建编译环境有点麻烦，这次顺便记录一下编译过程及Dockerfile</p>
+<a id="more"></a>
+
+<p>编译方法参考<a href="https://openjdk.org/groups/build/doc/building.html" target="_blank" rel="noopener">OpenJDK官方文档</a>，构建 JDK 需要预先存在的 JDK ，即 boot JDK，一般 boot JDK 的主版本需要低于编译版本。boot JDK 可在<a href="https://www.oracle.com/java/technologies/javase/javase7-archive-downloads.html" target="_blank" rel="noopener">oracle</a>下载，JDK 源码在 <a href="https://github.com/openjdk/jdk8u/tags" target="_blank" rel="noopener">OpenJDK 的代码仓库</a>下载。另外还需要下载Linux版本的<a href="https://github.com/github/codeql-cli-binaries/releases" target="_blank" rel="noopener">CodeQL CLI</a></p>
+<p>最后目录结构如下：</p>
+<p><img src="/2023/09/06/Docker%E7%BC%96%E8%AF%91OpenJDK-CodeQL%E6%95%B0%E6%8D%AE%E5%BA%93/image-20230908132515211.png" alt="image-20230908132515211"></p>
+<p>bootJDK，codeqlCLI，source 目录下均放对应资源的已解压的文件夹</p>
+<p>Dockerfile</p>
+<figure class="highlight dockerfile"><table><tr><td class="code"><pre><span class="line"><span class="keyword">FROM</span> --platform=linux/amd64 centos:centos7</span><br><span class="line"></span><br><span class="line"><span class="keyword">RUN</span><span class="bash"> yum groupinstall <span class="string">"Development Tools"</span> -y &amp;&amp; \</span></span><br><span class="line"><span class="bash">    yum install <span class="built_in">which</span> -y &amp;&amp; \</span></span><br><span class="line"><span class="bash">    yum install libXtst-devel libXt-devel libXrender-devel -y &amp;&amp; \</span></span><br><span class="line"><span class="bash">    yum install cups-devel -y &amp;&amp; \</span></span><br><span class="line"><span class="bash">    yum install freetype-devel -y &amp;&amp; \</span></span><br><span class="line"><span class="bash">    yum install alsa-lib-devel -y &amp;&amp; \</span></span><br><span class="line"><span class="bash">    yum install fontconfig-devel -y</span></span><br></pre></td></tr></table></figure>
+
+<p>docker-compose.yml</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">version:</span> <span class="string">'3'</span></span><br><span class="line"></span><br><span class="line"><span class="attr">services:</span></span><br><span class="line">  <span class="attr">jdk_compiler:</span></span><br><span class="line">    <span class="attr">build:</span> <span class="string">.</span></span><br><span class="line">    <span class="attr">container_name:</span> <span class="string">jdk_compiler</span></span><br><span class="line">    <span class="attr">environment:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">TZ=Asia/Shanghai</span></span><br><span class="line">    <span class="attr">volumes:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">./bootJDK:/root/bootJDK</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">./source:/root/source</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">./codeqlCLI:/root/codeqlCLI</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">./database:/root/database</span></span><br><span class="line">    <span class="attr">command:</span> </span><br><span class="line">      <span class="bullet">-</span> <span class="string">/bin/bash</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">-c</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">|</span></span><br><span class="line">        <span class="string">cd</span> <span class="string">/root/source/*/</span></span><br><span class="line">        <span class="string">make</span> <span class="string">dist-clean</span></span><br><span class="line">        <span class="string">bash</span> <span class="string">configure</span> <span class="string">--with-boot-jdk=`echo</span> <span class="string">/root/bootJDK/*/`</span></span><br><span class="line">        <span class="string">export</span> <span class="string">DISABLE_HOTSPOT_OS_VERSION_CHECK=ok</span></span><br><span class="line">        <span class="string">/root/codeqlCLI/*/codeql</span> <span class="string">database</span> <span class="string">create</span> <span class="string">/root/database/`basename</span> <span class="string">\`pwd\``</span> <span class="string">--language="java"</span> <span class="string">--command="make</span> <span class="string">images"</span></span><br></pre></td></tr></table></figure>
+
+
+
+<p>cd到docker-compose.yml所在目录，执行<code>docker compose up</code>即可，编译时间可能会很长，几十分钟到一小时左右，编译好的数据在database目录下</p>
+<p>我在ARM架构的Mac上运行该容器，总会在CodeQL编译数据库的时候卡住，不知道是否是因为架构问题，转译或者模拟运行太慢还是bug，后面换成AMD64的机器可以正常编译</p>
+]]></content>
+      <tags>
+        <tag>CodeQL</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Grafana 历史漏洞分析</title>
     <url>/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/</url>
     <content><![CDATA[<p>最近学了下Go，也准备挖一下Go WEB应用的漏洞。梳理了Grafana的结构，调试分析了Grafana的一些历史漏洞及修复方案，也在分析过程中挖到了新的。感觉Go语言确实是比较安全的，很多漏洞其实都是代码逻辑上的问题</p>
@@ -2327,8 +2352,8 @@
 <p><a href="https://www.freebuf.com/vuls/230243.html" target="_blank" rel="noopener">挖洞经验 | 用HTTP请求重写实现JSON CSRF</a></p>
 ]]></content>
       <tags>
-        <tag>JSON CSRF</tag>
         <tag>漏洞挖掘</tag>
+        <tag>JSON CSRF</tag>
       </tags>
   </entry>
   <entry>
@@ -2686,8 +2711,8 @@
 
 ]]></content>
       <tags>
-        <tag>漏洞挖掘</tag>
         <tag>XSS</tag>
+        <tag>漏洞挖掘</tag>
       </tags>
   </entry>
   <entry>
@@ -2747,8 +2772,8 @@
 <p><img src="/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/image-20200510234044653.png" alt="image-20200510234044653"></p>
 ]]></content>
       <tags>
-        <tag>漏洞挖掘</tag>
         <tag>XSS</tag>
+        <tag>漏洞挖掘</tag>
       </tags>
   </entry>
   <entry>
