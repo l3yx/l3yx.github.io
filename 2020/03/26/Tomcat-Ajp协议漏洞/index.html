@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"l3yx.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.21.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="Tomcat主要是提供Servlet&#x2F;JSP容器，静态资源的处理速度以及Web服务管理功能方面不如其他专业的HTTP服务器，所以使用效率和性能更高二进制TCP传输协议ajp协议以供其他web服务器进行反向代理或者用于集群，而8009端口的ajp服务默认在公网开启，通过ajp协议可以控制request对象的某些Attribute属性从而造成webapps目录下的任意文件读取&#x2F;包含">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Tomcat Ajp协议漏洞">
+<meta property="og:url" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/index.html">
+<meta property="og:site_name" content="l3yx&#39;s blog">
+<meta property="og:description" content="Tomcat主要是提供Servlet&#x2F;JSP容器，静态资源的处理速度以及Web服务管理功能方面不如其他专业的HTTP服务器，所以使用效率和性能更高二进制TCP传输协议ajp协议以供其他web服务器进行反向代理或者用于集群，而8009端口的ajp服务默认在公网开启，通过ajp协议可以控制request对象的某些Attribute属性从而造成webapps目录下的任意文件读取&#x2F;包含">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326102909478.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326103304189.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326103548188.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326103949800.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326104556122.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326104920331.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326110137180.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326110306603.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326110641559.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326110809101.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326114142570.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326115020723.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326125943121.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326150114592.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326151300045.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326151900051.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326151918810.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326151932440.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326151535450.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326152237580.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326152441914.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326152624852.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326153216070.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326153814678.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326160730549.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326160942966.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326161040592.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326161648547.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326161818325.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326161856522.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326164001646.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326164040472.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326164128950.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326164157798.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326164647071.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326165032990.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326165249071.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326165724644.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326170101382.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326165837963.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326165918980.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326170508191.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326170809752.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326171827276.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326171840099.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326172233725.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326172326694.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326172506497.png">
+<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326172452719.png">
+<meta property="article:published_time" content="2020-03-26T01:36:10.000Z">
+<meta property="article:modified_time" content="2020-04-28T10:19:28.000Z">
+<meta property="article:author" content="淚笑">
+<meta property="article:tag" content="Tomcat">
+<meta property="article:tag" content="ajp">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326102909478.png">
+
+
+<link rel="canonical" href="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/","path":"2020/03/26/Tomcat-Ajp协议漏洞/","title":"Tomcat Ajp协议漏洞"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Tomcat Ajp协议漏洞 | l3yx's blog</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">l3yx's blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#IDEA%E8%B0%83%E8%AF%95Tomcat"><span class="nav-number">1.</span> <span class="nav-text">IDEA调试Tomcat</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Tomcat-Ajp%E5%8D%8F%E8%AE%AE"><span class="nav-number">2.</span> <span class="nav-text">Tomcat Ajp协议</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90"><span class="nav-number">3.</span> <span class="nav-text">漏洞分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%96%87%E4%BB%B6%E8%AF%BB%E5%8F%96"><span class="nav-number">3.1.</span> <span class="nav-text">文件读取</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%96%87%E4%BB%B6%E5%8C%85%E5%90%AB"><span class="nav-number">3.2.</span> <span class="nav-text">文件包含</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%AF%E8%AF%BB%E8%B7%AF%E5%BE%84"><span class="nav-number">4.</span> <span class="nav-text">可读路径</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%96%87%E4%BB%B6%E8%AF%BB%E5%8F%96-1"><span class="nav-number">4.1.</span> <span class="nav-text">文件读取</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%96%87%E4%BB%B6%E5%8C%85%E5%90%AB-1"><span class="nav-number">4.2.</span> <span class="nav-text">文件包含</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%B7%A8webapp%E8%AF%BB%E5%8F%96-%E5%8C%85%E5%90%AB"><span class="nav-number">4.3.</span> <span class="nav-text">跨webapp读取&#x2F;包含</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BF%AE%E5%A4%8D%E6%96%B9%E6%A1%88"><span class="nav-number">5.</span> <span class="nav-text">修复方案</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">6.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="淚笑"
+      src="/resources/avatar.jpg">
+  <p class="site-author-name" itemprop="name">淚笑</p>
+  <div class="site-description" itemprop="description">学的越多，懂的越少</div>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/l3yx" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;l3yx" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1729888211@qq.com" title="E-Mail → mailto:1729888211@qq.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/resources/avatar.jpg">
+      <meta itemprop="name" content="淚笑">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="l3yx's blog">
+      <meta itemprop="description" content="学的越多，懂的越少">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Tomcat Ajp协议漏洞 | l3yx's blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Tomcat Ajp协议漏洞
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2020-03-26 09:36:10" itemprop="dateCreated datePublished" datetime="2020-03-26T09:36:10+08:00">2020-03-26</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2020-04-28 18:19:28" itemprop="dateModified" datetime="2020-04-28T18:19:28+08:00">2020-04-28</time>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>Tomcat主要是提供Servlet&#x2F;JSP容器，静态资源的处理速度以及Web服务管理功能方面不如其他专业的HTTP服务器，所以使用效率和性能更高二进制TCP传输协议ajp协议以供其他web服务器进行反向代理或者用于集群，而8009端口的ajp服务默认在公网开启，通过ajp协议可以控制request对象的某些Attribute属性从而造成webapps目录下的任意文件读取&#x2F;包含</p>
+<span id="more"></span>
+
+<h2 id="IDEA调试Tomcat"><a href="#IDEA调试Tomcat" class="headerlink" title="IDEA调试Tomcat"></a>IDEA调试Tomcat</h2><p>github下载存在漏洞的版本<a target="_blank" rel="noopener" href="https://github.com/apache/tomcat/releases/tag/9.0.19">https://github.com/apache/tomcat/releases/tag/9.0.19</a></p>
+<p>解压源码后，在源码根目录新建 home 文件夹，把 conf 文件夹和 webapps 文件夹移动到 home 文件夹里，然后在源码根目录新建 pom.xml 文件（原来为 Ant 工程，这里把它改为 Maven 工程）</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version=<span class="string">&quot;1.0&quot;</span> encoding=<span class="string">&quot;UTF-8&quot;</span>?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">project</span> <span class="attr">xmlns</span>=<span class="string">&quot;http://maven.apache.org/POM/4.0.0&quot;</span></span></span><br><span class="line"><span class="tag">         <span class="attr">xmlns:xsi</span>=<span class="string">&quot;http://www.w3.org/2001/XMLSchema-instance&quot;</span></span></span><br><span class="line"><span class="tag">         <span class="attr">xsi:schemaLocation</span>=<span class="string">&quot;http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd&quot;</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">modelVersion</span>&gt;</span>4.0.0<span class="tag">&lt;/<span class="name">modelVersion</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.apache.tomcat<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>tomcat<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">name</span>&gt;</span>tomcat<span class="tag">&lt;/<span class="name">name</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>9.0.19<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">dependencies</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>junit<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>junit<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>4.12<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">scope</span>&gt;</span>test<span class="tag">&lt;/<span class="name">scope</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.apache.ant<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>ant<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>1.10.5<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>wsdl4j<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>wsdl4j<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>1.6.3<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line">        <span class="comment">&lt;!--&lt;dependency&gt;--&gt;</span></span><br><span class="line">            <span class="comment">&lt;!--&lt;groupId&gt;javax.xml&lt;/groupId&gt;--&gt;</span></span><br><span class="line">            <span class="comment">&lt;!--&lt;artifactId&gt;jaxrpc&lt;/artifactId&gt;--&gt;</span></span><br><span class="line">            <span class="comment">&lt;!--&lt;version&gt;1.1&lt;/version&gt;--&gt;</span></span><br><span class="line">        <span class="comment">&lt;!--&lt;/dependency&gt;--&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.apache.geronimo.specs<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>geronimo-jaxrpc_1.1_spec<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>2.1<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!--        &lt;dependency&gt;--&gt;</span></span><br><span class="line"><span class="comment">&lt;!--            &lt;groupId&gt;org.eclipse.jdt.core.compiler&lt;/groupId&gt;--&gt;</span></span><br><span class="line"><span class="comment">&lt;!--            &lt;artifactId&gt;ecj&lt;/artifactId&gt;--&gt;</span></span><br><span class="line"><span class="comment">&lt;!--            &lt;version&gt;4.5&lt;/version&gt;--&gt;</span></span><br><span class="line"><span class="comment">&lt;!--        &lt;/dependency&gt;--&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.eclipse.jdt<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>ecj<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>3.17.0<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.easymock<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>easymock<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>4.0.2<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">scope</span>&gt;</span>test<span class="tag">&lt;/<span class="name">scope</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">dependencies</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">build</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">plugins</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">plugin</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.apache.maven.plugins<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>maven-compiler-plugin<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">configuration</span>&gt;</span></span><br><span class="line">                    <span class="tag">&lt;<span class="name">source</span>&gt;</span>1.8<span class="tag">&lt;/<span class="name">source</span>&gt;</span></span><br><span class="line">                    <span class="tag">&lt;<span class="name">target</span>&gt;</span>1.8<span class="tag">&lt;/<span class="name">target</span>&gt;</span></span><br><span class="line">                    <span class="tag">&lt;<span class="name">encoding</span>&gt;</span>UTF-8<span class="tag">&lt;/<span class="name">encoding</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;/<span class="name">configuration</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;/<span class="name">plugin</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">plugin</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.apache.maven.plugins<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>maven-resources-plugin<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">configuration</span>&gt;</span></span><br><span class="line">                    <span class="tag">&lt;<span class="name">encoding</span>&gt;</span>UTF-8<span class="tag">&lt;/<span class="name">encoding</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;/<span class="name">configuration</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;/<span class="name">plugin</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">plugins</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">build</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">project</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+
+
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326102909478.png" alt="image-20200326102909478"></p>
+<p>用IDEA导入</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326103304189.png" alt="image-20200326103304189"></p>
+<p>将java文件夹标记为Sources Root，test标记为Test Sources Root</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326103548188.png" alt="image-20200326103548188"></p>
+<p>运行org.apache.catalina.startup.Bootstrap#main方法</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326103949800.png" alt="image-20200326103949800"></p>
+<p>找不到trailers，把 home&#x2F;webapps&#x2F;examples&#x2F;WEB-INF&#x2F;classes&#x2F;trailers 目录拷贝到 test 目录下</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326104556122.png" alt="image-20200326104556122"></p>
+<p>再次运行，找不到CookieFilter，把 home&#x2F;webapps&#x2F;examples&#x2F;WEB-INF&#x2F;classes&#x2F;util&#x2F;CookieFilter.java 文件拷贝到 test&#x2F;util 目录下<br><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326104920331.png" alt="image-20200326104920331"></p>
+<p>conf&#x2F;server.xml 找不到，设置下 jvm 参数（就是指定之前创建的 home 目录）</p>
+<p><code>-Dcatalina.home=</code></p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326110137180.png" alt="image-20200326110137180"></p>
+<p>访问网页报错</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326110306603.png" alt="image-20200326110306603"></p>
+<p>删除webapps &#x2F;examples文件夹</p>
+<p>编辑org.apache.catalina.startup.ContextConfig#configureStart方法，添加初始化 JSP 解析器的代码</p>
+<p><code>context.addServletContainerInitializer(new JasperInitializer(), null);</code></p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326110641559.png" alt="image-20200326110641559"></p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326110809101.png" alt="image-20200326110809101"></p>
+<h2 id="Tomcat-Ajp协议"><a href="#Tomcat-Ajp协议" class="headerlink" title="Tomcat Ajp协议"></a>Tomcat Ajp协议</h2><p>Tomcat默认的conf&#x2F;server.xml中配置了2个Connector</p>
+<p>一个为8080端口的HTTP协议，另外一个就是8009端口的AJP协议</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326114142570.png" alt="image-20200326114142570"></p>
+<p>Tomcat最主要的功能是提供Servlet&#x2F;JSP容器，尽管它也可以作为独立的Java Web服务器，但它在对静态资源（如HTML文件或图像文件）的处理速度，以及提供的Web服务器管理功能方面都不如其他专业的HTTP服务器，如IIS和Apache的服务器。因此在实际应用中，常常把Tomcat的与其他HTTP服务器集成。对于不支持的Servlet&#x2F;JSP的HTTP服务器，可以通过的Tomcat服务器来运行的Servlet&#x2F;JSP组件。而Tomcat和其他服务器的集成，就是通过ajp协议来完成的</p>
+<p>ajp是一个二进制的TCP传输协议，相比HTTP这种纯文本的协议来说，效率和性能更高，也做了很多优化。显然，浏览器并不能直接支持ajp协议，只支持HTTP协议。所以通常是通过Apache的proxy_ajp模块进行反向代理，暴露成http协议给客户端访问</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326115020723.png" alt="image-20200326115020723"></p>
+<p>Debug运行Tomcat，nc 尝试连接可以看到8009端口开放</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326125943121.png" alt="image-20200326125943121"></p>
+<h2 id="漏洞分析"><a href="#漏洞分析" class="headerlink" title="漏洞分析"></a>漏洞分析</h2><h3 id="文件读取"><a href="#文件读取" class="headerlink" title="文件读取"></a>文件读取</h3><p>Tomcat在处理ajp请求的时候调用org.apache.coyote.ajp.AjpProcessor#prepareRequest来解析一些请求头</p>
+<p>在该处下断点，并利用poc发送ajp请求</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326150114592.png" alt="image-20200326150114592"></p>
+<p>org&#x2F;apache&#x2F;coyote&#x2F;ajp&#x2F;AjpProcessor.java</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326151300045.png" alt="image-20200326151300045"></p>
+<p>当ajp数据包的头设置为<code>SC_REQ_ATTRIBUTE</code>时,Connector会紧接着读取变量<code>n</code>（属性名）和<code>v</code>（值），当<code>n</code>不是<code>SC_A_REQ_LOCAL_ADDR</code>、<code>SC_A_REQ_REMOTE_PORT</code>、<code>SC_A_SSL_PROTOCOL</code>时，就会用<code>v</code>来赋值属性<code>n</code></p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326151900051.png" alt="image-20200326151900051"></p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326151918810.png" alt="image-20200326151918810"></p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326151932440.png" alt="image-20200326151932440"></p>
+<p>接着，<code>service()</code>方法将修改过的request代入后面的调用</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326151535450.png" alt="image-20200326151535450"></p>
+<p>poc请求的url为&#x2F;asdf</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326152237580.png" alt="image-20200326152237580"></p>
+<p>当请求的uri无法匹配其他servlet时会由DefaultServlet处理，其中的调用流程如下</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326152441914.png" alt="image-20200326152441914"></p>
+<p>在<code>org.apache.catalina.servlets.DefaultServlet</code>中，当我们的请求声明的是GET方法时，存在调用<code>service()-&gt;doGet()-&gt;serveResource()</code></p>
+<p>org.apache.catalina.servlets.DefaultServlet#serveResource</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326152624852.png" alt="image-20200326152624852"></p>
+<p>org.apache.catalina.servlets.DefaultServlet#getRelativePath</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326153216070.png" alt="image-20200326153216070"></p>
+<p><code>serveResource()</code>方法获得path后会将<code>path</code>带入到<code>getResource</code>方法中造成任意文件读取</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326153814678.png" alt="image-20200326153814678"></p>
+<p>之后的代码逻辑是把通过path获取的资源序列化输出，因此客户端再按照AJP协议解析数据包就能得到文件内容</p>
+<h3 id="文件包含"><a href="#文件包含" class="headerlink" title="文件包含"></a>文件包含</h3><p>Tomcat默认将jsp&#x2F;jspx结尾的请求交给<code>org.apache.jasper.servlet.JspServlet</code>处理</p>
+<p>修改一下POC，将请求url改为jsp结尾</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326160730549.png" alt="image-20200326160730549"></p>
+<p>WEB-INF下新建一个文件</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326160942966.png" alt="image-20200326160942966"></p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326161040592.png" alt="image-20200326161040592"></p>
+<p>在org.apache.jasper.servlet.JspServlet#service下断点</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326161648547.png" alt="image-20200326161648547"></p>
+<p>这里同样会获取javax.servlet.include.path_info、javax.servlet.include.servlet_path这两个属性（可以通过ajp协议控制这两个属性）</p>
+<p>将这两个属性 对应的值拼接到jspURi变量中，最后交给serviceJspFile方法处理</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326161818325.png" alt="image-20200326161818325"></p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326161856522.png" alt="image-20200326161856522"></p>
+<h2 id="可读路径"><a href="#可读路径" class="headerlink" title="可读路径"></a>可读路径</h2><h3 id="文件读取-1"><a href="#文件读取-1" class="headerlink" title="文件读取"></a>文件读取</h3><p>该漏洞只能读取webapps目录下的文件，不能通过目录穿越读取其他路径</p>
+<p>尝试在paylaod中加入..&#x2F;</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326164001646.png" alt="image-20200326164001646"></p>
+<p>步入DefaultServlet中调用的getResource</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326164040472.png" alt="image-20200326164040472"></p>
+<p>org.apache.catalina.webresources.StandardRoot#getResource</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326164128950.png" alt="image-20200326164128950"></p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326164157798.png" alt="image-20200326164157798"></p>
+<p>org.apache.catalina.webresources.StandardRoot#validate</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326164647071.png" alt="image-20200326164647071"></p>
+<p>org.apache.tomcat.util.http.RequestUtil#normalize(java.lang.String, boolean)</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326165032990.png" alt="image-20200326165032990"></p>
+<p>其中检测到了&#x2F;..&#x2F;就会return null</p>
+<p>在org&#x2F;apache&#x2F;catalina&#x2F;webresources&#x2F;StandardRoot抛出异常</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326165249071.png" alt="image-20200326165249071"></p>
+<h3 id="文件包含-1"><a href="#文件包含-1" class="headerlink" title="文件包含"></a>文件包含</h3><p>先修改一下POC</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326165724644.png" alt="image-20200326165724644"></p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326170101382.png" alt="image-20200326170101382"></p>
+<p>跟入</p>
+<p>org.apache.jasper.servlet.JspServlet#serviceJspFile</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326165837963.png" alt="image-20200326165837963"></p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326165918980.png" alt="image-20200326165918980"></p>
+<p>跟着jspUri变量，会发现后面就进入了和文件读取一样的检测逻辑</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326170508191.png" alt="image-20200326170508191"></p>
+<h3 id="跨webapp读取-包含"><a href="#跨webapp读取-包含" class="headerlink" title="跨webapp读取&#x2F;包含"></a>跨webapp读取&#x2F;包含</h3><p>目前都是读取默认的ROOT下的文件，如果想跨webapp读取，可以修改POC中的请求url</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326170809752.png" alt="image-20200326170809752"></p>
+<p>创建test目录并写入文件</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326171827276.png" alt="image-20200326171827276"></p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326171840099.png" alt="image-20200326171840099"></p>
+<p>修改POC，url中换成test目录，并且后面跟随随机字符（当请求的uri无法匹配其他servlet时才会由DefaultServlet处理）</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326172233725.png" alt="image-20200326172233725"></p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326172326694.png" alt="image-20200326172326694"></p>
+<p>修改POC，包含文件并执行</p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326172506497.png" alt="image-20200326172506497"></p>
+<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326172452719.png" alt="image-20200326172452719"></p>
+<h2 id="修复方案"><a href="#修复方案" class="headerlink" title="修复方案"></a>修复方案</h2><ul>
+<li><p>升级最新版本</p>
+</li>
+<li><p>禁用AJP协议</p>
+<p>删除或注释conf&#x2F;server.xml中的</p>
+<p><code>&lt;Connector port=&quot;8009&quot; protocol=&quot;AJP/1.3&quot; redirectPort=&quot;8443&quot; /&gt;</code></p>
+</li>
+<li><p>配置secret来设置AJP协议的认证凭证</p>
+<p><code>&lt;Connector port=&quot;8009&quot;protocol=&quot;AJP/1.3&quot; redirectPort=&quot;8443&quot;address=&quot;YOUR_TOMCAT_IP_ADDRESS&quot; secret=&quot;YOUR_TOMCAT_AJP_SECRET&quot;/&gt;</code></p>
+</li>
+</ul>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a target="_blank" rel="noopener" href="https://github.com/YDHCUI/CNVD-2020-10487-Tomcat-Ajp-lfi">CNVD-2020-10487-Tomcat-Ajp-lfi</a></p>
+<p><a target="_blank" rel="noopener" href="https://www.cnblogs.com/jhxxb/p/10768580.html">IDEA 导入 Tomcat9 源码</a></p>
+<p><a target="_blank" rel="noopener" href="https://www.freebuf.com/vuls/228111.html">Tomcat-Ajp漏洞：我是如何一步步写出POC的？</a></p>
+<p><a target="_blank" rel="noopener" href="https://tomcat.apache.org/connectors-doc/ajp/ajpv13a.html">The Apache Tomcat Connectors - AJP Protocol Reference</a></p>
+<p><a target="_blank" rel="noopener" href="https://blog.csdn.net/jeikerxiao/article/details/82745516">Tomcat HTTP协议与AJP协议</a></p>
+<p><a target="_blank" rel="noopener" href="https://xz.aliyun.com/t/7325">Tomcat Ajp协议文件包含漏洞分析</a></p>
+<p><a target="_blank" rel="noopener" href="http://www.liuhaihua.cn/archives/665301.html">Tomcat-Ajp协议漏洞分析(CVE-2020-1938)</a></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Tomcat/" rel="tag"># Tomcat</a>
+              <a href="/tags/ajp/" rel="tag"># ajp</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/" rel="prev" title="Shiro 1.2.4 反序列化漏洞">
+                  <i class="fa fa-angle-left"></i> Shiro 1.2.4 反序列化漏洞
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2020/03/31/Java-Web%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E5%9B%9E%E6%98%BE%E6%80%BB%E7%BB%93/" rel="next" title="Java Web代码执行漏洞回显总结">
+                  Java Web代码执行漏洞回显总结 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">淚笑</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

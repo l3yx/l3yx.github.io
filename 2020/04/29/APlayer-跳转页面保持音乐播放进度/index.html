@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"l3yx.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.21.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="想给博客加个音频播放的插件作为背景音乐，但是在博客内跳转的时候音乐会中断并重新加载，参考了网易云音乐网页版的解决办法就是所有页面都在前端通过Ajax动态加载，并不会跳转网页，所以音乐播放不会中断。但是改Hexo源码的话不太可行，想到一个办法就是每次跳转前记录进度并在下次加载网页时读取">
+<meta property="og:type" content="article">
+<meta property="og:title" content="APlayer 跳转页面保持音乐播放进度">
+<meta property="og:url" content="https://l3yx.github.io/2020/04/29/APlayer-%E8%B7%B3%E8%BD%AC%E9%A1%B5%E9%9D%A2%E4%BF%9D%E6%8C%81%E9%9F%B3%E4%B9%90%E6%92%AD%E6%94%BE%E8%BF%9B%E5%BA%A6/index.html">
+<meta property="og:site_name" content="l3yx&#39;s blog">
+<meta property="og:description" content="想给博客加个音频播放的插件作为背景音乐，但是在博客内跳转的时候音乐会中断并重新加载，参考了网易云音乐网页版的解决办法就是所有页面都在前端通过Ajax动态加载，并不会跳转网页，所以音乐播放不会中断。但是改Hexo源码的话不太可行，想到一个办法就是每次跳转前记录进度并在下次加载网页时读取">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://l3yx.github.io/APlayer-%E8%B7%B3%E8%BD%AC%E9%A1%B5%E9%9D%A2%E4%BF%9D%E6%8C%81%E9%9F%B3%E4%B9%90%E6%92%AD%E6%94%BE%E8%BF%9B%E5%BA%A6/image-20200429222458927.png">
+<meta property="article:published_time" content="2020-04-29T12:44:13.000Z">
+<meta property="article:modified_time" content="2020-04-30T00:58:26.000Z">
+<meta property="article:author" content="淚笑">
+<meta property="article:tag" content="APlayer">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://l3yx.github.io/APlayer-%E8%B7%B3%E8%BD%AC%E9%A1%B5%E9%9D%A2%E4%BF%9D%E6%8C%81%E9%9F%B3%E4%B9%90%E6%92%AD%E6%94%BE%E8%BF%9B%E5%BA%A6/image-20200429222458927.png">
+
+
+<link rel="canonical" href="https://l3yx.github.io/2020/04/29/APlayer-%E8%B7%B3%E8%BD%AC%E9%A1%B5%E9%9D%A2%E4%BF%9D%E6%8C%81%E9%9F%B3%E4%B9%90%E6%92%AD%E6%94%BE%E8%BF%9B%E5%BA%A6/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://l3yx.github.io/2020/04/29/APlayer-%E8%B7%B3%E8%BD%AC%E9%A1%B5%E9%9D%A2%E4%BF%9D%E6%8C%81%E9%9F%B3%E4%B9%90%E6%92%AD%E6%94%BE%E8%BF%9B%E5%BA%A6/","path":"2020/04/29/APlayer-跳转页面保持音乐播放进度/","title":"APlayer 跳转页面保持音乐播放进度"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>APlayer 跳转页面保持音乐播放进度 | l3yx's blog</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">l3yx's blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">1.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="淚笑"
+      src="/resources/avatar.jpg">
+  <p class="site-author-name" itemprop="name">淚笑</p>
+  <div class="site-description" itemprop="description">学的越多，懂的越少</div>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/l3yx" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;l3yx" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1729888211@qq.com" title="E-Mail → mailto:1729888211@qq.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://l3yx.github.io/2020/04/29/APlayer-%E8%B7%B3%E8%BD%AC%E9%A1%B5%E9%9D%A2%E4%BF%9D%E6%8C%81%E9%9F%B3%E4%B9%90%E6%92%AD%E6%94%BE%E8%BF%9B%E5%BA%A6/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/resources/avatar.jpg">
+      <meta itemprop="name" content="淚笑">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="l3yx's blog">
+      <meta itemprop="description" content="学的越多，懂的越少">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="APlayer 跳转页面保持音乐播放进度 | l3yx's blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          APlayer 跳转页面保持音乐播放进度
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2020-04-29 20:44:13" itemprop="dateCreated datePublished" datetime="2020-04-29T20:44:13+08:00">2020-04-29</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2020-04-30 08:58:26" itemprop="dateModified" datetime="2020-04-30T08:58:26+08:00">2020-04-30</time>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>想给博客加个音频播放的插件作为背景音乐，但是在博客内跳转的时候音乐会中断并重新加载，参考了网易云音乐网页版的解决办法就是所有页面都在前端通过Ajax动态加载，并不会跳转网页，所以音乐播放不会中断。但是改Hexo源码的话不太可行，想到一个办法就是每次跳转前记录进度并在下次加载网页时读取</p>
+<span id="more"></span>
+
+<p>添加APlayer部分参考<a target="_blank" rel="noopener" href="https://asdfv1929.github.io/2018/05/26/next-add-music/">Hexo NexT主题中添加网页音乐播放器功能</a></p>
+<p>后来发现个很好用的插件<a target="_blank" rel="noopener" href="https://github.com/metowolf/MetingJS">MetingJS</a>，可以直接解析网易云音乐等各网络平台的歌曲</p>
+<p>在 themes&#x2F;next&#x2F;layout&#x2F;_layout.swig 添加</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- require APlayer --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">link</span> <span class="attr">rel</span>=<span class="string">&quot;stylesheet&quot;</span> <span class="attr">href</span>=<span class="string">&quot;https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css&quot;</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">&quot;https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.js&quot;</span>&gt;</span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- require MetingJS --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">&quot;https://cdn.jsdelivr.net/npm/meting@2/dist/Meting.min.js&quot;</span>&gt;</span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">div</span> <span class="attr">style</span>=<span class="string">&quot;opacity:0.7&quot;</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">meting-js</span></span></span><br><span class="line"><span class="tag">        <span class="attr">server</span>=<span class="string">&quot;netease&quot;</span></span></span><br><span class="line"><span class="tag">        <span class="attr">type</span>=<span class="string">&quot;playlist&quot;</span></span></span><br><span class="line"><span class="tag">        <span class="attr">id</span>=<span class="string">&quot;2486559481&quot;</span></span></span><br><span class="line"><span class="tag">        <span class="attr">fixed</span>=<span class="string">&quot;true&quot;</span></span></span><br><span class="line"><span class="tag">        <span class="attr">volume</span>=<span class="string">&quot;0.3&quot;</span></span></span><br><span class="line"><span class="tag">        <span class="attr">order</span>=<span class="string">&quot;random&quot;</span></span></span><br><span class="line"><span class="tag">        &gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">meting-js</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>id对应歌单，其他配置项详见文档</p>
+<p><img src="/APlayer-%E8%B7%B3%E8%BD%AC%E9%A1%B5%E9%9D%A2%E4%BF%9D%E6%8C%81%E9%9F%B3%E4%B9%90%E6%92%AD%E6%94%BE%E8%BF%9B%E5%BA%A6/image-20200429222458927.png" alt="image-20200429222458927"></p>
+<p>然后要获取APlayer对象来控制音乐播放，<code>document.querySelector(&#39;meting-js&#39;).aplayer</code>，在浏览器控制台可以成功获取，但写在HTML源码中就无法获得，应该是执行该代码时meting还未来得及初始化aplayer对象，后来试了很多办法，终于解决，即监听对象值的变化</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">ap = <span class="literal">null</span></span><br><span class="line"><span class="title class_">Object</span>.<span class="title function_">defineProperty</span>(<span class="variable language_">document</span>.<span class="title function_">querySelector</span>(<span class="string">&#x27;meting-js&#x27;</span>),<span class="string">&quot;aplayer&quot;</span>,&#123;</span><br><span class="line">    <span class="attr">set</span>: <span class="keyword">function</span>(<span class="params">aplayer</span>) &#123;</span><br><span class="line">        ap=aplayer</span><br><span class="line">        <span class="title function_">ready</span>();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line"><span class="keyword">function</span> <span class="title function_">ready</span>(<span class="params"></span>)&#123;</span><br><span class="line">    ap.<span class="property">list</span>.<span class="title function_">switch</span>(<span class="number">0</span>);</span><br><span class="line">    ap.<span class="title function_">play</span>();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>还有个小坑：<a target="_blank" rel="noopener" href="https://www.jarviswang.me/?p=889">HTML5中Audio元素在chrome中自动播放报错Uncaught (in promise) DOMException的解决方法</a></p>
+<p>最后完整添加到 themes&#x2F;next&#x2F;layout&#x2F;_layout.swig 的代码如下</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- require APlayer --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">link</span> <span class="attr">rel</span>=<span class="string">&quot;stylesheet&quot;</span> <span class="attr">href</span>=<span class="string">&quot;https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css&quot;</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">&quot;https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.js&quot;</span>&gt;</span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- require MetingJS --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">&quot;https://cdn.jsdelivr.net/npm/meting@2/dist/Meting.min.js&quot;</span>&gt;</span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">div</span> <span class="attr">style</span>=<span class="string">&quot;opacity:0.7&quot;</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">meting-js</span></span></span><br><span class="line"><span class="tag">        <span class="attr">server</span>=<span class="string">&quot;netease&quot;</span></span></span><br><span class="line"><span class="tag">        <span class="attr">type</span>=<span class="string">&quot;playlist&quot;</span></span></span><br><span class="line"><span class="tag">        <span class="attr">id</span>=<span class="string">&quot;2486559481&quot;</span></span></span><br><span class="line"><span class="tag">        <span class="attr">fixed</span>=<span class="string">&quot;true&quot;</span></span></span><br><span class="line"><span class="tag">        <span class="attr">volume</span>=<span class="string">&quot;0.3&quot;</span></span></span><br><span class="line"><span class="tag">        <span class="attr">order</span>=<span class="string">&quot;random&quot;</span></span></span><br><span class="line"><span class="tag">        &gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">meting-js</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="language-javascript"></span></span><br><span class="line"><span class="language-javascript">    ap = <span class="literal">null</span></span></span><br><span class="line"><span class="language-javascript">    <span class="title class_">Object</span>.<span class="title function_">defineProperty</span>(<span class="variable language_">document</span>.<span class="title function_">querySelector</span>(<span class="string">&#x27;meting-js&#x27;</span>),<span class="string">&quot;aplayer&quot;</span>,&#123;</span></span><br><span class="line"><span class="language-javascript">        <span class="attr">set</span>: <span class="keyword">function</span>(<span class="params">aplayer</span>) &#123;</span></span><br><span class="line"><span class="language-javascript">            ap=aplayer</span></span><br><span class="line"><span class="language-javascript">            <span class="title function_">ready</span>();</span></span><br><span class="line"><span class="language-javascript">        &#125;</span></span><br><span class="line"><span class="language-javascript">    &#125;);</span></span><br><span class="line"><span class="language-javascript">    </span></span><br><span class="line"><span class="language-javascript">    isRecover = <span class="literal">false</span>;</span></span><br><span class="line"><span class="language-javascript">    <span class="keyword">function</span> <span class="title function_">ready</span>(<span class="params"></span>)&#123;</span></span><br><span class="line"><span class="language-javascript">        ap.<span class="title function_">on</span>(<span class="string">&#x27;canplay&#x27;</span>, <span class="keyword">function</span> (<span class="params"></span>) &#123;</span></span><br><span class="line"><span class="language-javascript">            <span class="keyword">if</span>(!isRecover)&#123;</span></span><br><span class="line"><span class="language-javascript">                <span class="keyword">if</span>(<span class="variable language_">localStorage</span>.<span class="title function_">getItem</span>(<span class="string">&quot;musicIndex&quot;</span>) != <span class="literal">null</span>)&#123;</span></span><br><span class="line"><span class="language-javascript">                    musicIndex = <span class="variable language_">localStorage</span>.<span class="title function_">getItem</span>(<span class="string">&quot;musicIndex&quot;</span>);</span></span><br><span class="line"><span class="language-javascript">                    musicTime = <span class="variable language_">localStorage</span>.<span class="title function_">getItem</span>(<span class="string">&quot;musicTime&quot;</span>);</span></span><br><span class="line"><span class="language-javascript">                    <span class="keyword">if</span>(ap.<span class="property">list</span>.<span class="property">index</span> != musicIndex)&#123;</span></span><br><span class="line"><span class="language-javascript">                        ap.<span class="property">list</span>.<span class="title function_">switch</span>(musicIndex);</span></span><br><span class="line"><span class="language-javascript">                    &#125;<span class="keyword">else</span>&#123;</span></span><br><span class="line"><span class="language-javascript">                        ap.<span class="title function_">seek</span>(musicTime);</span></span><br><span class="line"><span class="language-javascript">                        ap.<span class="title function_">play</span>();</span></span><br><span class="line"><span class="language-javascript">                        <span class="variable language_">localStorage</span>.<span class="title function_">clear</span>();</span></span><br><span class="line"><span class="language-javascript">                        isRecover = <span class="literal">true</span>;</span></span><br><span class="line"><span class="language-javascript">                    &#125;</span></span><br><span class="line"><span class="language-javascript">                &#125;<span class="keyword">else</span>&#123;</span></span><br><span class="line"><span class="language-javascript">                    isRecover = <span class="literal">true</span>;</span></span><br><span class="line"><span class="language-javascript">                &#125;</span></span><br><span class="line"><span class="language-javascript">            &#125;</span></span><br><span class="line"><span class="language-javascript">        &#125;);</span></span><br><span class="line"><span class="language-javascript">    &#125;</span></span><br><span class="line"><span class="language-javascript"></span></span><br><span class="line"><span class="language-javascript">    <span class="variable language_">window</span>.<span class="property">onbeforeunload</span> = <span class="keyword">function</span>(<span class="params">event</span>) &#123;</span></span><br><span class="line"><span class="language-javascript">        <span class="keyword">if</span>(!ap.<span class="property">audio</span>.<span class="property">paused</span>)&#123;</span></span><br><span class="line"><span class="language-javascript">            musicIndex = ap.<span class="property">list</span>.<span class="property">index</span>;</span></span><br><span class="line"><span class="language-javascript">            musicTime = ap.<span class="property">audio</span>.<span class="property">currentTime</span>;</span></span><br><span class="line"><span class="language-javascript">            <span class="variable language_">localStorage</span>.<span class="title function_">setItem</span>(<span class="string">&quot;musicIndex&quot;</span>,musicIndex);</span></span><br><span class="line"><span class="language-javascript">            <span class="variable language_">localStorage</span>.<span class="title function_">setItem</span>(<span class="string">&quot;musicTime&quot;</span>,musicTime);</span></span><br><span class="line"><span class="language-javascript">        &#125;</span></span><br><span class="line"><span class="language-javascript">    &#125;;</span></span><br><span class="line"><span class="language-javascript"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+
+
+
+
+
+
+
+
+
+
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a target="_blank" rel="noopener" href="https://asdfv1929.github.io/2018/05/26/next-add-music/">Hexo NexT主题中添加网页音乐播放器功能</a></p>
+<p><a target="_blank" rel="noopener" href="https://aplayer.js.org/">APlayer</a></p>
+<p><a target="_blank" rel="noopener" href="https://github.com/metowolf/MetingJS">MetingJS</a></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/APlayer/" rel="tag"># APlayer</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2020/04/27/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/" rel="prev" title="通达OA 任意用户登录漏洞">
+                  <i class="fa fa-angle-left"></i> 通达OA 任意用户登录漏洞
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2020/05/10/%E8%AE%B0%E4%B8%80%E6%AC%A1XSS%E6%8C%96%E6%8E%98%E8%BF%87%E7%A8%8B/" rel="next" title="记一次XSS挖掘过程">
+                  记一次XSS挖掘过程 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">淚笑</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

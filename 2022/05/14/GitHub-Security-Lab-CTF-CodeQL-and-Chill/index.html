@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"l3yx.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.21.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="这是GitHub Security Lab CTF的一道题目，利用CodeQL挖掘Netflix Titus服务端模板注入漏洞。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="GitHub Security Lab CTF: CodeQL and Chill">
+<meta property="og:url" content="https://l3yx.github.io/2022/05/14/GitHub-Security-Lab-CTF-CodeQL-and-Chill/index.html">
+<meta property="og:site_name" content="l3yx&#39;s blog">
+<meta property="og:description" content="这是GitHub Security Lab CTF的一道题目，利用CodeQL挖掘Netflix Titus服务端模板注入漏洞。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://l3yx.github.io/2022/05/14/GitHub-Security-Lab-CTF-CodeQL-and-Chill/image-20220515222307815.png">
+<meta property="og:image" content="https://l3yx.github.io/2022/05/14/GitHub-Security-Lab-CTF-CodeQL-and-Chill/image-20220516214726813.png">
+<meta property="og:image" content="https://l3yx.github.io/2022/05/14/GitHub-Security-Lab-CTF-CodeQL-and-Chill/image-20220516214817080.png">
+<meta property="og:image" content="https://l3yx.github.io/2022/05/14/GitHub-Security-Lab-CTF-CodeQL-and-Chill/image-20220518222225797.png">
+<meta property="og:image" content="https://l3yx.github.io/2022/05/14/GitHub-Security-Lab-CTF-CodeQL-and-Chill/image-20220518225203065.png">
+<meta property="og:image" content="https://l3yx.github.io/2022/05/14/GitHub-Security-Lab-CTF-CodeQL-and-Chill/image-20220518225526091.png">
+<meta property="og:image" content="https://l3yx.github.io/2022/05/14/GitHub-Security-Lab-CTF-CodeQL-and-Chill/image-20220518230306550.png">
+<meta property="og:image" content="https://l3yx.github.io/2022/05/14/GitHub-Security-Lab-CTF-CodeQL-and-Chill/image-20220518230617304.png">
+<meta property="og:image" content="https://l3yx.github.io/2022/05/14/GitHub-Security-Lab-CTF-CodeQL-and-Chill/image-20220521115653697.png">
+<meta property="og:image" content="https://l3yx.github.io/2022/05/14/GitHub-Security-Lab-CTF-CodeQL-and-Chill/image-20220521125052495.png">
+<meta property="og:image" content="https://l3yx.github.io/2022/05/14/GitHub-Security-Lab-CTF-CodeQL-and-Chill/image-20220521125744518.png">
+<meta property="og:image" content="https://l3yx.github.io/2022/05/14/GitHub-Security-Lab-CTF-CodeQL-and-Chill/image-20220521131153845.png">
+<meta property="article:published_time" content="2022-05-14T07:58:37.000Z">
+<meta property="article:modified_time" content="2022-05-28T05:24:36.800Z">
+<meta property="article:author" content="淚笑">
+<meta property="article:tag" content="CodeQL">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://l3yx.github.io/2022/05/14/GitHub-Security-Lab-CTF-CodeQL-and-Chill/image-20220515222307815.png">
+
+
+<link rel="canonical" href="https://l3yx.github.io/2022/05/14/GitHub-Security-Lab-CTF-CodeQL-and-Chill/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://l3yx.github.io/2022/05/14/GitHub-Security-Lab-CTF-CodeQL-and-Chill/","path":"2022/05/14/GitHub-Security-Lab-CTF-CodeQL-and-Chill/","title":"GitHub Security Lab CTF: CodeQL and Chill"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>GitHub Security Lab CTF: CodeQL and Chill | l3yx's blog</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">l3yx's blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E8%AF%A6%E6%83%85"><span class="nav-number">1.</span> <span class="nav-text">漏洞详情</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E6%B5%81%E5%92%8C%E6%B1%A1%E7%82%B9%E8%B7%9F%E8%B8%AA%E5%88%86%E6%9E%90"><span class="nav-number">2.</span> <span class="nav-text">数据流和污点跟踪分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Source"><span class="nav-number">2.1.</span> <span class="nav-text">Source</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Sink"><span class="nav-number">2.2.</span> <span class="nav-text">Sink</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B1%A1%E7%82%B9%E8%B7%9F%E8%B8%AA"><span class="nav-number">2.3.</span> <span class="nav-text">污点跟踪</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E5%88%86%E6%9E%90"><span class="nav-number">2.4.</span> <span class="nav-text">问题分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B7%BB%E5%8A%A0%E9%A2%9D%E5%A4%96%E7%9A%84%E6%B1%A1%E7%82%B9%E6%AD%A5%E9%AA%A4"><span class="nav-number">2.5.</span> <span class="nav-text">添加额外的污点步骤</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9C%80%E7%BB%88%E6%9F%A5%E8%AF%A2"><span class="nav-number">2.6.</span> <span class="nav-text">最终查询</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B9%8B%E5%89%8D%E9%97%AE%E9%A2%98%E8%A7%A3%E5%86%B3"><span class="nav-number">3.</span> <span class="nav-text">之前问题解决</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E6%A1%A3"><span class="nav-number">4.</span> <span class="nav-text">参考文档</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="淚笑"
+      src="/resources/avatar.jpg">
+  <p class="site-author-name" itemprop="name">淚笑</p>
+  <div class="site-description" itemprop="description">学的越多，懂的越少</div>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/l3yx" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;l3yx" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1729888211@qq.com" title="E-Mail → mailto:1729888211@qq.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://l3yx.github.io/2022/05/14/GitHub-Security-Lab-CTF-CodeQL-and-Chill/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/resources/avatar.jpg">
+      <meta itemprop="name" content="淚笑">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="l3yx's blog">
+      <meta itemprop="description" content="学的越多，懂的越少">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="GitHub Security Lab CTF: CodeQL and Chill | l3yx's blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          GitHub Security Lab CTF: CodeQL and Chill
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2022-05-14 15:58:37" itemprop="dateCreated datePublished" datetime="2022-05-14T15:58:37+08:00">2022-05-14</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2022-05-28 13:24:36" itemprop="dateModified" datetime="2022-05-28T13:24:36+08:00">2022-05-28</time>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>这是GitHub Security Lab CTF的一道<a target="_blank" rel="noopener" href="https://securitylab.github.com/ctf/codeql-and-chill/">题目</a>，利用CodeQL挖掘<a target="_blank" rel="noopener" href="https://securitylab.github.com/advisories/GHSL-2020-028-netflix-titus/">Netflix Titus服务端模板注入</a>漏洞。</p>
+<span id="more"></span>
+
+<h2 id="漏洞详情"><a href="#漏洞详情" class="headerlink" title="漏洞详情"></a>漏洞详情</h2><p>JSR是<code>Java Specification Requests</code>的缩写，意思是Java 规范提案。<a target="_blank" rel="noopener" href="https://jcp.org/en/jsr/detail?id=380">JSR380</a>是关于数据校验这块的，也就是JSR第380号标准。Netflix Titus使用Java Bean Validation (JSR 380) 规范自定义了约束验证器，如<code>com.netflix.titus.api.jobmanager.model.job.sanitizer.SchedulingConstraintSetValidator</code></p>
+<p><a target="_blank" rel="noopener" href="https://github.com/Netflix/titus-control-plane/blob/8a8bd4c1b4b63e17520804c6f7f6278252bf5a5b/titus-api/src/main/java/com/netflix/titus/api/jobmanager/model/job/sanitizer/SchedulingConstraintSetValidator.java"><code>SchedulingConstraintSetValidator.java</code></a></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">SchedulingConstraintSetValidator</span> <span class="keyword">implements</span> <span class="title class_">ConstraintValidator</span>&lt;SchedulingConstraintSetValidator.SchedulingConstraintSet, Container&gt; &#123;</span><br><span class="line">		...</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="type">boolean</span> <span class="title function_">isValid</span><span class="params">(Container container, ConstraintValidatorContext context)</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (container == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        Set&lt;String&gt; common = <span class="keyword">new</span> <span class="title class_">HashSet</span>&lt;&gt;(container.getSoftConstraints().keySet());</span><br><span class="line">        common.retainAll(container.getHardConstraints().keySet());</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (common.isEmpty()) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        context.buildConstraintViolationWithTemplate(</span><br><span class="line">                <span class="string">&quot;Soft and hard constraints not unique. Shared constraints: &quot;</span> + common</span><br><span class="line">        ).addConstraintViolation().disableDefaultConstraintViolation();</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>通过<a target="_blank" rel="noopener" href="https://beanvalidation.org/2.0-jsr380/">Bean Validation 2.0 规范</a>可知在构建违反约束的错误信息时，可以插入多种类型的值，包括<a target="_blank" rel="noopener" href="https://docs.jboss.org/hibernate/validator/5.1/reference/en-US/html/chapter-message-interpolation.html#section-interpolation-with-message-expressions">Java EL 表达式</a>。因此如果<code>ConstraintValidatorContext.buildConstraintViolationWithTemplate()</code>的第一个参数即错误信息模板被攻击者可控，就有可能导致任意代码执行，即<a target="_blank" rel="noopener" href="https://securitylab.github.com/advisories/GHSL-2020-028-netflix-titus/">CVE-2020-9297</a>。这些错误信息模板就是注入漏洞的sink。经过验证的bean属性通常会流入自定义错误信息，这些就是source。</p>
+<h2 id="数据流和污点跟踪分析"><a href="#数据流和污点跟踪分析" class="headerlink" title="数据流和污点跟踪分析"></a>数据流和污点跟踪分析</h2><p>首先下载存在漏洞的版本<a target="_blank" rel="noopener" href="https://github.com/Netflix/titus-control-plane/commit/8a8bd4c1b4b63e17520804c6f7f6278252bf5a5b"><code>8a8bd4c</code></a>对应的<a target="_blank" rel="noopener" href="https://drive.google.com/open?id=10ju0t2QZjsKI8qrAqwzsPA3K-lBgqPVF">CodeQL数据库</a>。</p>
+<h3 id="Source"><a href="#Source" class="headerlink" title="Source"></a>Source</h3><p>题目已经提示source是上文代码中<code>isValid</code>方法的第一个参数，我们要找的<code>isValid</code>方法其实是对<code>ConstraintValidator</code>接口的具体实现，首先抽象出该接口：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">class ConstraintValidator extends Interface&#123;</span><br><span class="line">    ConstraintValidator()&#123;</span><br><span class="line">        this.hasQualifiedName(&quot;javax.validation&quot;, &quot;ConstraintValidator&quot;)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>抽象出<code>isValid</code>方法：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">class AbstractIsValid extends <span class="keyword">Method</span>&#123;</span><br><span class="line">    AbstractIsValid()&#123;</span><br><span class="line">        this.getDeclaringType() instanceof ConstraintValidator <span class="keyword">and</span></span><br><span class="line">        this.hasName(&quot;isValid&quot;)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">class IsValid extends <span class="keyword">Method</span>&#123;</span><br><span class="line">    IsValid()&#123;</span><br><span class="line">        <span class="keyword">exists</span>(AbstractIsValid abstractIsValid <span class="operator">|</span> this.overridesOrInstantiates<span class="operator">*</span>(abstractIsValid) )</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>确定source：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">predicate isSource(DataFlow::Node source) &#123; </span><br><span class="line">    <span class="keyword">exists</span>(IsValid isValid <span class="operator">|</span> source.asParameter() <span class="operator">=</span> isValid.getParameter(<span class="number">0</span>))</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="Sink"><a href="#Sink" class="headerlink" title="Sink"></a>Sink</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">class ConstraintValidatorContext extends RefType &#123;</span><br><span class="line">    ConstraintValidatorContext()&#123;</span><br><span class="line">        this.hasQualifiedName(&quot;javax.validation&quot;,&quot;ConstraintValidatorContext&quot;)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">class BuildConstraintViolationWithTemplate extends <span class="keyword">Method</span> &#123;</span><br><span class="line">    BuildConstraintViolationWithTemplate()&#123;</span><br><span class="line">        this.getDeclaringType().getASupertype<span class="operator">*</span>() instanceof  ConstraintValidatorContext <span class="keyword">and</span></span><br><span class="line">        this.hasName(&quot;buildConstraintViolationWithTemplate&quot;)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">predicate isSink(DataFlow::Node sink) &#123; </span><br><span class="line">    <span class="keyword">exists</span>(MethodAccess methodAccess <span class="operator">|</span> </span><br><span class="line">        methodAccess.getCallee() instanceof  BuildConstraintViolationWithTemplate <span class="keyword">and</span></span><br><span class="line">        methodAccess.getArgument(<span class="number">0</span>) <span class="operator">=</span> sink.asExpr()</span><br><span class="line">    )</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="污点跟踪"><a href="#污点跟踪" class="headerlink" title="污点跟踪"></a>污点跟踪</h3><p>完整代码：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br></pre></td><td class="code"><pre><span class="line">import java</span><br><span class="line">import semmle.code.java.dataflow.DataFlow</span><br><span class="line">import semmle.code.java.dataflow.TaintTracking</span><br><span class="line">import DataFlow::PathGraph</span><br><span class="line"></span><br><span class="line">class ConstraintValidator extends Interface&#123;</span><br><span class="line">    ConstraintValidator()&#123;</span><br><span class="line">        this.hasQualifiedName(&quot;javax.validation&quot;, &quot;ConstraintValidator&quot;)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">class AbstractIsValid extends <span class="keyword">Method</span>&#123;</span><br><span class="line">    AbstractIsValid()&#123;</span><br><span class="line">        this.getDeclaringType() instanceof ConstraintValidator <span class="keyword">and</span></span><br><span class="line">        this.hasName(&quot;isValid&quot;)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">class IsValid extends <span class="keyword">Method</span>&#123;</span><br><span class="line">    IsValid()&#123;</span><br><span class="line">        <span class="keyword">exists</span>(AbstractIsValid abstractIsValid <span class="operator">|</span> this.overridesOrInstantiates<span class="operator">*</span>(abstractIsValid) )</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">class ConstraintValidatorContext extends RefType &#123;</span><br><span class="line">    ConstraintValidatorContext()&#123;</span><br><span class="line">        this.hasQualifiedName(&quot;javax.validation&quot;,&quot;ConstraintValidatorContext&quot;)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">class BuildConstraintViolationWithTemplate extends <span class="keyword">Method</span> &#123;</span><br><span class="line">    BuildConstraintViolationWithTemplate()&#123;</span><br><span class="line">        this.getDeclaringType().getASupertype<span class="operator">*</span>() instanceof  ConstraintValidatorContext <span class="keyword">and</span></span><br><span class="line">        this.hasName(&quot;buildConstraintViolationWithTemplate&quot;)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">class MyTaintTrackingConfig extends TaintTracking::Configuration &#123;</span><br><span class="line">    MyTaintTrackingConfig() &#123; this <span class="operator">=</span> &quot;MyTaintTrackingConfig&quot; &#125;</span><br><span class="line"></span><br><span class="line">    override predicate isSource(DataFlow::Node source) &#123;</span><br><span class="line">        <span class="keyword">exists</span>(IsValid isValid <span class="operator">|</span> source.asParameter() <span class="operator">=</span> isValid.getParameter(<span class="number">0</span>))</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    override predicate isSink(DataFlow::Node sink) &#123;</span><br><span class="line">        <span class="keyword">exists</span>(MethodAccess methodAccess <span class="operator">|</span> </span><br><span class="line">            methodAccess.getCallee() instanceof  BuildConstraintViolationWithTemplate <span class="keyword">and</span></span><br><span class="line">            methodAccess.getArgument(<span class="number">0</span>) <span class="operator">=</span> sink.asExpr()</span><br><span class="line">        )</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">from</span> MyTaintTrackingConfig cfg, DataFlow::PathNode source, DataFlow::PathNode sink</span><br><span class="line"><span class="keyword">where</span> cfg.hasFlowPath(source, sink)</span><br><span class="line"><span class="keyword">select</span> sink, source, sink, &quot;Custom constraint error message contains unsanitized user data&quot;</span><br></pre></td></tr></table></figure>
+
+<p>查询结果为0。</p>
+<h3 id="问题分析"><a href="#问题分析" class="headerlink" title="问题分析"></a>问题分析</h3><p>目前source和sink点都已经明确，结果为0则说明从source到sink的路径上缺少了一步。CodeQL提供了<code>partial data flow</code>来进行Debug，这个功能可以查找从给定的source到任何可能的sink的流，让sink不受限制，同时限制从<code>source</code>到<code>sink</code>的搜索步骤的数量。因此可以使用这个功能来跟踪污点从source到所有可能的sink的流向，并查看流在哪一步不再被进一步跟踪。</p>
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://codeql.github.com/codeql-standard-libraries/java/semmle/code/java/dataflow/internal/DataFlowImpl2.qll/predicate.DataFlowImpl2$Configuration$hasPartialFlow.3.html">predicate hasPartialFlow(PartialPathNode source, PartialPathNode node, int dist)</a></p>
+<p>如果存在从<code>source</code>到<code>node</code>的部分数据流路径，则成立。<code>node</code>与最近的<code>source</code>之间的近似距离是<code>dist</code>并且被限制为小于或等于<code>explorationLimit()</code>。该谓词完全无视<code>sink</code>的定义。</p>
+<p>此谓词旨在用于数据流探索和调试，如果<code>sourece</code>数量太多或者<code>explorationLimit</code>设置得太高则可能会表现不佳。</p>
+<p>默认情况下禁用此谓词（没有结果）。用合适的数字覆盖 <code>explorationLimit()</code>以启用此谓词。</p>
+<p>要在<code>path-problem</code>查询中使用它，请导入模块<code>PartialPathGraph</code>。</p>
+</blockquote>
+<p>使用模板如下：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/** @kind path-problem */</span></span><br><span class="line">import java</span><br><span class="line">import semmle.code.java.dataflow.TaintTracking</span><br><span class="line">import DataFlow::PartialPathGraph <span class="operator">/</span><span class="operator">/</span> this <span class="keyword">is</span> different<span class="operator">!</span></span><br><span class="line"></span><br><span class="line">class MyTaintTrackingConfig extends TaintTracking::Configuration &#123;</span><br><span class="line">    MyTaintTrackingConfig() &#123; ... &#125; <span class="operator">/</span><span class="operator">/</span> same <span class="keyword">as</span> before</span><br><span class="line">    override predicate isSource(DataFlow::Node source) &#123; ... &#125; <span class="operator">/</span><span class="operator">/</span> same <span class="keyword">as</span> before</span><br><span class="line">    override predicate isSink(DataFlow::Node sink) &#123; ... &#125; <span class="operator">/</span><span class="operator">/</span> same <span class="keyword">as</span> before</span><br><span class="line">    override <span class="type">int</span> explorationLimit() &#123; <span class="keyword">result</span> <span class="operator">=</span>  <span class="number">10</span>&#125; <span class="operator">/</span><span class="operator">/</span> this <span class="keyword">is</span> different<span class="operator">!</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">from</span> MyTaintTrackingConfig cfg, DataFlow::PartialPathNode source, DataFlow::PartialPathNode sink</span><br><span class="line"><span class="keyword">where</span></span><br><span class="line">  cfg.hasPartialFlow(source, sink, _) <span class="keyword">and</span></span><br><span class="line">  source.getNode() <span class="operator">=</span> ... <span class="operator">/</span><span class="operator">/</span> TODO restrict <span class="keyword">to</span> the <span class="keyword">one</span> source we <span class="keyword">are</span> interested <span class="keyword">in</span>, <span class="keyword">for</span> ease <span class="keyword">of</span> debugging</span><br><span class="line"><span class="keyword">select</span> sink, source, sink, &quot;Partial flow from unsanitized user data&quot;</span><br><span class="line"></span><br><span class="line">predicate partial_flow(PartialPathNode n, Node src, <span class="type">int</span> dist) &#123;</span><br><span class="line">  <span class="keyword">exists</span>(MyTaintTrackingConfig conf, PartialPathNode source <span class="operator">|</span></span><br><span class="line">    conf.hasPartialFlow(source, n, dist) <span class="keyword">and</span></span><br><span class="line">    src <span class="operator">=</span> source.getNode() <span class="keyword">and</span></span><br><span class="line">    source <span class="operator">=</span>  <span class="operator">/</span><span class="operator">/</span> TODO <span class="operator">-</span> restrict <span class="keyword">to</span> THE source we <span class="keyword">are</span> interested <span class="keyword">in</span></span><br><span class="line">  )</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>完整代码（注意<code>DataFlow::PathGraph</code>和<code>DataFlow::PartialPathGraph</code>不能同时导入）：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br></pre></td><td class="code"><pre><span class="line">import java</span><br><span class="line">import semmle.code.java.dataflow.DataFlow</span><br><span class="line">import semmle.code.java.dataflow.TaintTracking</span><br><span class="line"><span class="operator">/</span><span class="operator">/</span>import DataFlow::PathGraph</span><br><span class="line">import DataFlow::PartialPathGraph</span><br><span class="line"></span><br><span class="line">class ConstraintValidator extends Interface&#123;</span><br><span class="line">    ConstraintValidator()&#123;</span><br><span class="line">        this.hasQualifiedName(&quot;javax.validation&quot;, &quot;ConstraintValidator&quot;)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">class AbstractIsValid extends <span class="keyword">Method</span>&#123;</span><br><span class="line">    AbstractIsValid()&#123;</span><br><span class="line">        this.getDeclaringType() instanceof ConstraintValidator <span class="keyword">and</span></span><br><span class="line">        this.hasName(&quot;isValid&quot;)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">class IsValid extends <span class="keyword">Method</span>&#123;</span><br><span class="line">    IsValid()&#123;</span><br><span class="line">        <span class="keyword">exists</span>(AbstractIsValid abstractIsValid <span class="operator">|</span> this.overridesOrInstantiates<span class="operator">*</span>(abstractIsValid) )</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">class ConstraintValidatorContext extends RefType &#123;</span><br><span class="line">    ConstraintValidatorContext()&#123;</span><br><span class="line">        this.hasQualifiedName(&quot;javax.validation&quot;,&quot;ConstraintValidatorContext&quot;)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">class BuildConstraintViolationWithTemplate extends <span class="keyword">Method</span> &#123;</span><br><span class="line">    BuildConstraintViolationWithTemplate()&#123;</span><br><span class="line">        this.getDeclaringType().getASupertype<span class="operator">*</span>() instanceof  ConstraintValidatorContext <span class="keyword">and</span></span><br><span class="line">        this.hasName(&quot;buildConstraintViolationWithTemplate&quot;)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">class MyTaintTrackingConfig extends TaintTracking::Configuration &#123;</span><br><span class="line">    MyTaintTrackingConfig() &#123; this <span class="operator">=</span> &quot;MyTaintTrackingConfig&quot; &#125;</span><br><span class="line"></span><br><span class="line">    override predicate isSource(DataFlow::Node source) &#123;</span><br><span class="line">        <span class="keyword">exists</span>(IsValid isValid <span class="operator">|</span> source.asParameter() <span class="operator">=</span> isValid.getParameter(<span class="number">0</span>))</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    override predicate isSink(DataFlow::Node sink) &#123;</span><br><span class="line">        <span class="keyword">exists</span>(MethodAccess methodAccess <span class="operator">|</span> </span><br><span class="line">            methodAccess.getCallee() instanceof  BuildConstraintViolationWithTemplate <span class="keyword">and</span></span><br><span class="line">            methodAccess.getArgument(<span class="number">0</span>) <span class="operator">=</span> sink.asExpr()</span><br><span class="line">        )</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    override <span class="type">int</span> explorationLimit() &#123; <span class="keyword">result</span> <span class="operator">=</span>  <span class="number">3</span>&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">from</span> MyTaintTrackingConfig cfg, DataFlow::PartialPathNode source, DataFlow::PartialPathNode sink</span><br><span class="line"><span class="keyword">where</span></span><br><span class="line">    cfg.hasPartialFlow(source, sink, _) <span class="keyword">and</span></span><br><span class="line">    source.getNode().asParameter().getName() <span class="operator">=</span> &quot;container&quot;</span><br><span class="line"><span class="keyword">select</span> sink, source, sink, &quot;Partial flow from unsanitized user data&quot;</span><br><span class="line"></span><br><span class="line">predicate partial_flow(DataFlow::PartialPathNode n, DataFlow::Node src, <span class="type">int</span> dist) &#123;</span><br><span class="line">    <span class="keyword">exists</span>(MyTaintTrackingConfig conf, DataFlow::PartialPathNode source <span class="operator">|</span></span><br><span class="line">        conf.hasPartialFlow(source, n, dist) <span class="keyword">and</span></span><br><span class="line">        src <span class="operator">=</span> source.getNode() <span class="keyword">and</span></span><br><span class="line">        source.getNode().asParameter().getName() <span class="operator">=</span> &quot;container&quot;</span><br><span class="line">    )</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>测试发现污点确实是到了预期的地方的</p>
+<p><img src="/2022/05/14/GitHub-Security-Lab-CTF-CodeQL-and-Chill/image-20220515222307815.png" alt="image-20220515222307815"></p>
+<p>这与题目中CodeQL不会通过getter传播污染的描述不符，猜测可能是我当前用的最新版引擎（v2.9.1）已经支持这类方法的污点自动传播了。</p>
+<blockquote>
+<p>You must have found that CodeQL does not propagate taint through getters like <code>container.getHardConstraints</code> and <code>container.getSoftConstraints</code>. Can you guess why this default behaviour was implemented?</p>
+</blockquote>
+<p>但如上所述，最新版CodeQL理应直接得到查询结果才对。修改一下<a href="./#%E6%B1%A1%E7%82%B9%E8%B7%9F%E8%B8%AA">污点跟踪</a>处的查询：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">class MyTaintTrackingConfig extends TaintTracking::Configuration &#123;</span><br><span class="line">    MyTaintTrackingConfig() &#123; this <span class="operator">=</span> &quot;MyTaintTrackingConfig&quot; &#125;</span><br><span class="line"></span><br><span class="line">    override predicate isSource(DataFlow::Node source) &#123;</span><br><span class="line">        <span class="keyword">exists</span>(IsValid isValid <span class="operator">|</span> source.asParameter() <span class="operator">=</span> isValid.getParameter(<span class="number">0</span>)) </span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    override predicate isSink(DataFlow::Node sink) &#123;</span><br><span class="line">        <span class="keyword">exists</span>(MethodAccess methodAccess <span class="operator">|</span> </span><br><span class="line">            <span class="operator">/</span><span class="operator">/</span>methodAccess.getArgument(<span class="number">0</span>) <span class="operator">=</span> sink.asExpr() <span class="keyword">and</span></span><br><span class="line">            methodAccess.getCallee() instanceof  BuildConstraintViolationWithTemplate <span class="keyword">and</span></span><br><span class="line">            sink.getLocation().getFile().getBaseName() <span class="operator">=</span> &quot;SchedulingConstraintSetValidator.java&quot;</span><br><span class="line">        )</span><br><span class="line">        </span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">from</span> MyTaintTrackingConfig cfg, DataFlow::Node source, DataFlow::Node sink,MethodAccess methodAccess</span><br><span class="line"><span class="keyword">where</span> cfg.hasFlow(source, sink) <span class="keyword">and</span></span><br><span class="line">    methodAccess.getArgument(<span class="number">0</span>) <span class="operator">=</span> sink.asExpr() <span class="keyword">and</span></span><br><span class="line">    methodAccess.getCallee() instanceof  BuildConstraintViolationWithTemplate <span class="keyword">and</span></span><br><span class="line">    sink.getLocation().getFile().getBaseName() <span class="operator">=</span> &quot;SchedulingConstraintSetValidator.java&quot;</span><br><span class="line"><span class="keyword">select</span> sink, source, sink, &quot;Custom constraint error message contains unsanitized user data&quot;</span><br></pre></td></tr></table></figure>
+
+<p>如果取消上面代码<code>//methodAccess.getArgument(0) = sink.asExpr() and</code>的注释，那么在<code>isSink</code>中和最后的查询条件中，对<code>sink</code>的筛选条件是一致的，所以如果上面的查询能查出结果，那么将那一行取消注释之后，也应该能查出结果，但是实际测试取消注释后是0个结果，感觉这里可能有什么bug，已经提了<a target="_blank" rel="noopener" href="https://github.com/github/codeql/issues/9177">Issue</a>。</p>
+<p><img src="/2022/05/14/GitHub-Security-Lab-CTF-CodeQL-and-Chill/image-20220516214726813.png" alt="image-20220516214726813"></p>
+<p><img src="/2022/05/14/GitHub-Security-Lab-CTF-CodeQL-and-Chill/image-20220516214817080.png" alt="image-20220516214817080"></p>
+<p>为了顺着原题目的思路继续学习，这里暂时把CodeQL引擎版本换成了<a target="_blank" rel="noopener" href="https://github.com/github/codeql-cli-binaries/releases/tag/v2.2.3">v2.2.3</a>，库换成了<a target="_blank" rel="noopener" href="https://github.com/github/codeql/releases/tag/v1.25.0">v1.25.0</a>。</p>
+<p>重新执行上方Debug的<a href="./#%E9%97%AE%E9%A2%98%E5%88%86%E6%9E%90">查询</a>，发现不会通过getters传播污点，比如 <code>container.getHardConstraints</code> 和 <code>container.getSoftConstraints</code>。</p>
+<p><img src="/2022/05/14/GitHub-Security-Lab-CTF-CodeQL-and-Chill/image-20220518222225797.png" alt="image-20220518222225797"></p>
+<h3 id="添加额外的污点步骤"><a href="#添加额外的污点步骤" class="headerlink" title="添加额外的污点步骤"></a>添加额外的污点步骤</h3><p>可以通过继承类 <a target="_blank" rel="noopener" href="https://github.com/github/codeql/blob/bc7163aa68017f93c25ec7423044727a5d785142/java/ql/src/semmle/code/java/dataflow/internal/TaintTrackingUtil.qll#L67">TaintTracking::AdditionalTaintStep</a>  并实现 <code>step</code> 谓词。 当受污染的数据从 <code>node1</code> 流向 <code>node2</code>.时， <code>step</code> 谓词应该成立。添加如下查询以让污点在getters传播。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">class GetterTaintStep extends TaintTracking::AdditionalTaintStep &#123;</span><br><span class="line">    override predicate step(DataFlow::Node node1, DataFlow::Node node2) &#123;</span><br><span class="line">        <span class="keyword">exists</span>(MethodAccess ma <span class="operator">|</span></span><br><span class="line">            ma.getQualifier() <span class="operator">=</span> node1.asExpr() <span class="keyword">and</span></span><br><span class="line">            ma <span class="operator">=</span> node2.asExpr() <span class="keyword">and</span></span><br><span class="line">            ma.getMethod() instanceof GetterMethod</span><br><span class="line">        )</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>Expr <a target="_blank" rel="noopener" href="https://codeql.github.com/codeql-standard-libraries/java/semmle/code/java/Expr.qll/predicate.Expr$MethodAccess$getQualifier.0.html">getQualifier()</a> : 获取此方法访问的限定表达式（如果有）。</p>
+</blockquote>
+<p><img src="/2022/05/14/GitHub-Security-Lab-CTF-CodeQL-and-Chill/image-20220518225203065.png" alt="image-20220518225203065"></p>
+<p>在<code>keySet</code>中断了，接着添加：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">class KeySetTaintStep extends TaintTracking::AdditionalTaintStep &#123;</span><br><span class="line">    override predicate step(DataFlow::Node node1, DataFlow::Node node2) &#123;</span><br><span class="line">        <span class="keyword">exists</span>(MethodAccess ma <span class="operator">|</span></span><br><span class="line">            ma.getQualifier() <span class="operator">=</span> node1.asExpr() <span class="keyword">and</span></span><br><span class="line">            ma <span class="operator">=</span> node2.asExpr() <span class="keyword">and</span></span><br><span class="line">            ma.getMethod().getName() <span class="operator">=</span> &quot;keySet&quot;</span><br><span class="line">        )</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><img src="/2022/05/14/GitHub-Security-Lab-CTF-CodeQL-and-Chill/image-20220518225526091.png" alt="image-20220518225526091"></p>
+<p>在<code>new HashSet&lt;&gt;</code>中断了，添加：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">class HashSetStep extends TaintTracking::AdditionalTaintStep &#123;</span><br><span class="line">    override predicate step(DataFlow::Node node1, DataFlow::Node node2) &#123;</span><br><span class="line">        <span class="keyword">exists</span>(ConstructorCall cc <span class="operator">|</span></span><br><span class="line">            cc.getAnArgument() <span class="operator">=</span> node1.asExpr() <span class="keyword">and</span></span><br><span class="line">            cc <span class="operator">=</span> node2.asExpr() <span class="keyword">and</span></span><br><span class="line">            cc.getConstructor().getSourceDeclaration().getName() <span class="operator">=</span> &quot;HashSet&quot;</span><br><span class="line">        )</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><img src="/2022/05/14/GitHub-Security-Lab-CTF-CodeQL-and-Chill/image-20220518230306550.png" alt="image-20220518230306550"></p>
+<p>已经流到预期的sink点了</p>
+<h3 id="最终查询"><a href="#最终查询" class="headerlink" title="最终查询"></a>最终查询</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br></pre></td><td class="code"><pre><span class="line">import java</span><br><span class="line">import semmle.code.java.dataflow.DataFlow</span><br><span class="line">import semmle.code.java.dataflow.TaintTracking</span><br><span class="line">import DataFlow::PathGraph</span><br><span class="line"></span><br><span class="line">class ConstraintValidator extends Interface&#123;</span><br><span class="line">    ConstraintValidator()&#123;</span><br><span class="line">        this.hasQualifiedName(&quot;javax.validation&quot;, &quot;ConstraintValidator&quot;)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">class AbstractIsValid extends <span class="keyword">Method</span>&#123;</span><br><span class="line">    AbstractIsValid()&#123;</span><br><span class="line">        this.getDeclaringType() instanceof ConstraintValidator <span class="keyword">and</span></span><br><span class="line">        this.hasName(&quot;isValid&quot;)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">class IsValid extends <span class="keyword">Method</span>&#123;</span><br><span class="line">    IsValid()&#123;</span><br><span class="line">        <span class="keyword">exists</span>(AbstractIsValid abstractIsValid <span class="operator">|</span> this.overridesOrInstantiates<span class="operator">*</span>(abstractIsValid) )</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">class ConstraintValidatorContext extends RefType &#123;</span><br><span class="line">    ConstraintValidatorContext()&#123;</span><br><span class="line">        this.hasQualifiedName(&quot;javax.validation&quot;,&quot;ConstraintValidatorContext&quot;)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">class BuildConstraintViolationWithTemplate extends <span class="keyword">Method</span> &#123;</span><br><span class="line">    BuildConstraintViolationWithTemplate()&#123;</span><br><span class="line">        this.getDeclaringType().getASupertype<span class="operator">*</span>() instanceof  ConstraintValidatorContext <span class="keyword">and</span></span><br><span class="line">        this.hasName(&quot;buildConstraintViolationWithTemplate&quot;)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">class MyTaintTrackingConfig extends TaintTracking::Configuration &#123;</span><br><span class="line">    MyTaintTrackingConfig() &#123; this <span class="operator">=</span> &quot;MyTaintTrackingConfig&quot; &#125;</span><br><span class="line"></span><br><span class="line">    override predicate isSource(DataFlow::Node source) &#123;</span><br><span class="line">        <span class="keyword">exists</span>(IsValid isValid <span class="operator">|</span> source.asParameter() <span class="operator">=</span> isValid.getParameter(<span class="number">0</span>))</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    override predicate isSink(DataFlow::Node sink) &#123;</span><br><span class="line">        <span class="keyword">exists</span>(MethodAccess methodAccess <span class="operator">|</span> </span><br><span class="line">            methodAccess.getCallee() instanceof  BuildConstraintViolationWithTemplate <span class="keyword">and</span></span><br><span class="line">            methodAccess.getArgument(<span class="number">0</span>) <span class="operator">=</span> sink.asExpr()</span><br><span class="line">        )</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">class GetterTaintStep extends TaintTracking::AdditionalTaintStep &#123;</span><br><span class="line">    override predicate step(DataFlow::Node node1, DataFlow::Node node2) &#123;</span><br><span class="line">        <span class="keyword">exists</span>(MethodAccess ma <span class="operator">|</span></span><br><span class="line">            ma.getQualifier() <span class="operator">=</span> node1.asExpr() <span class="keyword">and</span></span><br><span class="line">            ma <span class="operator">=</span> node2.asExpr() <span class="keyword">and</span></span><br><span class="line">            ma.getMethod() instanceof GetterMethod</span><br><span class="line">        )</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">class KeySetTaintStep extends TaintTracking::AdditionalTaintStep &#123;</span><br><span class="line">    override predicate step(DataFlow::Node node1, DataFlow::Node node2) &#123;</span><br><span class="line">        <span class="keyword">exists</span>(MethodAccess ma <span class="operator">|</span></span><br><span class="line">            ma.getQualifier() <span class="operator">=</span> node1.asExpr() <span class="keyword">and</span></span><br><span class="line">            ma <span class="operator">=</span> node2.asExpr() <span class="keyword">and</span></span><br><span class="line">            ma.getMethod().getName() <span class="operator">=</span> &quot;keySet&quot;</span><br><span class="line">        )</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">class HashSetStep extends TaintTracking::AdditionalTaintStep &#123;</span><br><span class="line">    override predicate step(DataFlow::Node node1, DataFlow::Node node2) &#123;</span><br><span class="line">        <span class="keyword">exists</span>(ConstructorCall cc <span class="operator">|</span></span><br><span class="line">            cc.getAnArgument() <span class="operator">=</span> node1.asExpr() <span class="keyword">and</span></span><br><span class="line">            cc <span class="operator">=</span> node2.asExpr() <span class="keyword">and</span></span><br><span class="line">            cc.getConstructor().getSourceDeclaration().getName() <span class="operator">=</span> &quot;HashSet&quot;</span><br><span class="line">        )</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">from</span> MyTaintTrackingConfig cfg, DataFlow::PathNode source, DataFlow::PathNode sink</span><br><span class="line"><span class="keyword">where</span> cfg.hasFlowPath(source, sink)</span><br><span class="line"><span class="keyword">select</span> sink, source, sink, &quot;Custom constraint error message contains unsanitized user data&quot;</span><br></pre></td></tr></table></figure>
+
+<p><img src="/2022/05/14/GitHub-Security-Lab-CTF-CodeQL-and-Chill/image-20220518230617304.png" alt="image-20220518230617304"></p>
+<h2 id="之前问题解决"><a href="#之前问题解决" class="headerlink" title="之前问题解决"></a>之前问题解决</h2><p>之前提的<a target="_blank" rel="noopener" href="https://github.com/github/codeql/issues/9177">Issue</a>有了答复。</p>
+<p>而且之前的数据流其实没流向预期的地方，是有中断的。如下查询：</p>
+<p>codeql-cli 及库版本：</p>
+<p><img src="/2022/05/14/GitHub-Security-Lab-CTF-CodeQL-and-Chill/image-20220521115653697.png" alt="image-20220521115653697"></p>
+<p>Java代码：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> java.util.Arrays;</span><br><span class="line"><span class="keyword">import</span> java.util.HashSet;</span><br><span class="line"><span class="keyword">import</span> java.util.Set;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Demo</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">        test(<span class="string">&quot;test&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">test</span><span class="params">(String source)</span>&#123;</span><br><span class="line">        Set&lt;String&gt; common = <span class="keyword">new</span> <span class="title class_">HashSet</span>&lt;&gt;(Arrays.asList(source));</span><br><span class="line">        System.out.println(<span class="string">&quot;&quot;</span> + common);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>将<code>test</code>方法的参数作为source，标准输出的内容作为sink的话，可以看到实际运行结果是source可以流向sink。</p>
+<p><img src="/2022/05/14/GitHub-Security-Lab-CTF-CodeQL-and-Chill/image-20220521125052495.png" alt="image-20220521125052495"></p>
+<p>CodeQL查询：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * @kind path-problem</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line">import java</span><br><span class="line">import semmle.code.java.dataflow.DataFlow</span><br><span class="line">import semmle.code.java.dataflow.TaintTracking</span><br><span class="line"><span class="operator">/</span><span class="operator">/</span>import DataFlow::PathGraph</span><br><span class="line">import DataFlow::PartialPathGraph</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">class MyTaintTrackingConfig extends TaintTracking::Configuration &#123;</span><br><span class="line">    MyTaintTrackingConfig() &#123; this <span class="operator">=</span> &quot;MyTaintTrackingConfig&quot; &#125;</span><br><span class="line"></span><br><span class="line">    override predicate isSource(DataFlow::Node source) &#123;</span><br><span class="line">        <span class="keyword">exists</span>(<span class="keyword">Method</span> m <span class="operator">|</span> </span><br><span class="line">            m.hasQualifiedName(&quot;&quot;, &quot;Demo&quot;, &quot;test&quot;) <span class="keyword">and</span></span><br><span class="line">            m.getAParameter() <span class="operator">=</span> source.asParameter()</span><br><span class="line">        )</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    override predicate isSink(DataFlow::Node sink) &#123;</span><br><span class="line">        <span class="keyword">exists</span>(MethodAccess ma <span class="operator">|</span> </span><br><span class="line">            ma.getCallee().getDeclaringType().hasQualifiedName(&quot;java.io&quot;, &quot;PrintStream&quot;) <span class="keyword">and</span></span><br><span class="line">            sink.asExpr() <span class="operator">=</span> ma.getAnArgument()</span><br><span class="line">        )</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    override <span class="type">int</span> explorationLimit() &#123; <span class="keyword">result</span> <span class="operator">=</span> <span class="number">10</span>&#125;</span><br><span class="line">&#125;</span><br><span class="line">  </span><br><span class="line"><span class="keyword">from</span> MyTaintTrackingConfig cfg, DataFlow::PartialPathNode source, DataFlow::PartialPathNode sink</span><br><span class="line"><span class="keyword">where</span> cfg.hasPartialFlow(source, sink, _)</span><br><span class="line"><span class="keyword">select</span> sink, source, sink, &quot;Partial flow from unsanitized user data&quot;</span><br></pre></td></tr></table></figure>
+
+<p><img src="/2022/05/14/GitHub-Security-Lab-CTF-CodeQL-and-Chill/image-20220521125744518.png" alt="image-20220521125744518"></p>
+<p>查询结果是污点只流到了<code>common [&lt;element&gt;]</code>，<code>&quot;&quot; + common</code>对于<code>common</code>中的污点数据来说是一种隐式读取，所以并没有让污点继续传播，也就没有流到预期的sink点即<code>System.out.println</code>的参数。</p>
+<p>解决方法是在字符串连接处引入这些隐式读取，即在污点跟踪配置中覆盖以下方法：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">override predicate isAdditionalTaintStep(DataFlow::Node pred, DataFlow::Node succ) &#123;</span><br><span class="line">    pred.asExpr() <span class="operator">=</span> succ.asExpr().(AddExpr).getAnOperand()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">override predicate allowImplicitRead(DataFlow::Node node, DataFlow::ContentSet c) &#123;</span><br><span class="line">    super.allowImplicitRead(node, c)</span><br><span class="line">    <span class="keyword">or</span></span><br><span class="line">    this.isAdditionalTaintStep(node, _) <span class="keyword">and</span></span><br><span class="line">    (</span><br><span class="line">        c instanceof DataFlow::ArrayContent</span><br><span class="line">        <span class="keyword">or</span></span><br><span class="line">        c instanceof DataFlow::CollectionContent</span><br><span class="line">        <span class="keyword">or</span></span><br><span class="line">        c instanceof DataFlow::MapValueContent</span><br><span class="line">    )</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>最终查询：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * @kind path-problem</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line">import java</span><br><span class="line">import semmle.code.java.dataflow.DataFlow</span><br><span class="line">import semmle.code.java.dataflow.TaintTracking</span><br><span class="line">import DataFlow::PathGraph</span><br><span class="line"><span class="operator">/</span><span class="operator">/</span>import DataFlow::PartialPathGraph</span><br><span class="line"></span><br><span class="line">class MyTaintTrackingConfig extends TaintTracking::Configuration &#123;</span><br><span class="line">    MyTaintTrackingConfig() &#123; this <span class="operator">=</span> &quot;MyTaintTrackingConfig&quot; &#125;</span><br><span class="line"></span><br><span class="line">    override predicate isSource(DataFlow::Node source) &#123;</span><br><span class="line">        <span class="keyword">exists</span>(<span class="keyword">Method</span> m <span class="operator">|</span> </span><br><span class="line">            m.hasQualifiedName(&quot;&quot;, &quot;Demo&quot;, &quot;test&quot;) <span class="keyword">and</span></span><br><span class="line">            m.getAParameter() <span class="operator">=</span> source.asParameter()</span><br><span class="line">        )</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    override predicate isSink(DataFlow::Node sink) &#123;</span><br><span class="line">        <span class="keyword">exists</span>(MethodAccess ma <span class="operator">|</span> </span><br><span class="line">            ma.getCallee().getDeclaringType().hasQualifiedName(&quot;java.io&quot;, &quot;PrintStream&quot;) <span class="keyword">and</span></span><br><span class="line">            sink.asExpr() <span class="operator">=</span> ma.getAnArgument()</span><br><span class="line">        )</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    override predicate isAdditionalTaintStep(DataFlow::Node pred, DataFlow::Node succ) &#123;</span><br><span class="line">        pred.asExpr() <span class="operator">=</span> succ.asExpr().(AddExpr).getAnOperand()</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    override predicate allowImplicitRead(DataFlow::Node node, DataFlow::ContentSet c) &#123;</span><br><span class="line">        super.allowImplicitRead(node, c)</span><br><span class="line">        <span class="keyword">or</span></span><br><span class="line">        this.isAdditionalTaintStep(node, _) <span class="keyword">and</span></span><br><span class="line">        (</span><br><span class="line">            c instanceof DataFlow::ArrayContent</span><br><span class="line">            <span class="keyword">or</span></span><br><span class="line">            c instanceof DataFlow::CollectionContent</span><br><span class="line">            <span class="keyword">or</span></span><br><span class="line">            c instanceof DataFlow::MapValueContent</span><br><span class="line">        )</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line">  </span><br><span class="line"><span class="keyword">from</span> MyTaintTrackingConfig cfg, DataFlow::PathNode source, DataFlow::PathNode sink</span><br><span class="line"><span class="keyword">where</span> cfg.hasFlowPath(source, sink)</span><br><span class="line"><span class="keyword">select</span> sink, source, sink, &quot;Partial flow from unsanitized user data&quot;</span><br></pre></td></tr></table></figure>
+
+<p><img src="/2022/05/14/GitHub-Security-Lab-CTF-CodeQL-and-Chill/image-20220521131153845.png" alt="image-20220521131153845"></p>
+<h2 id="参考文档"><a href="#参考文档" class="headerlink" title="参考文档"></a>参考文档</h2><p><a target="_blank" rel="noopener" href="https://securitylab.github.com/ctf/codeql-and-chill/">GitHub Security Lab CTF 4: CodeQL and Chill - The Java Edition</a></p>
+<p><a target="_blank" rel="noopener" href="https://securitylab.github.com/ctf/codeql-and-chill/answers/">Answers &amp; Feedback - GitHub Security Lab CTF 4: CodeQL and chill - The Java edition</a></p>
+<p><a target="_blank" rel="noopener" href="https://github.com/SummerSec/BlogPapers/blob/master/2022/GitHub%20Java%20CodeQL%20CTF.md">GitHub Java CodeQL CTF</a></p>
+<p><a target="_blank" rel="noopener" href="https://xz.aliyun.com/t/7979">使用 CodeQL 挖掘 CVE-2020-9297</a></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/CodeQL/" rel="tag"># CodeQL</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2022/03/05/CodeQL%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="prev" title="CodeQL学习笔记">
+                  <i class="fa fa-angle-left"></i> CodeQL学习笔记
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2022/07/16/Spring-Security-%E6%9D%83%E9%99%90%E7%BB%95%E8%BF%87-CVE-2022-22978/" rel="next" title="Spring Security 权限绕过(CVE-2022-22978)">
+                  Spring Security 权限绕过(CVE-2022-22978) <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">淚笑</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

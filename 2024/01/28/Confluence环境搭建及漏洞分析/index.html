@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"l3yx.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.21.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="这篇笔记是一个多月前写的，本来是想分析漏洞 CVE-2023-22522，但当时关于该漏洞的信息太少，最后也没分析出该漏洞原貌。笔记只留下一些环境搭建的方法和分析思路，另外还有一个不太算漏洞的漏洞，官方给了$300意思意思">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Confluence环境搭建及漏洞分析">
+<meta property="og:url" content="https://l3yx.github.io/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/index.html">
+<meta property="og:site_name" content="l3yx&#39;s blog">
+<meta property="og:description" content="这篇笔记是一个多月前写的，本来是想分析漏洞 CVE-2023-22522，但当时关于该漏洞的信息太少，最后也没分析出该漏洞原貌。笔记只留下一些环境搭建的方法和分析思路，另外还有一个不太算漏洞的漏洞，官方给了$300意思意思">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://l3yx.github.io/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210124036385.png">
+<meta property="og:image" content="https://l3yx.github.io/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210124114393.png">
+<meta property="og:image" content="https://l3yx.github.io/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210125246183.png">
+<meta property="og:image" content="https://l3yx.github.io/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210130027450.png">
+<meta property="og:image" content="https://l3yx.github.io/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210130342789.png">
+<meta property="og:image" content="https://l3yx.github.io/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210131317013.png">
+<meta property="og:image" content="https://l3yx.github.io/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210131624038.png">
+<meta property="og:image" content="https://l3yx.github.io/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210135932141.png">
+<meta property="og:image" content="https://l3yx.github.io/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210140229775.png">
+<meta property="og:image" content="https://l3yx.github.io/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20240128115341600.png">
+<meta property="og:image" content="https://l3yx.github.io/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210204423849.png">
+<meta property="og:image" content="https://l3yx.github.io/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210224445107.png">
+<meta property="og:image" content="https://l3yx.github.io/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210225118832.png">
+<meta property="og:image" content="https://l3yx.github.io/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210225743403.png">
+<meta property="og:image" content="https://l3yx.github.io/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210225555317.png">
+<meta property="og:image" content="https://l3yx.github.io/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231211093622385.png">
+<meta property="og:image" content="https://l3yx.github.io/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231211094150585.png">
+<meta property="og:image" content="https://l3yx.github.io/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231211094348930.png">
+<meta property="og:image" content="https://l3yx.github.io/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231211094457434.png">
+<meta property="article:published_time" content="2024-01-28T03:48:00.000Z">
+<meta property="article:modified_time" content="2024-01-28T03:58:17.089Z">
+<meta property="article:author" content="淚笑">
+<meta property="article:tag" content="漏洞分析">
+<meta property="article:tag" content="Confluence">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://l3yx.github.io/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210124036385.png">
+
+
+<link rel="canonical" href="https://l3yx.github.io/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://l3yx.github.io/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/","path":"2024/01/28/Confluence环境搭建及漏洞分析/","title":"Confluence环境搭建及漏洞分析"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Confluence环境搭建及漏洞分析 | l3yx's blog</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">l3yx's blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA"><span class="nav-number">1.</span> <span class="nav-text">环境搭建</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90"><span class="nav-number">2.</span> <span class="nav-text">漏洞分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8A%A8%E6%80%81%E8%B0%83%E8%AF%95%E6%96%B9%E6%B3%95"><span class="nav-number">2.1.</span> <span class="nav-text">动态调试方法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B0%9D%E8%AF%95%E7%AC%AC%E4%B8%80%E6%AC%A1CodeQL%E6%89%AB%E6%8F%8F"><span class="nav-number">2.2.</span> <span class="nav-text">尝试第一次CodeQL扫描</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BB%A3%E7%A0%81Diff%EF%BC%8C%E5%B0%9D%E8%AF%95%E7%AC%AC%E4%BA%8C%E6%AC%A1CodeQL%E6%89%AB%E6%8F%8F"><span class="nav-number">2.3.</span> <span class="nav-text">代码Diff，尝试第二次CodeQL扫描</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%89%AB%E6%8F%8F%E7%BB%93%E6%9E%9C%E4%B8%80"><span class="nav-number">2.3.1.</span> <span class="nav-text">扫描结果一</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%89%AB%E6%8F%8F%E7%BB%93%E6%9E%9C%E4%BA%8C"><span class="nav-number">2.3.2.</span> <span class="nav-text">扫描结果二</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">3.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="淚笑"
+      src="/resources/avatar.jpg">
+  <p class="site-author-name" itemprop="name">淚笑</p>
+  <div class="site-description" itemprop="description">学的越多，懂的越少</div>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/l3yx" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;l3yx" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1729888211@qq.com" title="E-Mail → mailto:1729888211@qq.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://l3yx.github.io/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/resources/avatar.jpg">
+      <meta itemprop="name" content="淚笑">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="l3yx's blog">
+      <meta itemprop="description" content="学的越多，懂的越少">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Confluence环境搭建及漏洞分析 | l3yx's blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Confluence环境搭建及漏洞分析
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2024-01-28 11:48:00 / 修改时间：11:58:17" itemprop="dateCreated datePublished" datetime="2024-01-28T11:48:00+08:00">2024-01-28</time>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>这篇笔记是一个多月前写的，本来是想分析漏洞 CVE-2023-22522，但当时关于该漏洞的信息太少，最后也没分析出该漏洞原貌。笔记只留下一些环境搭建的方法和分析思路，另外还有一个不太算漏洞的漏洞，官方给了$300意思意思</p>
+<span id="more"></span>
+
+
+
+<h2 id="环境搭建"><a href="#环境搭建" class="headerlink" title="环境搭建"></a>环境搭建</h2><p>下载地址：<a target="_blank" rel="noopener" href="https://product-downloads.atlassian.com/software/confluence/downloads/atlassian-confluence-8.5.3.zip">https://product-downloads.atlassian.com/software/confluence/downloads/atlassian-confluence-8.5.3.zip</a></p>
+<p>支持的JDK和数据库版本：<a target="_blank" rel="noopener" href="https://confluence.atlassian.com/doc/supported-platforms-207488198.html">https://confluence.atlassian.com/doc/supported-platforms-207488198.html</a></p>
+<p>docker-compose.yml：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">services:</span><br><span class="line">  confluence:</span><br><span class="line">    build: .</span><br><span class="line">    ports:</span><br><span class="line">      - &quot;8090:8090&quot;</span><br><span class="line">      - &quot;5005:5005&quot;</span><br><span class="line">    environment:</span><br><span class="line">      - CATALINA_OPTS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005</span><br><span class="line">    depends_on:</span><br><span class="line">      - postgres</span><br><span class="line">    command: /atlassian-confluence/bin/start-confluence.sh --fg</span><br><span class="line"></span><br><span class="line">  postgres:</span><br><span class="line">    image: postgres:15-alpine3.18</span><br><span class="line">    expose:</span><br><span class="line">      - 5432</span><br><span class="line">    environment:</span><br><span class="line">      - POSTGRES_PASSWORD=postgres</span><br><span class="line">    command:</span><br><span class="line">      - sh</span><br><span class="line">      - -c</span><br><span class="line">      - echo &#x27;CREATE DATABASE confluence;&#x27; &gt; /docker-entrypoint-initdb.d/init.sql &amp;&amp; /usr/local/bin/docker-entrypoint.sh postgres</span><br></pre></td></tr></table></figure>
+
+<p>Dockerfile：</p>
+<figure class="highlight dockerfile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">FROM</span> openjdk:<span class="number">17</span>-jdk-bullseye</span><br><span class="line"></span><br><span class="line"><span class="keyword">COPY</span><span class="language-bash"> atlassian-confluence-8.5.3.zip /</span></span><br><span class="line"><span class="keyword">COPY</span><span class="language-bash"> confluence.cfg.xml /var/data/confluence/confluence.cfg.xml</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">RUN</span><span class="language-bash"> unzip atlassian-confluence-8.5.3.zip &amp;&amp; \ </span></span><br><span class="line">    mv atlassian-confluence-<span class="number">8.5</span>.<span class="number">3</span> atlassian-confluence &amp;&amp; \</span><br><span class="line">    mkdir -p /var/data/confluence/ &amp;&amp; \</span><br><span class="line">    echo <span class="string">&#x27; &#x27;</span> &gt;&gt; /atlassian-confluence/confluence/WEB-INF/classes/confluence-init.properties &amp;&amp; \</span><br><span class="line">    echo <span class="string">&#x27;confluence.home=/var/data/confluence/&#x27;</span> &gt;&gt; /atlassian-confluence/confluence/WEB-INF/classes/confluence-init.properties</span><br></pre></td></tr></table></figure>
+
+<p>confluence.cfg.xml：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version=<span class="string">&quot;1.0&quot;</span> encoding=<span class="string">&quot;UTF-8&quot;</span>?&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">confluence-configuration</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">setupStep</span>&gt;</span>setupcluster-start<span class="tag">&lt;/<span class="name">setupStep</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">setupType</span>&gt;</span>custom<span class="tag">&lt;/<span class="name">setupType</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">buildNumber</span>&gt;</span>9012<span class="tag">&lt;/<span class="name">buildNumber</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">properties</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">&quot;access.mode&quot;</span>&gt;</span>READ_WRITE<span class="tag">&lt;/<span class="name">property</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">&quot;atlassian.license.message&quot;</span>&gt;</span>AAABlA0ODAoPeNp1klFvmzAUhd/9K5D20qlya0MXIJKlUSBZOkLaQlJlyotrXRK3QCID6divn1Mnq lq1j77n+Pq75/pbvumsCIRFXIv6Q5sMnSsrzHLLJraDQgW8lds64i2wQwVTGxMPRdAIJXcHiYXbu ig7qAVYZ9rHrRDqFtT31dCK97zsXhugKZe6WnNti//upOpPLa8woZi4KJEC6uYLsTTiAlRzeNJGW ff4RtCqDpDQGBdpVz2CmhXzRjsZpuiNwLhmas1r2ZhK3/W8Xj9JXv5cV1yWF2JbmT5ctHIP5oqer 9XnWE9Qfn7lSPeLNxs2DV/CUewv/z25Fb07zwux9MejYMQj+1n8qUWwuV+353Y+rpaDKP79wB+8Y lG9JEEaXo7vVmzFDMExjrzfQcorYOFsOo3vw0mQGD1rudIps4KXDZzCm0QsmURZnOKE+p47oD8cl IHag9LKtR/McbrIr3Gcux6+8cjctDoszezMDPwM/SloOiDEJZ7jUHTbKbHhDXz8Csd4XiE/TUfjs PdI/wGum893MCwCFEBm/Dhfacgh6q8z1KkLA7IoRtgMAhR3aSuUYcM2Bt0xGXVKCB533E+uyg==X 02jj<span class="tag">&lt;/<span class="name">property</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">&quot;confluence.setup.server.id&quot;</span>&gt;</span>B9AU-NVTB-ET78-J80U<span class="tag">&lt;/<span class="name">property</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">&quot;confluence.webapp.context.path&quot;</span>&gt;</span><span class="tag">&lt;/<span class="name">property</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">&quot;jwt.private.key&quot;</span>&gt;</span>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<span class="tag">&lt;/<span class="name">property</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">&quot;jwt.public.key&quot;</span>&gt;</span>MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAkP0PJ779cjmR3XA3dE3DPloM79asNOd4pjQY9lmsUpg7b//3F4ugIBLvIouF44m8/TMjgteMYhh7EPj1jch7JV6uMilWb4POdbgod5zUlHESnExqfZ0tHSFsiYFVJCBgq3dzsMaSkDxxLKBYiua+wJ8AThXdNuclDb7FK+vZC2IRgA+KwQGOCbEVhUP1qbpwpBTAiD62j7HnKsBcTd0WApiNq6Q0dPAZUH0lWkNwQkTbU58R29AicgD9Twwmi3A5fLytlk9P+/kNZS9CiklPTdicq/1xzuaQedYZsZQEBiz0jos2VpVqwZYSPcPUxUns1t64rXG3iqhlSUc8Rdr+oy6smgERX9WziQHcRmG7hwreZofRzfFddYR8q3N5QC/Rhj5KAcO9o1B0FXyYojURAkxviyVHvA15mf9z0P7oFneVMIEEJSixtUEhswKXUBQmr07t7SX9LIvwd98mNyipECG3uPrdY6hQzD2bFwfvreFSJlXiTc5cRQmgYLItQw4TAgMBAAE=<span class="tag">&lt;/<span class="name">property</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">&quot;lucene.index.dir&quot;</span>&gt;</span>$&#123;localHome&#125;/index<span class="tag">&lt;/<span class="name">property</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">&quot;struts.multipart.saveDir&quot;</span>&gt;</span>$&#123;localHome&#125;/temp<span class="tag">&lt;/<span class="name">property</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">&quot;synchrony.encryption.disabled&quot;</span>&gt;</span>true<span class="tag">&lt;/<span class="name">property</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">&quot;synchrony.proxy.enabled&quot;</span>&gt;</span>true<span class="tag">&lt;/<span class="name">property</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">&quot;synchrony.service.authtoken&quot;</span>&gt;</span>fd4915a6ec781b2479100ef98bb9a788<span class="tag">&lt;/<span class="name">property</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">properties</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">confluence-configuration</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>confluence.cfg.xml中的license是在官网申请的，有效期只有一个月，如果过期了需要重新申请</p>
+<p>启动环境：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker compose up -d --build </span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="漏洞分析"><a href="#漏洞分析" class="headerlink" title="漏洞分析"></a>漏洞分析</h2><h3 id="动态调试方法"><a href="#动态调试方法" class="headerlink" title="动态调试方法"></a>动态调试方法</h3><p>前文的环境搭建已经开启了远程调试端口，如果要进行断点调试的话，可以将所有jar包导入IDEA作为lib，直接到jar包中的类下断点（用反编译后的源码下断点的话行号可能不准，断不到指定位置）</p>
+<h3 id="尝试第一次CodeQL扫描"><a href="#尝试第一次CodeQL扫描" class="headerlink" title="尝试第一次CodeQL扫描"></a>尝试第一次CodeQL扫描</h3><p>由于没有分析过confluence相关的漏洞，而且关于这个漏洞公开的细节太少，想试试用CodeQL扫一下</p>
+<p>confluence是闭源系统，可以用这个工具编译数据库：<a target="_blank" rel="noopener" href="https://github.com/waderwu/extractor-java">https://github.com/waderwu/extractor-java</a></p>
+<p>将源码包和依赖包分别拷贝到不同目录（这里我默认将以com.atlassian.confluence.开头的视为confluence本身，其他jar包视为依赖）：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">mkdir -p atlassian-confluence-8.5.3-src/lib/</span><br><span class="line">find atlassian-confluence-8.5.3/ -type f -name &quot;*.jar&quot; | grep &quot;com.atlassian.confluence.&quot; | xargs -I &#123;&#125; cp &#123;&#125; atlassian-confluence-8.5.3-src/</span><br><span class="line">find atlassian-confluence-8.5.3/ -type f -name &quot;*.jar&quot; | grep -v &quot;com.atlassian.confluence.&quot; | xargs -I &#123;&#125; cp &#123;&#125; atlassian-confluence-8.5.3-src/lib/</span><br></pre></td></tr></table></figure>
+
+
+
+<p>将源码包解压：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">cd atlassian-confluence-8.5.3-src/</span><br><span class="line">ls |grep &quot;.jar&quot; | xargs -I &#123;&#125; unzip -q -n &#123;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>反编译class（只处理包名为com.atlassian.confluence的类）：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">python3 ~/Tools/extractor-java/class2java.py com/atlassian/confluence</span><br></pre></td></tr></table></figure>
+
+
+
+<p>编译CodeQL数据库：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">python3 ~/Tools/extractor-java/run.py atlassian-confluence-8.5.3 com/atlassian/confluence -ld lib/</span><br></pre></td></tr></table></figure>
+
+
+
+<p>然后用CodeQl官方的模板注入规则进行扫描：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * @name Server-side template injection</span></span><br><span class="line"><span class="comment"> * @description Untrusted input interpreted as a template can lead to remote code execution.</span></span><br><span class="line"><span class="comment"> * @kind path-problem</span></span><br><span class="line"><span class="comment"> * @problem.severity error</span></span><br><span class="line"><span class="comment"> * @security-severity 9.3</span></span><br><span class="line"><span class="comment"> * @precision high</span></span><br><span class="line"><span class="comment"> * @id java/server-side-template-injection</span></span><br><span class="line"><span class="comment"> * @tags security</span></span><br><span class="line"><span class="comment"> *       external/cwe/cwe-1336</span></span><br><span class="line"><span class="comment"> *       external/cwe/cwe-094</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"></span><br><span class="line">import java</span><br><span class="line">import semmle.code.java.security.TemplateInjectionQuery</span><br><span class="line">import TemplateInjectionFlow::PathGraph</span><br><span class="line"></span><br><span class="line"><span class="keyword">from</span> TemplateInjectionFlow::PathNode source, TemplateInjectionFlow::PathNode sink</span><br><span class="line"><span class="keyword">where</span> TemplateInjectionFlow::flowPath(source, sink)</span><br><span class="line"><span class="keyword">select</span> sink.getNode(), source, sink, &quot;Template, which may contain code, depends on a $@.&quot;,</span><br><span class="line">  source.getNode(), &quot;user-provided value&quot;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>没想到还真扫到一个可能的漏洞，从<code>com.atlassian.confluence.plugins.gatekeeper.controllers.AbstractPermissionsAction</code>的字段<code>exportCustomSpaceDetailsFormat</code>到<code>velocityEngine.evaluate</code>，理论上<code>exportCustomSpaceDetailsFormat</code>可控的话，就可以造成模板注入漏洞</p>
+<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210124036385.png" alt="image-20231210124036385"></p>
+<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210124114393.png" alt="image-20231210124114393"></p>
+<p>其实一开始我不知道为什么这个类的字段可以作为source，猜想可能是confluence的web框架会自动注入请求参数</p>
+<p>关于入口或者说漏洞接口的寻找思路：</p>
+<p><code>AbstractPermissionsAction</code>是一个抽象类，所以我先找了同级目录下的对应实现类<code>SpacePermissionsAction</code></p>
+<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210125246183.png" alt="image-20231210125246183"></p>
+<p><code>SpacePermissionsAction</code>看起来像是设置空间权限的controller，它们所在jar包看起来是一个名为<code>gatekeeper</code>的插件，后续又结合官方文档，推测并找到了一个功能入口：</p>
+<p><code>/plugins/gatekeeper-plugin/space/inspect-permissions.action?key=TEST</code></p>
+<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210130027450.png" alt="image-20231210130027450"></p>
+<p>点击<code>导出</code>，对应的请求如下：</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">POST</span> <span class="string">/plugins/gatekeeper-plugin/space/init-evaluator.action</span> <span class="meta">HTTP/1.1</span></span><br><span class="line"><span class="attribute">Host</span><span class="punctuation">: </span>127.0.0.1:8090</span><br><span class="line"><span class="attribute">Content-Type</span><span class="punctuation">: </span>application/x-www-form-urlencoded</span><br><span class="line"></span><br><span class="line"><span class="language-sas"><span class="keyword">key</span>=TEST<span class="variable">&amp;userFilter</span>=<span class="variable">&amp;excludeDisabled</span>=false<span class="variable">&amp;excludeOwnersNoPermissions</span>=false<span class="variable">&amp;alwaysShowAnonymous</span>=false<span class="variable">&amp;pageId</span>=<span class="variable">&amp;exportCsvDelimiter</span>=%2C<span class="variable">&amp;exportSpaceDetailsFormat</span>=<span class="keyword">key</span><span class="variable">&amp;exportFormat</span>=csv</span></span><br></pre></td></tr></table></figure>
+
+<p>代码会运行到<code>com.atlassian.confluence.plugins.gatekeeper.controllers.AbstractPermissionsAction#initEvaluator</code></p>
+<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210130342789.png" alt="image-20231210130342789"></p>
+<p>但漏洞Sink在<code>checkValidVelocitySyntax</code>方法中，于是构造请求：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">key=TEST&amp;userFilter=&amp;excludeDisabled=false&amp;excludeOwnersNoPermissions=false&amp;alwaysShowAnonymous=false&amp;pageId=&amp;exportCsvDelimiter=%2C&amp;exportSpaceDetailsFormat=custom&amp;exportFormat=csv&amp;exportCustomSpaceDetailsFormat=leixiao</span><br></pre></td></tr></table></figure>
+
+<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210131317013.png" alt="image-20231210131317013"></p>
+<p>代码按预期走到了漏洞点，但奇怪就在这行代码怎么也执行不了，会抛出类加载冲突的异常：</p>
+<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210131624038.png" alt="image-20231210131624038"></p>
+<p>以为会和Jdk版本有关，尝试了Jdk11和Jdk17，都是这样，所以放弃了这个接口的尝试</p>
+<p><code>AbstractPermissionsAction</code>共有两个实现类：</p>
+<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210135932141.png" alt="image-20231210135932141"></p>
+<p>另一个类名为<code>GlobalPermissionsAction</code>，但对应的模组貌似是被默认禁用的：</p>
+<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210140229775.png" alt="image-20231210140229775"></p>
+<p>开启后该模组后，入口在<code>/admin/plugins/gatekeeper-plugin/global/inspect-permissions.action</code>，同样点击导出，测试后发现也会抛出类加载冲突异常。</p>
+<p>后来搜到一个15年的Bug：<a target="_blank" rel="noopener" href="https://jira.atlassian.com/browse/CONFSERVER-40148">https://jira.atlassian.com/browse/CONFSERVER-40148</a> ，和我遇到的问题一致，官方在20年发表的最后一句回复说已经在最新版本的Confluence上解决了，如果再次遇到这个情况可以继续反馈。我理解官方应该是承认这是设计上的Bug，并且会修复。然后刚好<code>gatekeeper</code>这个插件也有这个问题，但是没有被发现，所以目前来看这个插件确实存在着漏洞，但漏洞也确实利用不了。</p>
+<p>如果Bug被解决，那么这个漏洞是可以被轻松利用的，首先原本的POST请求其实可以转换成GET请求，然后就有两种利用方式：</p>
+<ol>
+<li>未授权的用户发送链接给管理员使其点击，类似于CSRF</li>
+<li>普通权限用户将链接以图片Url插入文章中，等待管理员浏览</li>
+</ol>
+<p>（后续是我本地修复了这个Bug，Bug原因是依赖包冲突，将<code>org.apache.servicemix.bundles.velocity-1.7_6.jar</code>换成maven仓库中的<code>org.apache.servicemix.bundles.velocity-1.6.4_4.jar</code>即可，但修复后依旧没办法利用。。。 黑名单限制太死了，而且此处也没有上下文，实在找不到绕过方法 -_-）</p>
+<p>再后面发现可以造成Dos攻击，报告官方后，给了$300奖励</p>
+<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20240128115341600.png" alt="image-20240128115341600"></p>
+<h3 id="代码Diff，尝试第二次CodeQL扫描"><a href="#代码Diff，尝试第二次CodeQL扫描" class="headerlink" title="代码Diff，尝试第二次CodeQL扫描"></a>代码Diff，尝试第二次CodeQL扫描</h3><p>将8.5.3和8.5.4反编译后的com.atlassian.confluence包中的类进行diff</p>
+<p>发现<code>com.atlassian.confluence.velocity.ConfigurableResourceManager#loadResource</code>方法中添加了一段对<code>resourceName</code>进行验证的代码：</p>
+<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210204423849.png" alt="image-20231210204423849"></p>
+<p>随后搜了一些资料，发现这个方法也是CVE-2019-3396的关键一环，所以我猜测CVE-2023-22522的原理可能和CVE-2019-3396差不多</p>
+<p>然后根据CVE-2019-3396写了CodeQL的查询语句：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * @id java/confluence-ssti</span></span><br><span class="line"><span class="comment"> * @kind path-problem</span></span><br><span class="line"><span class="comment"> * @problem.severity error</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"></span><br><span class="line">import java</span><br><span class="line">import semmle.code.java.dataflow.FlowSources</span><br><span class="line">import semmle.code.java.dataflow.TaintTracking</span><br><span class="line">import DataFlow::PathGraph</span><br><span class="line"></span><br><span class="line"><span class="operator">/</span><span class="operator">/</span> 从CVE<span class="number">-2019</span><span class="number">-3396</span>总结的source</span><br><span class="line">class MacroExecuteMethod extends <span class="keyword">Method</span> &#123;</span><br><span class="line">  MacroExecuteMethod() &#123;</span><br><span class="line">    <span class="keyword">exists</span>(RefType t <span class="operator">|</span></span><br><span class="line">      t.hasQualifiedName(&quot;com.atlassian.confluence.macro&quot;, &quot;Macro&quot;) <span class="keyword">and</span></span><br><span class="line">      this.getDeclaringType().getASupertype<span class="operator">*</span>() <span class="operator">=</span> t <span class="keyword">and</span></span><br><span class="line">      this.hasName(&quot;execute&quot;) <span class="keyword">and</span></span><br><span class="line">      this.getNumberOfParameters() <span class="operator">=</span> <span class="number">3</span></span><br><span class="line">    )</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="operator">/</span><span class="operator">/</span> 测试发现这里作为sink的话无法直接串联起来，所以改为GetTemplateMethod</span><br><span class="line">class GetResourceMethod extends <span class="keyword">Method</span> &#123;</span><br><span class="line">  GetResourceMethod() &#123;</span><br><span class="line">    <span class="keyword">exists</span>(Class c <span class="operator">|</span></span><br><span class="line">      c.hasName(&quot;ConfigurableResourceManager&quot;) <span class="keyword">and</span></span><br><span class="line">      this.getDeclaringType() <span class="operator">=</span> c <span class="keyword">and</span></span><br><span class="line">      this.hasName(&quot;getResource&quot;)</span><br><span class="line">    )</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">class GetTemplateMethod extends <span class="keyword">Method</span> &#123;</span><br><span class="line">  GetTemplateMethod() &#123;</span><br><span class="line">    <span class="keyword">exists</span>(Class c <span class="operator">|</span></span><br><span class="line">      c.hasQualifiedName(&quot;org.apache.velocity.app&quot;, &quot;VelocityEngine&quot;) <span class="keyword">and</span></span><br><span class="line">      this.getDeclaringType() <span class="operator">=</span> c <span class="keyword">and</span></span><br><span class="line">      this.hasName(&quot;getTemplate&quot;)</span><br><span class="line">    )</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">class TaintTrackingConfig extends TaintTracking::Configuration &#123;</span><br><span class="line">  TaintTrackingConfig() &#123; this <span class="operator">=</span> &quot;TaintTrackingConfig&quot; &#125;</span><br><span class="line"></span><br><span class="line">  override predicate isSource(DataFlow::Node source) &#123;</span><br><span class="line">    source instanceof RemoteFlowSource</span><br><span class="line">    <span class="keyword">or</span></span><br><span class="line">    <span class="keyword">exists</span>(MacroExecuteMethod macroExecuteMethod <span class="operator">|</span></span><br><span class="line">      source.asParameter() <span class="operator">=</span> macroExecuteMethod.getParameter(<span class="number">0</span>)</span><br><span class="line">      <span class="keyword">or</span></span><br><span class="line">      source.asParameter() <span class="operator">=</span> macroExecuteMethod.getParameter(<span class="number">1</span>)</span><br><span class="line">    )</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  override predicate isSink(DataFlow::Node sink) &#123;</span><br><span class="line">    <span class="keyword">exists</span>(<span class="keyword">Call</span> <span class="keyword">call</span> <span class="operator">|</span> call.getCallee() instanceof GetTemplateMethod <span class="operator">|</span></span><br><span class="line">      sink.asExpr() <span class="operator">=</span> call.getArgument(<span class="number">0</span>)</span><br><span class="line">    )</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">from</span> TaintTrackingConfig cfg, DataFlow::PathNode source, DataFlow::PathNode sink</span><br><span class="line"><span class="keyword">where</span> cfg.hasFlowPath(source, sink)</span><br><span class="line"><span class="keyword">select</span> sink.getNode(), source, sink, &quot;Server-side template injection, depends on a $@.&quot;,</span><br><span class="line">  source.getNode(), source.toString()</span><br></pre></td></tr></table></figure>
+
+
+
+<p>一番分析调试后，又加了如下Sanitizer：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">override predicate isSanitizer(DataFlow::Node node) &#123;</span><br><span class="line">  <span class="keyword">exists</span>(<span class="keyword">Call</span> <span class="keyword">call</span> <span class="operator">|</span> call.getCallee().hasName(&quot;getSpaceKey&quot;) <span class="operator">|</span> node.asExpr() <span class="operator">=</span> <span class="keyword">call</span>)</span><br><span class="line">  <span class="keyword">or</span></span><br><span class="line">  <span class="keyword">exists</span>(<span class="keyword">Call</span> <span class="keyword">call</span> <span class="operator">|</span> call.getCallee().hasName(&quot;getDocId&quot;) <span class="keyword">and</span> call.getNumArgument() <span class="operator">=</span> <span class="number">1</span> <span class="operator">|</span></span><br><span class="line">    node.asExpr() <span class="operator">=</span> call.getAnArgument()</span><br><span class="line">  )</span><br><span class="line">  <span class="keyword">or</span></span><br><span class="line">  <span class="keyword">exists</span>(<span class="keyword">Call</span> <span class="keyword">call</span> <span class="operator">|</span></span><br><span class="line">    call.getCallee().hasName(&quot;get&quot;) <span class="keyword">and</span></span><br><span class="line">    call.getNumArgument() <span class="operator">=</span> <span class="number">1</span> <span class="keyword">and</span></span><br><span class="line">    call.getArgument(<span class="number">0</span>).(StringLiteral).getValue() <span class="operator">=</span> &quot;_template&quot;</span><br><span class="line">  <span class="operator">|</span></span><br><span class="line">    node.asExpr() <span class="operator">=</span> <span class="keyword">call</span></span><br><span class="line">  ) <span class="operator">/</span><span class="operator">/</span>传_template的利用方法已经在CVE<span class="number">-2019</span><span class="number">-3396</span>中被修复了</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>最后查询结果如下：</p>
+<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210224445107.png" alt="image-20231210224445107"></p>
+<h4 id="扫描结果一"><a href="#扫描结果一" class="headerlink" title="扫描结果一"></a>扫描结果一</h4><p>总共3个结果，但其实后两个结果是一样的，都是传入了<code>theme</code>这个参数，<code>theme</code>会和路径字符串进行拼接，最后传到<code>com.atlassian.confluence.velocity.ConfigurableResourceManager#getResource</code></p>
+<p>对应的功能点为预览 <code>&#39;导航图&#39;宏</code><br><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210225118832.png" alt="image-20231210225118832"></p>
+<p>HTTP请求为：</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">POST</span> <span class="string">/rest/tinymce/1/macro/preview</span> <span class="meta">HTTP/1.1</span></span><br><span class="line"><span class="attribute">Host</span><span class="punctuation">: </span>127.0.0.1:8090</span><br><span class="line"><span class="attribute">Content-Type</span><span class="punctuation">: </span>application/json; charset=UTF-8</span><br><span class="line"></span><br><span class="line"><span class="language-json"><span class="punctuation">&#123;</span><span class="attr">&quot;contentId&quot;</span><span class="punctuation">:</span><span class="string">&quot;360471&quot;</span><span class="punctuation">,</span><span class="attr">&quot;macro&quot;</span><span class="punctuation">:</span><span class="punctuation">&#123;</span><span class="attr">&quot;name&quot;</span><span class="punctuation">:</span><span class="string">&quot;navmap&quot;</span><span class="punctuation">,</span><span class="attr">&quot;body&quot;</span><span class="punctuation">:</span><span class="string">&quot;&quot;</span><span class="punctuation">,</span><span class="attr">&quot;params&quot;</span><span class="punctuation">:</span><span class="punctuation">&#123;</span><span class="attr">&quot;theme&quot;</span><span class="punctuation">:</span><span class="string">&quot;navmap-mytheme&quot;</span><span class="punctuation">&#125;</span><span class="punctuation">,</span><span class="attr">&quot;defaultParameterValue&quot;</span><span class="punctuation">:</span><span class="string">&quot;test&quot;</span><span class="punctuation">&#125;</span><span class="punctuation">&#125;</span></span></span><br></pre></td></tr></table></figure>
+
+
+
+<p><code>com.atlassian.confluence.plugins.macros.advanced.NavigationMapMacro#getTemplate</code></p>
+<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210225743403.png" alt="image-20231210225743403"></p>
+<p><code>com.atlassian.confluence.velocity.ConfigurableResourceManager#getResource</code></p>
+<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210225555317.png" alt="image-20231210225555317"></p>
+<p>到这里，其实和CVE-2019-3396的差别就是：CVE-2019-3396能控制整个<code>resourceName</code>，目前找到的点只能控制<code>resourceName</code>中间的一部分，参考<a target="_blank" rel="noopener" href="https://paper.seebug.org/893/">https://paper.seebug.org/893/</a> 中对CVE-2019-3396的分析，那这里肯定是没办法RCE的，而且在拼接<code>theme</code>之前用<code>isSafeTitleForFilesystem</code>方法进行了安全检查，也没办法目录穿越，所以这个点基本没用</p>
+<h4 id="扫描结果二"><a href="#扫描结果二" class="headerlink" title="扫描结果二"></a>扫描结果二</h4><p>另一个扫描结果的两条路径是<code>SpaceEditDecoratorAction</code>和<code>SpaceViewDefaultDecoratorAction</code>的<code>decoratorName</code>字段传入了<code>getTemplate</code></p>
+<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231211093622385.png" alt="image-20231211093622385"></p>
+<p>对应入口为<code>/spaces/viewdefaultdecorator.action?decoratorName=decorators/main.vmd&amp;key=TEST</code></p>
+<p><code>com.atlassian.confluence.admin.actions.lookandfeel.AbstractDecoratorAction#getTemplateFromResourceLoader</code>：</p>
+<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231211094150585.png" alt="image-20231211094150585"></p>
+<p>但是在进入<code>getTemplate</code>前，会经过<code>isUnderConfluenceApp</code>方法的检查：</p>
+<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231211094348930.png" alt="image-20231211094348930"></p>
+<p>这个方法的关键就是<code>URI.create(decoratorName).isAbsolute()</code>，在java中，就是判断scheme是否为null：</p>
+<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231211094457434.png" alt="image-20231211094457434"></p>
+<p>所以如果想像CVE-2019-3396一样传入<code>file:///...</code>或<code>http://...</code>是不行的。我也试了强行向<code>getTemplate</code>传入<code>file:///...</code>，<code>http://...</code>，<code>ftp://...</code>，也是没办法成功的，可能和Tomcat版本有关，或者是Confluence针对这种注入做了某种特定的修复</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a target="_blank" rel="noopener" href="https://confluence.atlassian.com/pages/viewpage.action?pageId=1319570362">https://confluence.atlassian.com/pages/viewpage.action?pageId=1319570362</a></p>
+<p><a target="_blank" rel="noopener" href="https://paper.seebug.org/884/">https://paper.seebug.org/884/</a></p>
+<p><a target="_blank" rel="noopener" href="https://paper.seebug.org/893/">https://paper.seebug.org/893/</a></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/" rel="tag"># 漏洞分析</a>
+              <a href="/tags/Confluence/" rel="tag"># Confluence</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2023/12/03/%E9%80%9A%E8%BF%87JDWP%E6%BC%8F%E6%B4%9E%E6%B3%A8%E5%85%A5%E4%B8%8D%E4%B8%80%E6%A0%B7%E7%9A%84%E5%86%85%E5%AD%98%E9%A9%AC/" rel="prev" title="通过JDWP漏洞注入"不一样"的内存马">
+                  <i class="fa fa-angle-left"></i> 通过JDWP漏洞注入"不一样"的内存马
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2024/02/10/Apache-Solr-Backup-Restore-APIs-RCE-CVE-2023-50386-%E5%88%86%E6%9E%90%E5%8F%8A%E6%8C%96%E6%8E%98%E6%80%9D%E8%B7%AF/" rel="next" title="Apache Solr Backup/Restore APIs RCE (CVE-2023-50386)分析及挖掘思路">
+                  Apache Solr Backup/Restore APIs RCE (CVE-2023-50386)分析及挖掘思路 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">淚笑</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

