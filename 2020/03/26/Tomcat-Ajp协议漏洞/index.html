@@ -26,62 +26,62 @@
 <meta property="og:site_name" content="l3yx&#39;s blog">
 <meta property="og:description" content="Tomcat主要是提供Servlet&#x2F;JSP容器，静态资源的处理速度以及Web服务管理功能方面不如其他专业的HTTP服务器，所以使用效率和性能更高二进制TCP传输协议ajp协议以供其他web服务器进行反向代理或者用于集群，而8009端口的ajp服务默认在公网开启，通过ajp协议可以控制request对象的某些Attribute属性从而造成webapps目录下的任意文件读取&#x2F;包含">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326102909478.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326103304189.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326103548188.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326103949800.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326104556122.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326104920331.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326110137180.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326110306603.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326110641559.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326110809101.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326114142570.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326115020723.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326125943121.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326150114592.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326151300045.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326151900051.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326151918810.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326151932440.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326151535450.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326152237580.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326152441914.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326152624852.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326153216070.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326153814678.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326160730549.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326160942966.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326161040592.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326161648547.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326161818325.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326161856522.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326164001646.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326164040472.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326164128950.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326164157798.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326164647071.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326165032990.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326165249071.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326165724644.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326170101382.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326165837963.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326165918980.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326170508191.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326170809752.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326171827276.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326171840099.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326172233725.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326172326694.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326172506497.png">
-<meta property="og:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326172452719.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326102909478.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326103304189.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326103548188.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326103949800.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326104556122.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326104920331.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326110137180.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326110306603.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326110641559.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326110809101.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326114142570.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326115020723.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326125943121.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326150114592.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326151300045.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326151900051.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326151918810.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326151932440.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326151535450.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326152237580.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326152441914.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326152624852.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326153216070.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326153814678.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326160730549.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326160942966.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326161040592.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326161648547.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326161818325.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326161856522.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326164001646.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326164040472.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326164128950.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326164157798.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326164647071.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326165032990.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326165249071.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326165724644.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326170101382.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326165837963.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326165918980.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326170508191.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326170809752.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326171827276.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326171840099.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326172233725.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326172326694.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326172506497.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326172452719.png">
 <meta property="article:published_time" content="2020-03-26T01:36:10.000Z">
 <meta property="article:modified_time" content="2020-04-28T10:19:28.000Z">
 <meta property="article:author" content="淚笑">
 <meta property="article:tag" content="Tomcat">
 <meta property="article:tag" content="ajp">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://l3yx.github.io/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326102909478.png">
+<meta name="twitter:image" content="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326102909478.png">
 
 
 <link rel="canonical" href="https://l3yx.github.io/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/">
@@ -271,6 +271,21 @@
     </span>
 
   
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>1.6k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>6 分钟</span>
+    </span>
 </div>
 
         </div>
@@ -288,104 +303,168 @@
 
 
 
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326102909478.png" alt="image-20200326102909478"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326102909478.png" class="" title="image-20200326102909478">
+
 <p>用IDEA导入</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326103304189.png" alt="image-20200326103304189"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326103304189.png" class="" title="image-20200326103304189">
+
 <p>将java文件夹标记为Sources Root，test标记为Test Sources Root</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326103548188.png" alt="image-20200326103548188"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326103548188.png" class="" title="image-20200326103548188">
+
 <p>运行org.apache.catalina.startup.Bootstrap#main方法</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326103949800.png" alt="image-20200326103949800"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326103949800.png" class="" title="image-20200326103949800">
+
 <p>找不到trailers，把 home&#x2F;webapps&#x2F;examples&#x2F;WEB-INF&#x2F;classes&#x2F;trailers 目录拷贝到 test 目录下</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326104556122.png" alt="image-20200326104556122"></p>
-<p>再次运行，找不到CookieFilter，把 home&#x2F;webapps&#x2F;examples&#x2F;WEB-INF&#x2F;classes&#x2F;util&#x2F;CookieFilter.java 文件拷贝到 test&#x2F;util 目录下<br><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326104920331.png" alt="image-20200326104920331"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326104556122.png" class="" title="image-20200326104556122">
+
+<p>再次运行，找不到CookieFilter，把 home&#x2F;webapps&#x2F;examples&#x2F;WEB-INF&#x2F;classes&#x2F;util&#x2F;CookieFilter.java 文件拷贝到 test&#x2F;util 目录下</p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326104920331.png" class="" title="image-20200326104920331">
+
 <p>conf&#x2F;server.xml 找不到，设置下 jvm 参数（就是指定之前创建的 home 目录）</p>
 <p><code>-Dcatalina.home=</code></p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326110137180.png" alt="image-20200326110137180"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326110137180.png" class="" title="image-20200326110137180">
+
 <p>访问网页报错</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326110306603.png" alt="image-20200326110306603"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326110306603.png" class="" title="image-20200326110306603">
+
 <p>删除webapps &#x2F;examples文件夹</p>
 <p>编辑org.apache.catalina.startup.ContextConfig#configureStart方法，添加初始化 JSP 解析器的代码</p>
 <p><code>context.addServletContainerInitializer(new JasperInitializer(), null);</code></p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326110641559.png" alt="image-20200326110641559"></p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326110809101.png" alt="image-20200326110809101"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326110641559.png" class="" title="image-20200326110641559">
+
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326110809101.png" class="" title="image-20200326110809101">
+
+
+
 <h2 id="Tomcat-Ajp协议"><a href="#Tomcat-Ajp协议" class="headerlink" title="Tomcat Ajp协议"></a>Tomcat Ajp协议</h2><p>Tomcat默认的conf&#x2F;server.xml中配置了2个Connector</p>
 <p>一个为8080端口的HTTP协议，另外一个就是8009端口的AJP协议</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326114142570.png" alt="image-20200326114142570"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326114142570.png" class="" title="image-20200326114142570">
+
 <p>Tomcat最主要的功能是提供Servlet&#x2F;JSP容器，尽管它也可以作为独立的Java Web服务器，但它在对静态资源（如HTML文件或图像文件）的处理速度，以及提供的Web服务器管理功能方面都不如其他专业的HTTP服务器，如IIS和Apache的服务器。因此在实际应用中，常常把Tomcat的与其他HTTP服务器集成。对于不支持的Servlet&#x2F;JSP的HTTP服务器，可以通过的Tomcat服务器来运行的Servlet&#x2F;JSP组件。而Tomcat和其他服务器的集成，就是通过ajp协议来完成的</p>
 <p>ajp是一个二进制的TCP传输协议，相比HTTP这种纯文本的协议来说，效率和性能更高，也做了很多优化。显然，浏览器并不能直接支持ajp协议，只支持HTTP协议。所以通常是通过Apache的proxy_ajp模块进行反向代理，暴露成http协议给客户端访问</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326115020723.png" alt="image-20200326115020723"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326115020723.png" class="" title="image-20200326115020723">
+
 <p>Debug运行Tomcat，nc 尝试连接可以看到8009端口开放</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326125943121.png" alt="image-20200326125943121"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326125943121.png" class="" title="image-20200326125943121">
+
+
+
 <h2 id="漏洞分析"><a href="#漏洞分析" class="headerlink" title="漏洞分析"></a>漏洞分析</h2><h3 id="文件读取"><a href="#文件读取" class="headerlink" title="文件读取"></a>文件读取</h3><p>Tomcat在处理ajp请求的时候调用org.apache.coyote.ajp.AjpProcessor#prepareRequest来解析一些请求头</p>
 <p>在该处下断点，并利用poc发送ajp请求</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326150114592.png" alt="image-20200326150114592"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326150114592.png" class="" title="image-20200326150114592">
+
 <p>org&#x2F;apache&#x2F;coyote&#x2F;ajp&#x2F;AjpProcessor.java</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326151300045.png" alt="image-20200326151300045"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326151300045.png" class="" title="image-20200326151300045">
+
 <p>当ajp数据包的头设置为<code>SC_REQ_ATTRIBUTE</code>时,Connector会紧接着读取变量<code>n</code>（属性名）和<code>v</code>（值），当<code>n</code>不是<code>SC_A_REQ_LOCAL_ADDR</code>、<code>SC_A_REQ_REMOTE_PORT</code>、<code>SC_A_SSL_PROTOCOL</code>时，就会用<code>v</code>来赋值属性<code>n</code></p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326151900051.png" alt="image-20200326151900051"></p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326151918810.png" alt="image-20200326151918810"></p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326151932440.png" alt="image-20200326151932440"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326151900051.png" class="" title="image-20200326151900051">
+
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326151918810.png" class="" title="image-20200326151918810">
+
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326151932440.png" class="" title="image-20200326151932440">
+
 <p>接着，<code>service()</code>方法将修改过的request代入后面的调用</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326151535450.png" alt="image-20200326151535450"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326151535450.png" class="" title="image-20200326151535450">
+
 <p>poc请求的url为&#x2F;asdf</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326152237580.png" alt="image-20200326152237580"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326152237580.png" class="" title="image-20200326152237580">
+
 <p>当请求的uri无法匹配其他servlet时会由DefaultServlet处理，其中的调用流程如下</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326152441914.png" alt="image-20200326152441914"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326152441914.png" class="" title="image-20200326152441914">
+
 <p>在<code>org.apache.catalina.servlets.DefaultServlet</code>中，当我们的请求声明的是GET方法时，存在调用<code>service()-&gt;doGet()-&gt;serveResource()</code></p>
 <p>org.apache.catalina.servlets.DefaultServlet#serveResource</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326152624852.png" alt="image-20200326152624852"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326152624852.png" class="" title="image-20200326152624852">
+
 <p>org.apache.catalina.servlets.DefaultServlet#getRelativePath</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326153216070.png" alt="image-20200326153216070"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326153216070.png" class="" title="image-20200326153216070">
+
 <p><code>serveResource()</code>方法获得path后会将<code>path</code>带入到<code>getResource</code>方法中造成任意文件读取</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326153814678.png" alt="image-20200326153814678"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326153814678.png" class="" title="image-20200326153814678">
+
 <p>之后的代码逻辑是把通过path获取的资源序列化输出，因此客户端再按照AJP协议解析数据包就能得到文件内容</p>
 <h3 id="文件包含"><a href="#文件包含" class="headerlink" title="文件包含"></a>文件包含</h3><p>Tomcat默认将jsp&#x2F;jspx结尾的请求交给<code>org.apache.jasper.servlet.JspServlet</code>处理</p>
 <p>修改一下POC，将请求url改为jsp结尾</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326160730549.png" alt="image-20200326160730549"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326160730549.png" class="" title="image-20200326160730549">
+
 <p>WEB-INF下新建一个文件</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326160942966.png" alt="image-20200326160942966"></p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326161040592.png" alt="image-20200326161040592"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326160942966.png" class="" title="image-20200326160942966">
+
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326161040592.png" class="" title="image-20200326161040592">
+
 <p>在org.apache.jasper.servlet.JspServlet#service下断点</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326161648547.png" alt="image-20200326161648547"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326161648547.png" class="" title="image-20200326161648547">
+
 <p>这里同样会获取javax.servlet.include.path_info、javax.servlet.include.servlet_path这两个属性（可以通过ajp协议控制这两个属性）</p>
 <p>将这两个属性 对应的值拼接到jspURi变量中，最后交给serviceJspFile方法处理</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326161818325.png" alt="image-20200326161818325"></p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326161856522.png" alt="image-20200326161856522"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326161818325.png" class="" title="image-20200326161818325">
+
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326161856522.png" class="" title="image-20200326161856522">
+
+
+
 <h2 id="可读路径"><a href="#可读路径" class="headerlink" title="可读路径"></a>可读路径</h2><h3 id="文件读取-1"><a href="#文件读取-1" class="headerlink" title="文件读取"></a>文件读取</h3><p>该漏洞只能读取webapps目录下的文件，不能通过目录穿越读取其他路径</p>
 <p>尝试在paylaod中加入..&#x2F;</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326164001646.png" alt="image-20200326164001646"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326164001646.png" class="" title="image-20200326164001646">
+
 <p>步入DefaultServlet中调用的getResource</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326164040472.png" alt="image-20200326164040472"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326164040472.png" class="" title="image-20200326164040472">
+
 <p>org.apache.catalina.webresources.StandardRoot#getResource</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326164128950.png" alt="image-20200326164128950"></p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326164157798.png" alt="image-20200326164157798"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326164128950.png" class="" title="image-20200326164128950">
+
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326164157798.png" class="" title="image-20200326164157798">
+
 <p>org.apache.catalina.webresources.StandardRoot#validate</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326164647071.png" alt="image-20200326164647071"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326164647071.png" class="" title="image-20200326164647071">
+
 <p>org.apache.tomcat.util.http.RequestUtil#normalize(java.lang.String, boolean)</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326165032990.png" alt="image-20200326165032990"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326165032990.png" class="" title="image-20200326165032990">
+
 <p>其中检测到了&#x2F;..&#x2F;就会return null</p>
 <p>在org&#x2F;apache&#x2F;catalina&#x2F;webresources&#x2F;StandardRoot抛出异常</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326165249071.png" alt="image-20200326165249071"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326165249071.png" class="" title="image-20200326165249071">
+
+
+
 <h3 id="文件包含-1"><a href="#文件包含-1" class="headerlink" title="文件包含"></a>文件包含</h3><p>先修改一下POC</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326165724644.png" alt="image-20200326165724644"></p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326170101382.png" alt="image-20200326170101382"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326165724644.png" class="" title="image-20200326165724644">
+
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326170101382.png" class="" title="image-20200326170101382">
+
 <p>跟入</p>
 <p>org.apache.jasper.servlet.JspServlet#serviceJspFile</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326165837963.png" alt="image-20200326165837963"></p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326165918980.png" alt="image-20200326165918980"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326165837963.png" class="" title="image-20200326165837963">
+
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326165918980.png" class="" title="image-20200326165918980">
+
 <p>跟着jspUri变量，会发现后面就进入了和文件读取一样的检测逻辑</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326170508191.png" alt="image-20200326170508191"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326170508191.png" class="" title="image-20200326170508191">
+
+
+
 <h3 id="跨webapp读取-包含"><a href="#跨webapp读取-包含" class="headerlink" title="跨webapp读取&#x2F;包含"></a>跨webapp读取&#x2F;包含</h3><p>目前都是读取默认的ROOT下的文件，如果想跨webapp读取，可以修改POC中的请求url</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326170809752.png" alt="image-20200326170809752"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326170809752.png" class="" title="image-20200326170809752">
+
 <p>创建test目录并写入文件</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326171827276.png" alt="image-20200326171827276"></p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326171840099.png" alt="image-20200326171840099"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326171827276.png" class="" title="image-20200326171827276">
+
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326171840099.png" class="" title="image-20200326171840099">
+
 <p>修改POC，url中换成test目录，并且后面跟随随机字符（当请求的uri无法匹配其他servlet时才会由DefaultServlet处理）</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326172233725.png" alt="image-20200326172233725"></p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326172326694.png" alt="image-20200326172326694"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326172233725.png" class="" title="image-20200326172233725">
+
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326172326694.png" class="" title="image-20200326172326694">
+
+
+
 <p>修改POC，包含文件并执行</p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326172506497.png" alt="image-20200326172506497"></p>
-<p><img src="/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326172452719.png" alt="image-20200326172452719"></p>
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326172506497.png" class="" title="image-20200326172506497">
+
+<img src="/2020/03/26/Tomcat-Ajp%E5%8D%8F%E8%AE%AE%E6%BC%8F%E6%B4%9E/image-20200326172452719.png" class="" title="image-20200326172452719">
+
+
+
 <h2 id="修复方案"><a href="#修复方案" class="headerlink" title="修复方案"></a>修复方案</h2><ul>
 <li><p>升级最新版本</p>
 </li>
@@ -454,6 +533,20 @@
     </span>
     <span class="author" itemprop="copyrightHolder">淚笑</span>
   </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">78k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">4:43</span>
+  </span>
+</div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
   </div>
 

@@ -26,17 +26,17 @@
 <meta property="og:site_name" content="l3yx&#39;s blog">
 <meta property="og:description" content="通达 OA 存在认证绕过漏洞，由外部可控的参数可登录任意用户">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://l3yx.github.io/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/image-20200427163951605.png">
-<meta property="og:image" content="https://l3yx.github.io/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/image-20200427164027214.png">
-<meta property="og:image" content="https://l3yx.github.io/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/image-20200427164111745.png">
-<meta property="og:image" content="https://l3yx.github.io/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/image-20200427172040437.png">
-<meta property="og:image" content="https://l3yx.github.io/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/image-20200427172441588.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/04/27/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/image-20200427163951605.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/04/27/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/image-20200427164027214.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/04/27/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/image-20200427164111745.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/04/27/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/image-20200427172040437.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/04/27/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/image-20200427172441588.png">
 <meta property="article:published_time" content="2020-04-27T07:09:17.000Z">
 <meta property="article:modified_time" content="2020-04-28T10:20:48.000Z">
 <meta property="article:author" content="淚笑">
 <meta property="article:tag" content="通达OA">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://l3yx.github.io/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/image-20200427163951605.png">
+<meta name="twitter:image" content="https://l3yx.github.io/2020/04/27/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/image-20200427163951605.png">
 
 
 <link rel="canonical" href="https://l3yx.github.io/2020/04/27/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/">
@@ -226,6 +226,21 @@
     </span>
 
   
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>364</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>1 分钟</span>
+    </span>
 </div>
 
         </div>
@@ -246,17 +261,22 @@
 </ul>
 <h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p><a target="_blank" rel="noopener" href="https://cdndown.tongda2000.com/oa/2019/TDOA11.4.exe">通达 OA V11.4</a></p>
 <p>访问&#x2F;general&#x2F;login_code.php获取code_uid</p>
-<p><img src="/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/image-20200427163951605.png" alt="image-20200427163951605"></p>
+<img src="/2020/04/27/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/image-20200427163951605.png" class="" title="image-20200427163951605">
+
 <p>POST传递CODEUID和被伪造用户的UID到&#x2F;logincheck_code.php，返回的SESSID即其身份</p>
-<p><img src="/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/image-20200427164027214.png" alt="image-20200427164027214"></p>
+<img src="/2020/04/27/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/image-20200427164027214.png" class="" title="image-20200427164027214">
+
 <p>携带SESSID访问</p>
-<p><img src="/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/image-20200427164111745.png" alt="image-20200427164111745"></p>
+<img src="/2020/04/27/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/image-20200427164111745.png" class="" title="image-20200427164111745">
+
 <h2 id="漏洞分析"><a href="#漏洞分析" class="headerlink" title="漏洞分析"></a>漏洞分析</h2><p>源码在程序安装目录的webroot目录下，用<a target="_blank" rel="noopener" href="https://paper.seebug.org/203/">工具</a>解密</p>
 <p>&#x2F;logincheck_code.php</p>
-<p><img src="/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/image-20200427172040437.png" alt="image-20200427172040437"></p>
+<img src="/2020/04/27/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/image-20200427172040437.png" class="" title="image-20200427172040437">
+
 <p>UID参数可控，在通过15行对login_codeuid的判断后，该值会被直接代入SQL语句进行查询，最后会返回对应UID的用户的信息，通达OA默认的第一个用户是管理员admin账户，所以可以设置UID为1，即可获取到admin管理员的信息，要通过15行的判断需要获取code_uid</p>
 <p>&#x2F;general&#x2F;login_code.php</p>
-<p><img src="/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/image-20200427172441588.png" alt="image-20200427172441588"></p>
+<img src="/2020/04/27/%E9%80%9A%E8%BE%BEOA-%E4%BB%BB%E6%84%8F%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95%E6%BC%8F%E6%B4%9E/image-20200427172441588.png" class="" title="image-20200427172441588">
+
 <p>当login_codeuid为空时会生成一个存入redis缓存并在最后输出</p>
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a target="_blank" rel="noopener" href="https://paper.seebug.org/203/">实用工具：免费Zend 5.2 5.3 5.4解密工具</a></p>
 <p><a target="_blank" rel="noopener" href="https://github.com/NS-Sp4ce/TongDaOA-Fake-User">TongDaOA-Fake-User</a></p>
@@ -310,6 +330,20 @@
     </span>
     <span class="author" itemprop="copyrightHolder">淚笑</span>
   </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">78k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">4:43</span>
+  </span>
+</div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
   </div>
 

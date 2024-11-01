@@ -26,13 +26,13 @@
 <meta property="og:site_name" content="l3yx&#39;s blog">
 <meta property="og:description" content="想给博客加个音频播放的插件作为背景音乐，但是在博客内跳转的时候音乐会中断并重新加载，参考了网易云音乐网页版的解决办法就是所有页面都在前端通过Ajax动态加载，并不会跳转网页，所以音乐播放不会中断。但是改Hexo源码的话不太可行，想到一个办法就是每次跳转前记录进度并在下次加载网页时读取">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://l3yx.github.io/APlayer-%E8%B7%B3%E8%BD%AC%E9%A1%B5%E9%9D%A2%E4%BF%9D%E6%8C%81%E9%9F%B3%E4%B9%90%E6%92%AD%E6%94%BE%E8%BF%9B%E5%BA%A6/image-20200429222458927.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/04/29/APlayer-%E8%B7%B3%E8%BD%AC%E9%A1%B5%E9%9D%A2%E4%BF%9D%E6%8C%81%E9%9F%B3%E4%B9%90%E6%92%AD%E6%94%BE%E8%BF%9B%E5%BA%A6/image-20200429222458927.png">
 <meta property="article:published_time" content="2020-04-29T12:44:13.000Z">
 <meta property="article:modified_time" content="2020-04-30T00:58:26.000Z">
 <meta property="article:author" content="淚笑">
 <meta property="article:tag" content="APlayer">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://l3yx.github.io/APlayer-%E8%B7%B3%E8%BD%AC%E9%A1%B5%E9%9D%A2%E4%BF%9D%E6%8C%81%E9%9F%B3%E4%B9%90%E6%92%AD%E6%94%BE%E8%BF%9B%E5%BA%A6/image-20200429222458927.png">
+<meta name="twitter:image" content="https://l3yx.github.io/2020/04/29/APlayer-%E8%B7%B3%E8%BD%AC%E9%A1%B5%E9%9D%A2%E4%BF%9D%E6%8C%81%E9%9F%B3%E4%B9%90%E6%92%AD%E6%94%BE%E8%BF%9B%E5%BA%A6/image-20200429222458927.png">
 
 
 <link rel="canonical" href="https://l3yx.github.io/2020/04/29/APlayer-%E8%B7%B3%E8%BD%AC%E9%A1%B5%E9%9D%A2%E4%BF%9D%E6%8C%81%E9%9F%B3%E4%B9%90%E6%92%AD%E6%94%BE%E8%BF%9B%E5%BA%A6/">
@@ -222,6 +222,21 @@
     </span>
 
   
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>552</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>2 分钟</span>
+    </span>
 </div>
 
         </div>
@@ -239,7 +254,10 @@
 <figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- require APlayer --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">link</span> <span class="attr">rel</span>=<span class="string">&quot;stylesheet&quot;</span> <span class="attr">href</span>=<span class="string">&quot;https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css&quot;</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">&quot;https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.js&quot;</span>&gt;</span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- require MetingJS --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">&quot;https://cdn.jsdelivr.net/npm/meting@2/dist/Meting.min.js&quot;</span>&gt;</span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">div</span> <span class="attr">style</span>=<span class="string">&quot;opacity:0.7&quot;</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">meting-js</span></span></span><br><span class="line"><span class="tag">        <span class="attr">server</span>=<span class="string">&quot;netease&quot;</span></span></span><br><span class="line"><span class="tag">        <span class="attr">type</span>=<span class="string">&quot;playlist&quot;</span></span></span><br><span class="line"><span class="tag">        <span class="attr">id</span>=<span class="string">&quot;2486559481&quot;</span></span></span><br><span class="line"><span class="tag">        <span class="attr">fixed</span>=<span class="string">&quot;true&quot;</span></span></span><br><span class="line"><span class="tag">        <span class="attr">volume</span>=<span class="string">&quot;0.3&quot;</span></span></span><br><span class="line"><span class="tag">        <span class="attr">order</span>=<span class="string">&quot;random&quot;</span></span></span><br><span class="line"><span class="tag">        &gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">meting-js</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br></pre></td></tr></table></figure>
 
 <p>id对应歌单，其他配置项详见文档</p>
-<p><img src="/APlayer-%E8%B7%B3%E8%BD%AC%E9%A1%B5%E9%9D%A2%E4%BF%9D%E6%8C%81%E9%9F%B3%E4%B9%90%E6%92%AD%E6%94%BE%E8%BF%9B%E5%BA%A6/image-20200429222458927.png" alt="image-20200429222458927"></p>
+<img src="/2020/04/29/APlayer-%E8%B7%B3%E8%BD%AC%E9%A1%B5%E9%9D%A2%E4%BF%9D%E6%8C%81%E9%9F%B3%E4%B9%90%E6%92%AD%E6%94%BE%E8%BF%9B%E5%BA%A6/image-20200429222458927.png" class="" title="image-20200429222458927">
+
+
+
 <p>然后要获取APlayer对象来控制音乐播放，<code>document.querySelector(&#39;meting-js&#39;).aplayer</code>，在浏览器控制台可以成功获取，但写在HTML源码中就无法获得，应该是执行该代码时meting还未来得及初始化aplayer对象，后来试了很多办法，终于解决，即监听对象值的变化</p>
 <figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">ap = <span class="literal">null</span></span><br><span class="line"><span class="title class_">Object</span>.<span class="title function_">defineProperty</span>(<span class="variable language_">document</span>.<span class="title function_">querySelector</span>(<span class="string">&#x27;meting-js&#x27;</span>),<span class="string">&quot;aplayer&quot;</span>,&#123;</span><br><span class="line">    <span class="attr">set</span>: <span class="keyword">function</span>(<span class="params">aplayer</span>) &#123;</span><br><span class="line">        ap=aplayer</span><br><span class="line">        <span class="title function_">ready</span>();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line"><span class="keyword">function</span> <span class="title function_">ready</span>(<span class="params"></span>)&#123;</span><br><span class="line">    ap.<span class="property">list</span>.<span class="title function_">switch</span>(<span class="number">0</span>);</span><br><span class="line">    ap.<span class="title function_">play</span>();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
@@ -310,6 +328,20 @@
     </span>
     <span class="author" itemprop="copyrightHolder">淚笑</span>
   </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">78k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">4:43</span>
+  </span>
+</div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
   </div>
 

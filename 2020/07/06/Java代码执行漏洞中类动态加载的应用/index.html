@@ -26,19 +26,19 @@
 <meta property="og:site_name" content="l3yx&#39;s blog">
 <meta property="og:description" content="今年SCTF和另一个师傅一起出了道题，其中环境就是完全不出网的Spring boot + Shiro，要对其进行内网渗透，所以就有了下文的思路，通过改造ysoserial，reGeorg，使用动态加载类的方法，突破header头长度的限制，攻击Shiro并把reGeorg注册为filter，提供代理">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://l3yx.github.io/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200705130850198.png">
-<meta property="og:image" content="https://l3yx.github.io/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200703151537094.png">
-<meta property="og:image" content="https://l3yx.github.io/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200703151808170.png">
-<meta property="og:image" content="https://l3yx.github.io/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200703150835555.png">
-<meta property="og:image" content="https://l3yx.github.io/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200703151936423.png">
-<meta property="og:image" content="https://l3yx.github.io/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200703152027686.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/07/06/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200705130850198.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/07/06/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200703151537094.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/07/06/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200703151808170.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/07/06/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200703150835555.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/07/06/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200703151936423.png">
+<meta property="og:image" content="https://l3yx.github.io/2020/07/06/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200703152027686.png">
 <meta property="article:published_time" content="2020-07-06T11:52:44.000Z">
 <meta property="article:modified_time" content="2020-07-06T12:26:40.000Z">
 <meta property="article:author" content="淚笑">
 <meta property="article:tag" content="Java">
 <meta property="article:tag" content="ysoserial">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://l3yx.github.io/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200705130850198.png">
+<meta name="twitter:image" content="https://l3yx.github.io/2020/07/06/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200705130850198.png">
 
 
 <link rel="canonical" href="https://l3yx.github.io/2020/07/06/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/">
@@ -222,6 +222,21 @@
     </span>
 
   
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>2k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>7 分钟</span>
+    </span>
 </div>
 
         </div>
@@ -245,7 +260,8 @@
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">java.lang.reflect.<span class="type">Method</span> <span class="variable">defineClassMethod</span> <span class="operator">=</span> ClassLoader.class.getDeclaredMethod(<span class="string">&quot;defineClass&quot;</span>,<span class="keyword">new</span> <span class="title class_">Class</span>[]&#123;<span class="type">byte</span>[].class, <span class="type">int</span>.class, <span class="type">int</span>.class&#125;);</span><br><span class="line">defineClassMethod.setAccessible(<span class="literal">true</span>);</span><br><span class="line"><span class="type">Class</span> <span class="variable">cc</span> <span class="operator">=</span> (Class) defineClassMethod.invoke(<span class="keyword">new</span> <span class="title class_">ClassLoader</span>()&#123;&#125;, classBytes, <span class="number">0</span>, classBytes.length);</span><br></pre></td></tr></table></figure>
 
 <p>在调用defineClass时，重新实例化了一个ClassLoader，<code>new ClassLoader()&#123;&#125;</code>，这是因为在Java中类的唯一性由类加载器和类本身决定，如果沿用当前上下文中的类加载器实例，而POC中使用同一个类名多次攻击，可能出现类重复定义异常</p>
-<p><img src="/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200705130850198.png" alt="image-20200705130850198"></p>
+<img src="/2020/07/06/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200705130850198.png" class="" title="image-20200705130850198">
+
 <h2 id="Shiro反序列化上载reGeorg代理"><a href="#Shiro反序列化上载reGeorg代理" class="headerlink" title="Shiro反序列化上载reGeorg代理"></a>Shiro反序列化上载reGeorg代理</h2><p>举个实际应用的例子，针对一个完全不出网的Spring Boot + Shiro程序如何进行内网渗透，这种情况下不能写Jsp马，而且不能出网自然不能作反弹Shell等操作，要进行内网渗透我觉得最好的方式就是动态注册filter或者servlet，并将reGeorg的代码嵌入其中，但如果将POC都写在header中，肯定会超过中间件header长度限制，当然在某些版本也有办法修改这个长度限制，参考<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s?__biz=MzIwMDk1MjMyMg==&mid=2247484799&idx=1&sn=42e7807d6ea0d8917b45e8aa2e4dba44">基于全局储存的新思路 | Tomcat的一种通用回显方法研究</a>，如果采用上文中从外部加载字节码的方法那么这个问题就迎刃而解</p>
 <h3 id="改造ysoserial"><a href="#改造ysoserial" class="headerlink" title="改造ysoserial"></a>改造ysoserial</h3><p>为了在ysoserial中正常使用下文中提到的类，需要先在pom.xml中加入如下依赖</p>
 <figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.apache.tomcat.embed<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>tomcat-embed-core<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>8.5.50<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-web<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">version</span>&gt;</span>2.5<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
@@ -294,15 +310,30 @@
 
 
 <h3 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h3><p>在Cookie处填入 rememberMe&#x3D;[ysoserial生成的POC]，POST包体填入classData&#x3D;[MemReGeorg类字节码的base64]，注意POST中参数需要URL编码，发包</p>
-<p><img src="/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200703151537094.png" alt="image-20200703151537094"></p>
+<img src="/2020/07/06/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200703151537094.png" class="" title="image-20200703151537094">
+
+
+
 <p>然后带上<code>X-CMD:l3yx</code>header头再请求页面，返回<code>X-STATUS: OK</code>说明reGeorg已经正常工作</p>
-<p><img src="/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200703151808170.png" alt="image-20200703151808170"></p>
+<img src="/2020/07/06/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200703151808170.png" class="" title="image-20200703151808170">
+
+
+
 <p>reGeorg客户端也需要修改一下，原版会先GET请求一下网页判断是否是reGeorg的jsp页面，由于这里是添加了一个filter，正常访问网页是不会有变化的，只有带上相关头才会进入reGeorg代码，所以需要将客户端中相关的验证去除</p>
 <p>在askGeorg函数第一行增加return True即可</p>
-<p><img src="/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200703150835555.png" alt="image-20200703150835555"></p>
+<img src="/2020/07/06/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200703150835555.png" class="" title="image-20200703150835555">
+
+
+
 <p>连接reGeorg</p>
-<p><img src="/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200703151936423.png" alt="image-20200703151936423"></p>
-<p><img src="/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200703152027686.png" alt="image-20200703152027686"></p>
+<img src="/2020/07/06/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200703151936423.png" class="" title="image-20200703151936423">
+
+<img src="/2020/07/06/Java%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%B1%BB%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%BA%94%E7%94%A8/image-20200703152027686.png" class="" title="image-20200703152027686">
+
+
+
+
+
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a target="_blank" rel="noopener" href="https://xz.aliyun.com/t/2744">https://xz.aliyun.com/t/2744</a></p>
 <p><a target="_blank" rel="noopener" href="https://xz.aliyun.com/t/7388">https://xz.aliyun.com/t/7388</a></p>
 
@@ -355,6 +386,20 @@
     </span>
     <span class="author" itemprop="copyrightHolder">淚笑</span>
   </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">78k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">4:43</span>
+  </span>
+</div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
   </div>
 

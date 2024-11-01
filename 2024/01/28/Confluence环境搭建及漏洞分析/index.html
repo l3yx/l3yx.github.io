@@ -235,6 +235,21 @@
     </span>
 
   
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>2.4k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>9 分钟</span>
+    </span>
 </div>
 
         </div>
@@ -294,31 +309,42 @@
 
 
 <p>没想到还真扫到一个可能的漏洞，从<code>com.atlassian.confluence.plugins.gatekeeper.controllers.AbstractPermissionsAction</code>的字段<code>exportCustomSpaceDetailsFormat</code>到<code>velocityEngine.evaluate</code>，理论上<code>exportCustomSpaceDetailsFormat</code>可控的话，就可以造成模板注入漏洞</p>
-<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210124036385.png" alt="image-20231210124036385"></p>
-<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210124114393.png" alt="image-20231210124114393"></p>
+<img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210124036385.png" class="" title="image-20231210124036385">
+
+<img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210124114393.png" class="" title="image-20231210124114393">
+
 <p>其实一开始我不知道为什么这个类的字段可以作为source，猜想可能是confluence的web框架会自动注入请求参数</p>
 <p>关于入口或者说漏洞接口的寻找思路：</p>
 <p><code>AbstractPermissionsAction</code>是一个抽象类，所以我先找了同级目录下的对应实现类<code>SpacePermissionsAction</code></p>
-<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210125246183.png" alt="image-20231210125246183"></p>
+<img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210125246183.png" class="" title="image-20231210125246183">
+
 <p><code>SpacePermissionsAction</code>看起来像是设置空间权限的controller，它们所在jar包看起来是一个名为<code>gatekeeper</code>的插件，后续又结合官方文档，推测并找到了一个功能入口：</p>
 <p><code>/plugins/gatekeeper-plugin/space/inspect-permissions.action?key=TEST</code></p>
-<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210130027450.png" alt="image-20231210130027450"></p>
+<img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210130027450.png" class="" title="image-20231210130027450">
+
 <p>点击<code>导出</code>，对应的请求如下：</p>
 <figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">POST</span> <span class="string">/plugins/gatekeeper-plugin/space/init-evaluator.action</span> <span class="meta">HTTP/1.1</span></span><br><span class="line"><span class="attribute">Host</span><span class="punctuation">: </span>127.0.0.1:8090</span><br><span class="line"><span class="attribute">Content-Type</span><span class="punctuation">: </span>application/x-www-form-urlencoded</span><br><span class="line"></span><br><span class="line"><span class="language-sas"><span class="keyword">key</span>=TEST<span class="variable">&amp;userFilter</span>=<span class="variable">&amp;excludeDisabled</span>=false<span class="variable">&amp;excludeOwnersNoPermissions</span>=false<span class="variable">&amp;alwaysShowAnonymous</span>=false<span class="variable">&amp;pageId</span>=<span class="variable">&amp;exportCsvDelimiter</span>=%2C<span class="variable">&amp;exportSpaceDetailsFormat</span>=<span class="keyword">key</span><span class="variable">&amp;exportFormat</span>=csv</span></span><br></pre></td></tr></table></figure>
 
 <p>代码会运行到<code>com.atlassian.confluence.plugins.gatekeeper.controllers.AbstractPermissionsAction#initEvaluator</code></p>
-<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210130342789.png" alt="image-20231210130342789"></p>
+<img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210130342789.png" class="" title="image-20231210130342789">
+
 <p>但漏洞Sink在<code>checkValidVelocitySyntax</code>方法中，于是构造请求：</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">key=TEST&amp;userFilter=&amp;excludeDisabled=false&amp;excludeOwnersNoPermissions=false&amp;alwaysShowAnonymous=false&amp;pageId=&amp;exportCsvDelimiter=%2C&amp;exportSpaceDetailsFormat=custom&amp;exportFormat=csv&amp;exportCustomSpaceDetailsFormat=leixiao</span><br></pre></td></tr></table></figure>
 
-<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210131317013.png" alt="image-20231210131317013"></p>
+<img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210131317013.png" class="" title="image-20231210131317013">
+
 <p>代码按预期走到了漏洞点，但奇怪就在这行代码怎么也执行不了，会抛出类加载冲突的异常：</p>
-<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210131624038.png" alt="image-20231210131624038"></p>
+<img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210131624038.png" class="" title="image-20231210131624038">
+
 <p>以为会和Jdk版本有关，尝试了Jdk11和Jdk17，都是这样，所以放弃了这个接口的尝试</p>
 <p><code>AbstractPermissionsAction</code>共有两个实现类：</p>
-<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210135932141.png" alt="image-20231210135932141"></p>
+<img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210135932141.png" class="" title="image-20231210135932141">
+
 <p>另一个类名为<code>GlobalPermissionsAction</code>，但对应的模组貌似是被默认禁用的：</p>
-<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210140229775.png" alt="image-20231210140229775"></p>
+<img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210140229775.png" class="" title="image-20231210140229775">
+
+
+
 <p>开启后该模组后，入口在<code>/admin/plugins/gatekeeper-plugin/global/inspect-permissions.action</code>，同样点击导出，测试后发现也会抛出类加载冲突异常。</p>
 <p>后来搜到一个15年的Bug：<a target="_blank" rel="noopener" href="https://jira.atlassian.com/browse/CONFSERVER-40148">https://jira.atlassian.com/browse/CONFSERVER-40148</a> ，和我遇到的问题一致，官方在20年发表的最后一句回复说已经在最新版本的Confluence上解决了，如果再次遇到这个情况可以继续反馈。我理解官方应该是承认这是设计上的Bug，并且会修复。然后刚好<code>gatekeeper</code>这个插件也有这个问题，但是没有被发现，所以目前来看这个插件确实存在着漏洞，但漏洞也确实利用不了。</p>
 <p>如果Bug被解决，那么这个漏洞是可以被轻松利用的，首先原本的POST请求其实可以转换成GET请求，然后就有两种利用方式：</p>
@@ -328,10 +354,14 @@
 </ol>
 <p>（后续是我本地修复了这个Bug，Bug原因是依赖包冲突，将<code>org.apache.servicemix.bundles.velocity-1.7_6.jar</code>换成maven仓库中的<code>org.apache.servicemix.bundles.velocity-1.6.4_4.jar</code>即可，但修复后依旧没办法利用。。。 黑名单限制太死了，而且此处也没有上下文，实在找不到绕过方法 -_-）</p>
 <p>再后面发现可以造成Dos攻击，报告官方后，给了$300奖励</p>
-<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20240128115341600.png" alt="image-20240128115341600"></p>
+<img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20240128115341600.png" class="" title="image-20240128115341600">
+
+
+
 <h3 id="代码Diff，尝试第二次CodeQL扫描"><a href="#代码Diff，尝试第二次CodeQL扫描" class="headerlink" title="代码Diff，尝试第二次CodeQL扫描"></a>代码Diff，尝试第二次CodeQL扫描</h3><p>将8.5.3和8.5.4反编译后的com.atlassian.confluence包中的类进行diff</p>
 <p>发现<code>com.atlassian.confluence.velocity.ConfigurableResourceManager#loadResource</code>方法中添加了一段对<code>resourceName</code>进行验证的代码：</p>
-<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210204423849.png" alt="image-20231210204423849"></p>
+<img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210204423849.png" class="" title="image-20231210204423849">
+
 <p>随后搜了一些资料，发现这个方法也是CVE-2019-3396的关键一环，所以我猜测CVE-2023-22522的原理可能和CVE-2019-3396差不多</p>
 <p>然后根据CVE-2019-3396写了CodeQL的查询语句：</p>
 <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * @id java/confluence-ssti</span></span><br><span class="line"><span class="comment"> * @kind path-problem</span></span><br><span class="line"><span class="comment"> * @problem.severity error</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"></span><br><span class="line">import java</span><br><span class="line">import semmle.code.java.dataflow.FlowSources</span><br><span class="line">import semmle.code.java.dataflow.TaintTracking</span><br><span class="line">import DataFlow::PathGraph</span><br><span class="line"></span><br><span class="line"><span class="operator">/</span><span class="operator">/</span> 从CVE<span class="number">-2019</span><span class="number">-3396</span>总结的source</span><br><span class="line">class MacroExecuteMethod extends <span class="keyword">Method</span> &#123;</span><br><span class="line">  MacroExecuteMethod() &#123;</span><br><span class="line">    <span class="keyword">exists</span>(RefType t <span class="operator">|</span></span><br><span class="line">      t.hasQualifiedName(&quot;com.atlassian.confluence.macro&quot;, &quot;Macro&quot;) <span class="keyword">and</span></span><br><span class="line">      this.getDeclaringType().getASupertype<span class="operator">*</span>() <span class="operator">=</span> t <span class="keyword">and</span></span><br><span class="line">      this.hasName(&quot;execute&quot;) <span class="keyword">and</span></span><br><span class="line">      this.getNumberOfParameters() <span class="operator">=</span> <span class="number">3</span></span><br><span class="line">    )</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="operator">/</span><span class="operator">/</span> 测试发现这里作为sink的话无法直接串联起来，所以改为GetTemplateMethod</span><br><span class="line">class GetResourceMethod extends <span class="keyword">Method</span> &#123;</span><br><span class="line">  GetResourceMethod() &#123;</span><br><span class="line">    <span class="keyword">exists</span>(Class c <span class="operator">|</span></span><br><span class="line">      c.hasName(&quot;ConfigurableResourceManager&quot;) <span class="keyword">and</span></span><br><span class="line">      this.getDeclaringType() <span class="operator">=</span> c <span class="keyword">and</span></span><br><span class="line">      this.hasName(&quot;getResource&quot;)</span><br><span class="line">    )</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">class GetTemplateMethod extends <span class="keyword">Method</span> &#123;</span><br><span class="line">  GetTemplateMethod() &#123;</span><br><span class="line">    <span class="keyword">exists</span>(Class c <span class="operator">|</span></span><br><span class="line">      c.hasQualifiedName(&quot;org.apache.velocity.app&quot;, &quot;VelocityEngine&quot;) <span class="keyword">and</span></span><br><span class="line">      this.getDeclaringType() <span class="operator">=</span> c <span class="keyword">and</span></span><br><span class="line">      this.hasName(&quot;getTemplate&quot;)</span><br><span class="line">    )</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">class TaintTrackingConfig extends TaintTracking::Configuration &#123;</span><br><span class="line">  TaintTrackingConfig() &#123; this <span class="operator">=</span> &quot;TaintTrackingConfig&quot; &#125;</span><br><span class="line"></span><br><span class="line">  override predicate isSource(DataFlow::Node source) &#123;</span><br><span class="line">    source instanceof RemoteFlowSource</span><br><span class="line">    <span class="keyword">or</span></span><br><span class="line">    <span class="keyword">exists</span>(MacroExecuteMethod macroExecuteMethod <span class="operator">|</span></span><br><span class="line">      source.asParameter() <span class="operator">=</span> macroExecuteMethod.getParameter(<span class="number">0</span>)</span><br><span class="line">      <span class="keyword">or</span></span><br><span class="line">      source.asParameter() <span class="operator">=</span> macroExecuteMethod.getParameter(<span class="number">1</span>)</span><br><span class="line">    )</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  override predicate isSink(DataFlow::Node sink) &#123;</span><br><span class="line">    <span class="keyword">exists</span>(<span class="keyword">Call</span> <span class="keyword">call</span> <span class="operator">|</span> call.getCallee() instanceof GetTemplateMethod <span class="operator">|</span></span><br><span class="line">      sink.asExpr() <span class="operator">=</span> call.getArgument(<span class="number">0</span>)</span><br><span class="line">    )</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">from</span> TaintTrackingConfig cfg, DataFlow::PathNode source, DataFlow::PathNode sink</span><br><span class="line"><span class="keyword">where</span> cfg.hasFlowPath(source, sink)</span><br><span class="line"><span class="keyword">select</span> sink.getNode(), source, sink, &quot;Server-side template injection, depends on a $@.&quot;,</span><br><span class="line">  source.getNode(), source.toString()</span><br></pre></td></tr></table></figure>
@@ -344,28 +374,43 @@
 
 
 <p>最后查询结果如下：</p>
-<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210224445107.png" alt="image-20231210224445107"></p>
+<img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210224445107.png" class="" title="image-20231210224445107">
+
+
+
 <h4 id="扫描结果一"><a href="#扫描结果一" class="headerlink" title="扫描结果一"></a>扫描结果一</h4><p>总共3个结果，但其实后两个结果是一样的，都是传入了<code>theme</code>这个参数，<code>theme</code>会和路径字符串进行拼接，最后传到<code>com.atlassian.confluence.velocity.ConfigurableResourceManager#getResource</code></p>
-<p>对应的功能点为预览 <code>&#39;导航图&#39;宏</code><br><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210225118832.png" alt="image-20231210225118832"></p>
+<p>对应的功能点为预览 <code>&#39;导航图&#39;宏</code></p>
+<img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210225118832.png" class="" title="image-20231210225118832">
+
+
+
 <p>HTTP请求为：</p>
 <figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">POST</span> <span class="string">/rest/tinymce/1/macro/preview</span> <span class="meta">HTTP/1.1</span></span><br><span class="line"><span class="attribute">Host</span><span class="punctuation">: </span>127.0.0.1:8090</span><br><span class="line"><span class="attribute">Content-Type</span><span class="punctuation">: </span>application/json; charset=UTF-8</span><br><span class="line"></span><br><span class="line"><span class="language-json"><span class="punctuation">&#123;</span><span class="attr">&quot;contentId&quot;</span><span class="punctuation">:</span><span class="string">&quot;360471&quot;</span><span class="punctuation">,</span><span class="attr">&quot;macro&quot;</span><span class="punctuation">:</span><span class="punctuation">&#123;</span><span class="attr">&quot;name&quot;</span><span class="punctuation">:</span><span class="string">&quot;navmap&quot;</span><span class="punctuation">,</span><span class="attr">&quot;body&quot;</span><span class="punctuation">:</span><span class="string">&quot;&quot;</span><span class="punctuation">,</span><span class="attr">&quot;params&quot;</span><span class="punctuation">:</span><span class="punctuation">&#123;</span><span class="attr">&quot;theme&quot;</span><span class="punctuation">:</span><span class="string">&quot;navmap-mytheme&quot;</span><span class="punctuation">&#125;</span><span class="punctuation">,</span><span class="attr">&quot;defaultParameterValue&quot;</span><span class="punctuation">:</span><span class="string">&quot;test&quot;</span><span class="punctuation">&#125;</span><span class="punctuation">&#125;</span></span></span><br></pre></td></tr></table></figure>
 
 
 
 <p><code>com.atlassian.confluence.plugins.macros.advanced.NavigationMapMacro#getTemplate</code></p>
-<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210225743403.png" alt="image-20231210225743403"></p>
+<img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210225743403.png" class="" title="image-20231210225743403">
+
 <p><code>com.atlassian.confluence.velocity.ConfigurableResourceManager#getResource</code></p>
-<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210225555317.png" alt="image-20231210225555317"></p>
+<img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231210225555317.png" class="" title="image-20231210225555317">
+
+
+
 <p>到这里，其实和CVE-2019-3396的差别就是：CVE-2019-3396能控制整个<code>resourceName</code>，目前找到的点只能控制<code>resourceName</code>中间的一部分，参考<a target="_blank" rel="noopener" href="https://paper.seebug.org/893/">https://paper.seebug.org/893/</a> 中对CVE-2019-3396的分析，那这里肯定是没办法RCE的，而且在拼接<code>theme</code>之前用<code>isSafeTitleForFilesystem</code>方法进行了安全检查，也没办法目录穿越，所以这个点基本没用</p>
 <h4 id="扫描结果二"><a href="#扫描结果二" class="headerlink" title="扫描结果二"></a>扫描结果二</h4><p>另一个扫描结果的两条路径是<code>SpaceEditDecoratorAction</code>和<code>SpaceViewDefaultDecoratorAction</code>的<code>decoratorName</code>字段传入了<code>getTemplate</code></p>
-<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231211093622385.png" alt="image-20231211093622385"></p>
+<img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231211093622385.png" class="" title="image-20231211093622385">
+
 <p>对应入口为<code>/spaces/viewdefaultdecorator.action?decoratorName=decorators/main.vmd&amp;key=TEST</code></p>
 <p><code>com.atlassian.confluence.admin.actions.lookandfeel.AbstractDecoratorAction#getTemplateFromResourceLoader</code>：</p>
-<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231211094150585.png" alt="image-20231211094150585"></p>
+<img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231211094150585.png" class="" title="image-20231211094150585">
+
 <p>但是在进入<code>getTemplate</code>前，会经过<code>isUnderConfluenceApp</code>方法的检查：</p>
-<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231211094348930.png" alt="image-20231211094348930"></p>
+<img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231211094348930.png" class="" title="image-20231211094348930">
+
 <p>这个方法的关键就是<code>URI.create(decoratorName).isAbsolute()</code>，在java中，就是判断scheme是否为null：</p>
-<p><img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231211094457434.png" alt="image-20231211094457434"></p>
+<img src="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/image-20231211094457434.png" class="" title="image-20231211094457434">
+
 <p>所以如果想像CVE-2019-3396一样传入<code>file:///...</code>或<code>http://...</code>是不行的。我也试了强行向<code>getTemplate</code>传入<code>file:///...</code>，<code>http://...</code>，<code>ftp://...</code>，也是没办法成功的，可能和Tomcat版本有关，或者是Confluence针对这种注入做了某种特定的修复</p>
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a target="_blank" rel="noopener" href="https://confluence.atlassian.com/pages/viewpage.action?pageId=1319570362">https://confluence.atlassian.com/pages/viewpage.action?pageId=1319570362</a></p>
 <p><a target="_blank" rel="noopener" href="https://paper.seebug.org/884/">https://paper.seebug.org/884/</a></p>
@@ -420,6 +465,20 @@
     </span>
     <span class="author" itemprop="copyrightHolder">淚笑</span>
   </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">78k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">4:43</span>
+  </span>
+</div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
   </div>
 

@@ -221,6 +221,21 @@
     </span>
 
   
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>393</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>1 分钟</span>
+    </span>
 </div>
 
         </div>
@@ -234,7 +249,8 @@
 
 <p>编译方法参考<a target="_blank" rel="noopener" href="https://openjdk.org/groups/build/doc/building.html">OpenJDK官方文档</a>，构建 JDK 需要预先存在的 JDK ，即 boot JDK，一般 boot JDK 的主版本需要低于编译版本。boot JDK 可在<a target="_blank" rel="noopener" href="https://www.oracle.com/java/technologies/javase/javase7-archive-downloads.html">oracle</a>下载，JDK 源码在 <a target="_blank" rel="noopener" href="https://github.com/openjdk/jdk8u/tags">OpenJDK 的代码仓库</a>下载。另外还需要下载Linux版本的<a target="_blank" rel="noopener" href="https://github.com/github/codeql-cli-binaries/releases">CodeQL CLI</a></p>
 <p>最后目录结构如下：</p>
-<p><img src="/2023/09/06/Docker%E7%BC%96%E8%AF%91OpenJDK-CodeQL%E6%95%B0%E6%8D%AE%E5%BA%93/image-20230908132515211.png" alt="image-20230908132515211"></p>
+<img src="/2023/09/06/Docker%E7%BC%96%E8%AF%91OpenJDK-CodeQL%E6%95%B0%E6%8D%AE%E5%BA%93/image-20230908132515211.png" class="" title="image-20230908132515211">
+
 <p>bootJDK，codeqlCLI，source 目录下均放对应资源的已解压的文件夹</p>
 <p>Dockerfile</p>
 <figure class="highlight dockerfile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">FROM</span> --platform=linux/amd64 centos:centos7</span><br><span class="line"></span><br><span class="line"><span class="keyword">RUN</span><span class="language-bash"> yum groupinstall <span class="string">&quot;Development Tools&quot;</span> -y &amp;&amp; \</span></span><br><span class="line"><span class="language-bash">    yum install <span class="built_in">which</span> -y &amp;&amp; \</span></span><br><span class="line"><span class="language-bash">    yum install libXtst-devel libXt-devel libXrender-devel libXrandr-devel libXi-devel -y &amp;&amp; \</span></span><br><span class="line"><span class="language-bash">    yum install cups-devel -y &amp;&amp; \</span></span><br><span class="line"><span class="language-bash">    yum install freetype-devel -y &amp;&amp; \</span></span><br><span class="line"><span class="language-bash">    yum install alsa-lib-devel -y &amp;&amp; \</span></span><br><span class="line"><span class="language-bash">    yum install fontconfig-devel -y &amp;&amp; \</span></span><br><span class="line"><span class="language-bash">    yum install libffi-devel -y &amp;&amp; \</span></span><br><span class="line"><span class="language-bash">    yum install autoconf -y</span></span><br></pre></td></tr></table></figure>
@@ -295,6 +311,20 @@
     </span>
     <span class="author" itemprop="copyrightHolder">淚笑</span>
   </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">78k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">4:43</span>
+  </span>
+</div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
   </div>
 
