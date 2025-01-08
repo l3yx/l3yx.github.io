@@ -27,10 +27,11 @@
 <meta property="og:description" content="CVE-2023-33246 是通过updateBrokerConfig更新Broker的filterServerNums和rocketmqHome这两项配置进行RCE的（rocketmqHome会被拼接到命令中执行，filterServerNums&gt;0 是进入命令执行的前提条件） 修复的逻辑是直接删除相关代码 但从仓库的修复代码来看，还存在另一处RCE的点，不过官方只发布了上述一个CVE编">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2023-06-15T14:18:18.000Z">
-<meta property="article:modified_time" content="2023-06-15T14:22:36.281Z">
+<meta property="article:modified_time" content="2023-06-15T14:22:00.000Z">
 <meta property="article:author" content="淚笑">
+<meta property="article:tag" content="Web安全">
+<meta property="article:tag" content="Java">
 <meta property="article:tag" content="漏洞分析">
-<meta property="article:tag" content="RocketMQ">
 <meta name="twitter:card" content="summary">
 
 
@@ -89,7 +90,7 @@
 
 
 <nav class="site-nav">
-  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li>
       <li class="menu-item menu-item-search">
         <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
         </a>
@@ -211,7 +212,7 @@
       <span class="post-meta-item-text">发表于</span>
       
 
-      <time title="创建时间：2023-06-15 22:18:18 / 修改时间：22:22:36" itemprop="dateCreated datePublished" datetime="2023-06-15T22:18:18+08:00">2023-06-15</time>
+      <time title="创建时间：2023-06-15 22:18:18 / 修改时间：22:22:00" itemprop="dateCreated datePublished" datetime="2023-06-15T22:18:18+08:00">2023-06-15</time>
     </span>
 
   
@@ -367,8 +368,9 @@
 
     <footer class="post-footer">
           <div class="post-tags">
+              <a href="/tags/Web%E5%AE%89%E5%85%A8/" rel="tag"># Web安全</a>
+              <a href="/tags/Java/" rel="tag"># Java</a>
               <a href="/tags/%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/" rel="tag"># 漏洞分析</a>
-              <a href="/tags/RocketMQ/" rel="tag"># RocketMQ</a>
           </div>
 
         
@@ -402,7 +404,7 @@
 
   <div class="copyright">
     &copy; 
-    <span itemprop="copyrightYear">2024</span>
+    <span itemprop="copyrightYear">2025</span>
     <span class="with-love">
       <i class="fa fa-heart"></i>
     </span>
@@ -413,13 +415,13 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">86k</span>
+    <span title="站点总字数">89k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">5:14</span>
+    <span title="站点阅读时长">5:23</span>
   </span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
