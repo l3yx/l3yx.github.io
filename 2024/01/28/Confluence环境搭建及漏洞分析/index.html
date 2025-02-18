@@ -163,7 +163,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA"><span class="nav-number">1.</span> <span class="nav-text">环境搭建</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90"><span class="nav-number">2.</span> <span class="nav-text">漏洞分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8A%A8%E6%80%81%E8%B0%83%E8%AF%95%E6%96%B9%E6%B3%95"><span class="nav-number">2.1.</span> <span class="nav-text">动态调试方法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B0%9D%E8%AF%95%E7%AC%AC%E4%B8%80%E6%AC%A1CodeQL%E6%89%AB%E6%8F%8F"><span class="nav-number">2.2.</span> <span class="nav-text">尝试第一次CodeQL扫描</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BB%A3%E7%A0%81Diff%EF%BC%8C%E5%B0%9D%E8%AF%95%E7%AC%AC%E4%BA%8C%E6%AC%A1CodeQL%E6%89%AB%E6%8F%8F"><span class="nav-number">2.3.</span> <span class="nav-text">代码Diff，尝试第二次CodeQL扫描</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%89%AB%E6%8F%8F%E7%BB%93%E6%9E%9C%E4%B8%80"><span class="nav-number">2.3.1.</span> <span class="nav-text">扫描结果一</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%89%AB%E6%8F%8F%E7%BB%93%E6%9E%9C%E4%BA%8C"><span class="nav-number">2.3.2.</span> <span class="nav-text">扫描结果二</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">3.</span> <span class="nav-text">参考</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA"><span class="nav-number">1.</span> <span class="nav-text">环境搭建</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90"><span class="nav-number">2.</span> <span class="nav-text">漏洞分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8A%A8%E6%80%81%E8%B0%83%E8%AF%95"><span class="nav-number">2.1.</span> <span class="nav-text">动态调试</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B0%9D%E8%AF%95%E7%AC%AC%E4%B8%80%E6%AC%A1CodeQL%E6%89%AB%E6%8F%8F"><span class="nav-number">2.2.</span> <span class="nav-text">尝试第一次CodeQL扫描</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BB%A3%E7%A0%81Diff%EF%BC%8C%E5%B0%9D%E8%AF%95%E7%AC%AC%E4%BA%8C%E6%AC%A1CodeQL%E6%89%AB%E6%8F%8F"><span class="nav-number">2.3.</span> <span class="nav-text">代码Diff，尝试第二次CodeQL扫描</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%89%AB%E6%8F%8F%E7%BB%93%E6%9E%9C%E4%B8%80"><span class="nav-number">2.3.1.</span> <span class="nav-text">扫描结果一</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%89%AB%E6%8F%8F%E7%BB%93%E6%9E%9C%E4%BA%8C"><span class="nav-number">2.3.2.</span> <span class="nav-text">扫描结果二</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">3.</span> <span class="nav-text">参考</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -283,7 +283,7 @@
 
 
 
-<h2 id="漏洞分析"><a href="#漏洞分析" class="headerlink" title="漏洞分析"></a>漏洞分析</h2><h3 id="动态调试方法"><a href="#动态调试方法" class="headerlink" title="动态调试方法"></a>动态调试方法</h3><p>前文的环境搭建已经开启了远程调试端口，如果要进行断点调试的话，可以将所有jar包导入IDEA作为lib，直接到jar包中的类下断点（用反编译后的源码下断点的话行号可能不准，断不到指定位置）</p>
+<h2 id="漏洞分析"><a href="#漏洞分析" class="headerlink" title="漏洞分析"></a>漏洞分析</h2><h3 id="动态调试"><a href="#动态调试" class="headerlink" title="动态调试"></a>动态调试</h3><p>前文的环境搭建已经开启了远程调试端口，如果要进行断点调试的话，可以将所有jar包导入IDEA作为lib，直接到jar包中的类下断点（用反编译后的源码下断点的话行号可能不准，断不到指定位置）</p>
 <h3 id="尝试第一次CodeQL扫描"><a href="#尝试第一次CodeQL扫描" class="headerlink" title="尝试第一次CodeQL扫描"></a>尝试第一次CodeQL扫描</h3><p>由于没有分析过confluence相关的漏洞，而且关于这个漏洞公开的细节太少，想试试用CodeQL扫一下</p>
 <p>confluence是闭源系统，可以用这个工具编译数据库：<a target="_blank" rel="noopener" href="https://github.com/waderwu/extractor-java">https://github.com/waderwu/extractor-java</a></p>
 <p>将源码包和依赖包分别拷贝到不同目录（这里我默认将以com.atlassian.confluence.开头的视为confluence本身，其他jar包视为依赖）：</p>
@@ -476,13 +476,13 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">89k</span>
+    <span title="站点总字数">93k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">5:23</span>
+    <span title="站点阅读时长">5:39</span>
   </span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动

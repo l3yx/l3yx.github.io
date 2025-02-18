@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"l3yx.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.21.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="很久以前就对人工智能感兴趣，最近正好有时间，而且工作上也有个对漏洞报告进行识别的需求，便花了一个月左右时间学习了李沐老师的《动手学深度学习》、国外大佬的《Deep Learning for Coders with Fastai and PyTorch》以及各种入门书和视频。有了理论基础后便想自己先独立完成一个简单的漏洞分类模型，此篇笔记记录了一些思考和模型训练过程，完整代码在：https:&#x2F;&#x2F;gi">
+<meta property="og:type" content="article">
+<meta property="og:title" content="使用PyTorch微调BERT实现漏洞分类模型">
+<meta property="og:url" content="https://l3yx.github.io/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/index.html">
+<meta property="og:site_name" content="l3yx&#39;s blog">
+<meta property="og:description" content="很久以前就对人工智能感兴趣，最近正好有时间，而且工作上也有个对漏洞报告进行识别的需求，便花了一个月左右时间学习了李沐老师的《动手学深度学习》、国外大佬的《Deep Learning for Coders with Fastai and PyTorch》以及各种入门书和视频。有了理论基础后便想自己先独立完成一个简单的漏洞分类模型，此篇笔记记录了一些思考和模型训练过程，完整代码在：https:&#x2F;&#x2F;gi">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://l3yx.github.io/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/bert-transfer-learning.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/bert-base-bert-large-encoders.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/x2.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250215134520070.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/bert-encoders-input.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/bert-output-vector.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/bert-classifier.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250215155524443.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250216224407974.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250216224501924.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250216224723174.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250216224843415.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250216233809600.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250216234106529.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250216234220124.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250216234302765.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250217161928374.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250217185436522.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250217213627144.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250218131106672.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250218132606074.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250218194035929.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250218194046547.png">
+<meta property="article:published_time" content="2025-02-15T02:01:13.000Z">
+<meta property="article:modified_time" content="2025-02-17T11:23:00.000Z">
+<meta property="article:author" content="淚笑">
+<meta property="article:tag" content="深度学习">
+<meta property="article:tag" content="NLP">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://l3yx.github.io/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/bert-transfer-learning.png">
+
+
+<link rel="canonical" href="https://l3yx.github.io/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://l3yx.github.io/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/","path":"2025/02/15/使用PyTorch微调BERT实现漏洞分类模型/","title":"使用PyTorch微调BERT实现漏洞分类模型"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>使用PyTorch微调BERT实现漏洞分类模型 | l3yx's blog</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">l3yx's blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#BERT"><span class="nav-number">1.</span> <span class="nav-text">BERT</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B%E6%9E%B6%E6%9E%84"><span class="nav-number">1.1.</span> <span class="nav-text">模型架构</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B%E8%BE%93%E5%85%A5"><span class="nav-number">1.1.1.</span> <span class="nav-text">模型输入</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B%E8%BE%93%E5%87%BA"><span class="nav-number">1.1.2.</span> <span class="nav-text">模型输出</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%8E%AF%E5%A2%83%E5%87%86%E5%A4%87"><span class="nav-number">2.</span> <span class="nav-text">环境准备</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E8%8E%B7%E5%8F%96%E5%92%8C%E9%A2%84%E5%A4%84%E7%90%86"><span class="nav-number">3.</span> <span class="nav-text">数据获取和预处理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9A%E4%B9%89%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B"><span class="nav-number">4.</span> <span class="nav-text">定义分类模型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83%E5%92%8C%E4%BF%9D%E5%AD%98%E6%A8%A1%E5%9E%8B"><span class="nav-number">5.</span> <span class="nav-text">训练和保存模型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8A%A0%E8%BD%BD%E5%92%8C%E8%AF%84%E4%BC%B0%E6%A8%A1%E5%9E%8B"><span class="nav-number">6.</span> <span class="nav-text">加载和评估模型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A4%84%E7%90%86%E6%95%B0%E6%8D%AE%E9%87%8D%E6%96%B0%E8%AE%AD%E7%BB%83"><span class="nav-number">7.</span> <span class="nav-text">处理数据重新训练</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">8.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="淚笑"
+      src="/resources/avatar.jpg">
+  <p class="site-author-name" itemprop="name">淚笑</p>
+  <div class="site-description" itemprop="description">学的越多，懂的越少</div>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/l3yx" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;l3yx" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1729888211@qq.com" title="E-Mail → mailto:1729888211@qq.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://l3yx.github.io/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/resources/avatar.jpg">
+      <meta itemprop="name" content="淚笑">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="l3yx's blog">
+      <meta itemprop="description" content="学的越多，懂的越少">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="使用PyTorch微调BERT实现漏洞分类模型 | l3yx's blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          使用PyTorch微调BERT实现漏洞分类模型
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-02-15 10:01:13" itemprop="dateCreated datePublished" datetime="2025-02-15T10:01:13+08:00">2025-02-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-02-17 19:23:00" itemprop="dateModified" datetime="2025-02-17T19:23:00+08:00">2025-02-17</time>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>4.5k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>16 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>很久以前就对人工智能感兴趣，最近正好有时间，而且工作上也有个对漏洞报告进行识别的需求，便花了一个月左右时间学习了李沐老师的<a target="_blank" rel="noopener" href="https://zh.d2l.ai/index.html">《动手学深度学习》</a>、国外大佬的<a target="_blank" rel="noopener" href="https://course.fast.ai/Resources/book.html">《Deep Learning for Coders with Fastai and PyTorch》</a>以及各种入门书和视频。有了理论基础后便想自己先独立完成一个简单的漏洞分类模型，此篇笔记记录了一些思考和模型训练过程，完整代码在：<a target="_blank" rel="noopener" href="https://github.com/l3yx/VulBERT">https://github.com/l3yx/VulBERT</a></p>
+<span id="more"></span>
+
+<h2 id="BERT"><a href="#BERT" class="headerlink" title="BERT"></a>BERT</h2><p><a target="_blank" rel="noopener" href="https://ar5iv.labs.arxiv.org/html/1810.04805">BERT</a>（Bidirectional Encoder Representations from Transformers）是由谷歌在2018年提出的一种基于 Transformer 架构的预训练语言模型。本质是由多个 Transformer 编码器层顺序连接构成，通过预训练任务（如MLM和NSP）学习到双向上下文表征的深度模型。</p>
+<p>BERT 模型开发经过两个步骤：</p>
+<ol>
+<li>在大量文本上进行<strong>半监督训练</strong>以掌握语言模式和语言处理能力。</li>
+<li>使用在第一步中预训练好的模型，在带标签数据集上针对特定任务进行<strong>微调</strong>（<strong>监督训练</strong>）。</li>
+</ol>
+<img src="/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/bert-transfer-learning.png" class="" title="img">
+
+<p>可以通过 <a target="_blank" rel="noopener" href="https://github.com/google-research/bert">GitHub</a> 或 <a target="_blank" rel="noopener" href="https://huggingface.co/google-bert/bert-base-uncased">Hugging Face</a> 下载预训练好的模型，使用 Hugging Face 的 <a target="_blank" rel="noopener" href="https://huggingface.co/docs/transformers/quicktour">Transformers</a> 库可以方便的使用各种模型。</p>
+<h3 id="模型架构"><a href="#模型架构" class="headerlink" title="模型架构"></a>模型架构</h3><p>BERT base 模型由12层 Transformer 编码器构成，含12个注意力头，隐藏单元大小为768，参数约110M。BERT large 模型由24层 Transformer 编码器构成，有16个注意力头，隐藏单元大小为1024，参数约340M。</p>
+<img src="/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/bert-base-bert-large-encoders.png" class="" title="img">
+
+<h4 id="模型输入"><a href="#模型输入" class="headerlink" title="模型输入"></a>模型输入</h4><img src="/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/x2.png" class="" title="Refer to caption">
+
+<p>BERT 的理论输入由以下三部分构成：</p>
+<ul>
+<li><strong>Token Embeddings</strong>（文本分词后每个 token 的向量表示）</li>
+<li><strong>Segment Embeddings</strong>（通过标记 <code>0</code> 或 <code>1</code> 表示 token 属于第一句还是第二句，帮助模型识别句子边界） </li>
+<li><strong>Position Embeddings</strong> （为每个 token 添加位置信息编码，使 Transformer 能感知输入序列的顺序）</li>
+</ul>
+<p>在代码框架 Hugging Face Transformers 中，输入参数是 <code>input_ids</code>、<code>token_type_ids</code> 和 <code>attention_mask</code>。模型内部通过 <code>Token Embedding</code> 层将 <code>input_ids</code> 转换为向量（每个token对应的向量纬度大小等于隐藏单元大小），通过 <code>Segment Embedding</code> 层转换<code>token_type_ids</code>，通过 <code>Position Embedding</code> 层直接生成位置编码，<code>attention_mask</code> 用于标识哪些位置是真实 token，哪些是填充token（Padding）。</p>
+<p>测试代码如下：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> transformers <span class="keyword">import</span> BertTokenizer, BertModel</span><br><span class="line"></span><br><span class="line">bert_tokenizer = BertTokenizer.from_pretrained(<span class="string">&quot;google-bert/bert-base-uncased&quot;</span>)</span><br><span class="line">bert_base_model = BertModel.from_pretrained(<span class="string">&quot;google-bert/bert-base-uncased&quot;</span>)</span><br><span class="line">bert_large_model = BertModel.from_pretrained(<span class="string">&quot;google-bert/bert-large-uncased&quot;</span>)</span><br><span class="line"></span><br><span class="line">text = <span class="string">&quot;Hello World!&quot;</span></span><br><span class="line"></span><br><span class="line">inputs = bert_tokenizer(text, return_tensors=<span class="string">&#x27;pt&#x27;</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">f&#x27;inputs: <span class="subst">&#123;inputs&#125;</span>&#x27;</span>)</span><br><span class="line">tokens = bert_tokenizer.convert_ids_to_tokens(inputs[<span class="string">&#x27;input_ids&#x27;</span>][<span class="number">0</span>].tolist())</span><br><span class="line"><span class="built_in">print</span>(<span class="string">f&#x27;tokens: <span class="subst">&#123;tokens&#125;</span>&#x27;</span>)</span><br><span class="line">bert_base_token_embeddings = bert_base_model.embeddings.word_embeddings(inputs[<span class="string">&#x27;input_ids&#x27;</span>])</span><br><span class="line">bert_large_token_embeddings = bert_large_model.embeddings.word_embeddings(inputs[<span class="string">&#x27;input_ids&#x27;</span>])</span><br><span class="line"><span class="built_in">print</span>(<span class="string">f&#x27;bert_base_token_embeddings shape: <span class="subst">&#123;bert_base_token_embeddings.shape&#125;</span>&#x27;</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">f&#x27;bert_large_token_embeddings shape: <span class="subst">&#123;bert_large_token_embeddings.shape&#125;</span>&#x27;</span>)</span><br></pre></td></tr></table></figure>
+
+<img src="/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250215134520070.png" class="" title="image-20250215134520070">
+
+
+
+<p><code>[CLS]</code>即分类标记（Classification Token），位于输入序列的起始位置。<code>[SEP]</code>是分隔标记（Separator Token），用于分隔不同的文本片段，比如在文本对任务中区分两个句子，帮助模型明确不同文本之间的界限。</p>
+<p>输入文本逐层通过 self-attention 机制和前馈神经网络进行处理和转换，每个词本身的 embedding 始终作为主要语义基向量，同时其他词的语义通过注意力权重加权补充，形成更丰富的向量表征。经过多层迭代，每个词的最终 embedding 实质上是全局语义的深度整合。</p>
+<p><code>[CLS]</code>作为无实际语义的占位符，每层注意力计算中，它不携带初始语义信息，仅作为信息聚合节点接收来自全体词汇的加权特征。经过多层传递后，<code>[CLS]</code>最终形成全局语义的压缩表征，相比携带自身语义干扰的常规词汇，可以更好的表征文本语义。</p>
+<img src="/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/bert-encoders-input.png" class="" title="img">
+
+<p>BERT模型的最大输入长度通常为512个 token，这是由其预训练时使用的固定序列长度决定的，主要受限于 Transformer self-attention 机制的计算复杂度和训练资源限制。若输入过长，通常采用截断（舍弃超长部分）或分段处理（将文本拆分为多段分别输入后合并结果）；同一批次内输入长度不一时，通过填充（padding）短文本至批次最大长度并用 <code>[PAD]</code> 标记补位）结合注意力掩码（masking）屏蔽填充部分。</p>
+<h4 id="模型输出"><a href="#模型输出" class="headerlink" title="模型输出"></a>模型输出</h4><p>每个位置输出一个大小为 <code>hidden_size</code> （隐藏单元大小）的向量。对于分类任务，通常只关注第一个位置的输出。</p>
+<img src="/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/bert-output-vector.png" class="" title="img">
+
+<p>该向量可以用作分类器的输入。</p>
+<img src="/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/bert-classifier.png" class="" title="img">
+
+
+
+<p>在代码框架 Hugging Face Transformers 中，BERT模型的输出主要包含 <code>last_hidden_state</code> 和 <code>pooler_output</code> 两部分：</p>
+<ul>
+<li><strong>last_hidden_state</strong><ul>
+<li>形状：[batch_size, sequence_length, hidden_size]</li>
+<li>含义：模型最后一层输出的所有 token 的隐藏状态（每个 token 的上下文向量表示）</li>
+</ul>
+</li>
+<li><strong>pooler_output</strong><ul>
+<li>形状：[batch_size, hidden_size]</li>
+<li>含义：对 <code>[CLS]</code> token 的最后一层隐藏状态进一步通过一个线性层 + tanh 激活后的表示</li>
+</ul>
+</li>
+</ul>
+<p>代码如下：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> transformers <span class="keyword">import</span> BertTokenizer, BertModel</span><br><span class="line"><span class="keyword">import</span> torch</span><br><span class="line"></span><br><span class="line">tokenizer = BertTokenizer.from_pretrained(<span class="string">&quot;google-bert/bert-base-uncased&quot;</span>)</span><br><span class="line">model = BertModel.from_pretrained(<span class="string">&quot;google-bert/bert-base-uncased&quot;</span>)</span><br><span class="line"></span><br><span class="line">text = <span class="string">&quot;Hello World!&quot;</span></span><br><span class="line"></span><br><span class="line">inputs = tokenizer(text, return_tensors=<span class="string">&#x27;pt&#x27;</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">f&#x27;input_ids shape: <span class="subst">&#123;inputs[<span class="string">&quot;input_ids&quot;</span>].shape&#125;</span>&#x27;</span>)</span><br><span class="line">outputs = model(**inputs, output_hidden_states=<span class="literal">True</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">f&#x27;last_hidden_state shape: <span class="subst">&#123;outputs.last_hidden_state.shape&#125;</span>&#x27;</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">f&#x27;pooler_output shape: <span class="subst">&#123;outputs.pooler_output.shape&#125;</span>&#x27;</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 获取 [CLS] 的隐藏状态</span></span><br><span class="line">cls_hidden_state = outputs.last_hidden_state[<span class="number">0</span>][<span class="number">0</span>]</span><br><span class="line"><span class="comment"># 线性变换</span></span><br><span class="line">linear_output = torch.matmul(cls_hidden_state, model.pooler.dense.weight.T) + model.pooler.dense.bias</span><br><span class="line"><span class="comment"># Tanh 激活</span></span><br><span class="line">manual_pooler_output = torch.tanh(linear_output)</span><br><span class="line"><span class="built_in">print</span>(torch.<span class="built_in">all</span>(manual_pooler_output == outputs.pooler_output[<span class="number">0</span>]))</span><br></pre></td></tr></table></figure>
+
+<img src="/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250215155524443.png" class="" title="image-20250215155524443">
+
+
+
+<h2 id="环境准备"><a href="#环境准备" class="headerlink" title="环境准备"></a>环境准备</h2><p>我是在MacBook M2上编写代码并做简单测试，不过即使有 <a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/notes/mps.html">MPS</a> 加速，用来微调模型也相当费劲，所以训练我是放到云厂商的免费云空间跑的。</p>
+<p>Python依赖如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">torch==2.5.1</span><br><span class="line">transformers==4.48.3</span><br><span class="line">datasets==3.2.0</span><br><span class="line">matplotlib==3.10.0</span><br><span class="line">scikit-learn==1.6.1</span><br></pre></td></tr></table></figure>
+
+
+
+<p>另外国内访问 Hugging Face 需要通过镜像站：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> os</span><br><span class="line">os.environ[<span class="string">&#x27;HF_ENDPOINT&#x27;</span>] = <span class="string">&#x27;https://hf-mirror.com&#x27;</span></span><br></pre></td></tr></table></figure>
+
+
+
+<p>检查并使用GPU：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> torch</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> torch.cuda.is_available():</span><br><span class="line">    device = torch.device(<span class="string">&#x27;cuda&#x27;</span>)</span><br><span class="line"><span class="keyword">elif</span> torch.backends.mps.is_available():</span><br><span class="line">    device = torch.device(<span class="string">&#x27;mps&#x27;</span>)</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    device = torch.device(<span class="string">&#x27;cpu&#x27;</span>)</span><br><span class="line"></span><br><span class="line">torch.set_default_device(device)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">f&quot;Using device = <span class="subst">&#123;torch.get_default_device()&#125;</span>&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="数据获取和预处理"><a href="#数据获取和预处理" class="headerlink" title="数据获取和预处理"></a>数据获取和预处理</h2><p>Hugging Face Hub 中有 <a target="_blank" rel="noopener" href="https://huggingface.co/datasets/Hacker0x01/hackerone_disclosed_reports">HackerOne 的公开漏洞报告数据集</a>，做漏洞分类暂只会用到其中的<code>title</code>，<code>vulnerability_information</code> 和 <code>weakness</code> ，先简单的过滤一下：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> datasets <span class="keyword">import</span> load_dataset</span><br><span class="line"></span><br><span class="line">dataset = load_dataset(<span class="string">&quot;Hacker0x01/hackerone_disclosed_reports&quot;</span>)</span><br><span class="line">dataset = dataset.<span class="built_in">filter</span>(</span><br><span class="line">    <span class="keyword">lambda</span> example:</span><br><span class="line">    example[<span class="string">&quot;title&quot;</span>] <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span> <span class="keyword">and</span></span><br><span class="line">    example[<span class="string">&quot;vulnerability_information&quot;</span>] <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span> <span class="keyword">and</span></span><br><span class="line">    example[<span class="string">&quot;weakness&quot;</span>] <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span></span><br><span class="line">)</span><br><span class="line"><span class="built_in">print</span>(dataset)</span><br></pre></td></tr></table></figure>
+
+<img src="/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250216224407974.png" class="" title="image-20250216224407974">
+
+
+
+<p>报告中包含的漏洞类型很多，画了个条形图看一下大致占比：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> matplotlib.pyplot <span class="keyword">as</span> plt</span><br><span class="line"><span class="keyword">from</span> collections <span class="keyword">import</span> Counter</span><br><span class="line"></span><br><span class="line">weakness_types = [item[<span class="string">&quot;weakness&quot;</span>][<span class="string">&quot;name&quot;</span>] <span class="keyword">for</span> item <span class="keyword">in</span> dataset[<span class="string">&quot;train&quot;</span>]]</span><br><span class="line">type_counter = Counter(weakness_types)</span><br><span class="line">sorted_counts = <span class="built_in">sorted</span>(type_counter.items(), key=<span class="keyword">lambda</span> x: x[<span class="number">1</span>])</span><br><span class="line">labels = [x[<span class="number">0</span>] <span class="keyword">for</span> x <span class="keyword">in</span> sorted_counts]</span><br><span class="line">values = [x[<span class="number">1</span>] <span class="keyword">for</span> x <span class="keyword">in</span> sorted_counts]</span><br><span class="line">total = <span class="built_in">sum</span>(values)</span><br><span class="line"></span><br><span class="line">plt.figure(figsize=(<span class="number">10</span>, <span class="number">24</span>))</span><br><span class="line">plt.bar_label(</span><br><span class="line">    plt.barh(labels, values),</span><br><span class="line">    labels= [<span class="string">f&quot;<span class="subst">&#123;v&#125;</span> (<span class="subst">&#123;v/total:<span class="number">.3</span>%&#125;</span>)&quot;</span> <span class="keyword">for</span> v <span class="keyword">in</span> values],</span><br><span class="line">)</span><br><span class="line">plt.xlim(right=<span class="built_in">max</span>(values)*<span class="number">1.6</span>)</span><br><span class="line">plt.tight_layout()</span><br><span class="line">plt.title(<span class="string">f&quot;Number of vulnerability types: <span class="subst">&#123;<span class="built_in">len</span>(labels)&#125;</span>&quot;</span>)</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
+
+<img src="/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250216224501924.png" class="" title="image-20250216224501924">
+
+
+
+<p>大多数漏洞类型的报告数量都很少，模型可能无法有效学习，所以我将占比小于0.24%的都归为了Other类（剩余总共48种漏洞类型）。并在数据集中添加了 label 列表示漏洞类型，其值为 main_types 的下标：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">main_types = [k <span class="keyword">for</span> k,v <span class="keyword">in</span> type_counter.items() <span class="keyword">if</span> v &gt; total*<span class="number">0.0024</span>]</span><br><span class="line">main_types.append(<span class="string">&quot;Other&quot;</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">f&quot;漏洞类型数量: <span class="subst">&#123;<span class="built_in">len</span>(main_types)&#125;</span>&quot;</span>)</span><br><span class="line">dataset = dataset.<span class="built_in">map</span>(<span class="keyword">lambda</span> example: &#123;<span class="string">&#x27;label&#x27;</span>: main_types.index(example[<span class="string">&quot;weakness&quot;</span>][<span class="string">&quot;name&quot;</span>]) <span class="keyword">if</span> example[<span class="string">&quot;weakness&quot;</span>][<span class="string">&quot;name&quot;</span>] <span class="keyword">in</span> main_types <span class="keyword">else</span> <span class="built_in">len</span>(main_types)-<span class="number">1</span> &#125;)</span><br></pre></td></tr></table></figure>
+
+
+
+<p>然后对数据进行分词处理，将文本转换为模型能够理解的数字，并只保留有用的列：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> transformers <span class="keyword">import</span> BertTokenizer</span><br><span class="line"><span class="keyword">import</span> transformers</span><br><span class="line"></span><br><span class="line">tokenizer = BertTokenizer.from_pretrained(<span class="string">&quot;google-bert/bert-base-uncased&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">tokenize_function</span>(<span class="params">example</span>):</span><br><span class="line">    <span class="keyword">return</span> tokenizer(example[<span class="string">&quot;title&quot;</span>], example[<span class="string">&quot;vulnerability_information&quot;</span>], padding=<span class="literal">True</span>, max_length=<span class="number">512</span>, truncation=<span class="literal">True</span>)</span><br><span class="line"></span><br><span class="line">verbosity = transformers.logging.get_verbosity(); transformers.logging.set_verbosity_error()</span><br><span class="line">tokenized_datasets = dataset.<span class="built_in">map</span>(tokenize_function, batched=<span class="literal">True</span>)</span><br><span class="line">transformers.logging.set_verbosity(verbosity)</span><br><span class="line">tokenized_datasets = tokenized_datasets.select_columns([<span class="string">&#x27;input_ids&#x27;</span>, <span class="string">&#x27;token_type_ids&#x27;</span>, <span class="string">&#x27;attention_mask&#x27;</span>, <span class="string">&#x27;label&#x27;</span>])</span><br><span class="line">tokenized_datasets.set_format(<span class="string">&quot;torch&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> item <span class="keyword">in</span> tokenized_datasets[<span class="string">&quot;train&quot;</span>]:</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">f&quot;item: <span class="subst">&#123;item&#125;</span>&quot;</span>)</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">f&#x27;tokens: <span class="subst">&#123;tokenizer.convert_ids_to_tokens(item[<span class="string">&quot;input_ids&quot;</span>])&#125;</span>&#x27;</span>)</span><br><span class="line">    <span class="keyword">break</span></span><br></pre></td></tr></table></figure>
+
+<p>BERT 原生支持双句输入（通过 <code>[SEP]</code> 分隔），其预训练任务包含 NSP （Next Sentence Prediction），因此天然适合文本蕴含、语义相似度等任务。</p>
+<p>漏洞数据中有两项可以用于判断其漏洞类别，即漏洞报告标题和报告内容，这两项可以拼接为一段文本作为输入，但我觉得标题通常包含一些重要关键词，可以提供分类的核心线索，利用 BERT 的双句机制，模型能区分标题与内容，并通过注意力机制捕捉交互信息，所以在前文代码中我没有对标题和内容进行拼接，而是双句输入。</p>
+<p>继续为训练集、验证集和测试集分别创建Dataloader：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> torch.utils.data <span class="keyword">import</span> DataLoader</span><br><span class="line"><span class="keyword">import</span> torch</span><br><span class="line"></span><br><span class="line">generator = torch.Generator(device=device)</span><br><span class="line"></span><br><span class="line">train_dataloader = DataLoader(tokenized_datasets[<span class="string">&quot;train&quot;</span>], shuffle=<span class="literal">True</span>, batch_size=<span class="number">16</span>, generator=generator)</span><br><span class="line">validation_dataloader = DataLoader(tokenized_datasets[<span class="string">&quot;validation&quot;</span>], shuffle=<span class="literal">True</span>, batch_size=<span class="number">16</span>, generator=generator)</span><br><span class="line">test_dataloader = DataLoader(tokenized_datasets[<span class="string">&quot;test&quot;</span>], shuffle=<span class="literal">True</span>, batch_size=<span class="number">16</span>, generator=generator)</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> batch <span class="keyword">in</span> train_dataloader:</span><br><span class="line">    <span class="built_in">print</span>(&#123;k: v.shape <span class="keyword">for</span> k, v <span class="keyword">in</span> batch.items()&#125;)</span><br><span class="line">    <span class="keyword">break</span></span><br></pre></td></tr></table></figure>
+
+<img src="/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250216224723174.png" class="" title="image-20250216224723174">
+
+<p>Dataset 用于存储样本及其对应的标签。而 Dataloader 是将 Dataset 进一步包装为一个可迭代对象，以实现数据打乱、小批量读取等功能。</p>
+<h2 id="定义分类模型"><a href="#定义分类模型" class="headerlink" title="定义分类模型"></a>定义分类模型</h2><p>原始 BERT 本质上是一个特征提取器，它的输出是文本的语义向量表示（embedding），不包含分类逻辑，因此需要在 BERT 的基础上进行一些修改和扩展，以适应文本分类任务：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> torch.nn <span class="keyword">as</span> nn</span><br><span class="line"><span class="keyword">from</span> transformers <span class="keyword">import</span> BertModel</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">BertClassifier</span>(nn.Module):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, num_labels</span>):</span><br><span class="line">        <span class="built_in">super</span>(BertClassifier, <span class="variable language_">self</span>).__init__()</span><br><span class="line">        <span class="variable language_">self</span>.bert = BertModel.from_pretrained(<span class="string">&quot;google-bert/bert-base-uncased&quot;</span>)</span><br><span class="line">        <span class="variable language_">self</span>.dropout = nn.Dropout(<span class="variable language_">self</span>.bert.config.hidden_dropout_prob)</span><br><span class="line">        <span class="variable language_">self</span>.classifier = nn.Linear(<span class="variable language_">self</span>.bert.config.hidden_size, num_labels)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params">self, **inputs</span>):</span><br><span class="line">        outputs = <span class="variable language_">self</span>.bert(**inputs)</span><br><span class="line">        pooled_output = outputs.pooler_output</span><br><span class="line">        pooled_output = <span class="variable language_">self</span>.dropout(pooled_output)</span><br><span class="line">        logits = <span class="variable language_">self</span>.classifier(pooled_output)</span><br><span class="line">        <span class="keyword">return</span> logits</span><br><span class="line"></span><br><span class="line">model = BertClassifier(num_labels=<span class="built_in">len</span>(main_types))</span><br></pre></td></tr></table></figure>
+
+
+
+<p>另外其实 Hugging Face Transformers 库提供了封装好的分类模型，以下代码可证明自定义模型和 BertForSequenceClassification 基本一致，但 BertForSequenceClassification 还封装了多种分类任务和loss自动计算等：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> transformers <span class="keyword">import</span> BertForSequenceClassification</span><br><span class="line"></span><br><span class="line">model_builtin = BertForSequenceClassification.from_pretrained(<span class="string">&quot;google-bert/bert-base-uncased&quot;</span>, num_labels=<span class="built_in">len</span>(main_types))</span><br><span class="line"></span><br><span class="line">model.classifier.weight.data = model_builtin.classifier.weight.data.clone()</span><br><span class="line">model.classifier.bias.data = model_builtin.classifier.bias.data.clone()</span><br><span class="line"></span><br><span class="line">inputs = tokenizer(<span class="string">&quot;Hello World!&quot;</span>, return_tensors=<span class="string">&#x27;pt&#x27;</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用eval模式关闭Dropout的随机性</span></span><br><span class="line">model.<span class="built_in">eval</span>()</span><br><span class="line">model_builtin.<span class="built_in">eval</span>()</span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>( model(**inputs) == model_builtin(**inputs).logits )</span><br><span class="line"><span class="built_in">print</span>( nn.CrossEntropyLoss()( model(**inputs).view(-<span class="number">1</span>, <span class="built_in">len</span>(main_types)), torch.tensor(<span class="number">1</span>).view(-<span class="number">1</span>) ) == model_builtin(**inputs, labels=torch.tensor(<span class="number">1</span>)).loss )</span><br></pre></td></tr></table></figure>
+
+<img src="/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250216224843415.png" class="" title="image-20250216224843415">
+
+
+
+<h2 id="训练和保存模型"><a href="#训练和保存模型" class="headerlink" title="训练和保存模型"></a>训练和保存模型</h2><p>一个最基本的训练循环就如下所示：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> torch.optim <span class="keyword">import</span> AdamW</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">train</span>(<span class="params">lr, epochs, dataloader, model</span>):</span><br><span class="line">    model.train()</span><br><span class="line"></span><br><span class="line">    loss_fct = nn.CrossEntropyLoss()</span><br><span class="line">    optimizer = AdamW(model.parameters(), lr=lr)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> epoch <span class="keyword">in</span> <span class="built_in">range</span>(epochs):</span><br><span class="line">        <span class="keyword">for</span> batch <span class="keyword">in</span> dataloader:</span><br><span class="line">            inputs = &#123;</span><br><span class="line">                <span class="string">&quot;input_ids&quot;</span>: batch[<span class="string">&quot;input_ids&quot;</span>], </span><br><span class="line">                <span class="string">&quot;token_type_ids&quot;</span>: batch[<span class="string">&#x27;token_type_ids&#x27;</span>], </span><br><span class="line">                <span class="string">&quot;attention_mask&quot;</span>: batch[<span class="string">&quot;attention_mask&quot;</span>]</span><br><span class="line">            &#125;</span><br><span class="line">            outputs = model(**inputs)</span><br><span class="line">            batch_loss = loss_fct(outputs, batch[<span class="string">&quot;label&quot;</span>])</span><br><span class="line">            batch_loss.backward()</span><br><span class="line">            optimizer.step()</span><br><span class="line">            optimizer.zero_grad()</span><br></pre></td></tr></table></figure>
+
+<p>但一般还需要加入进度和指标反馈，验证集评估，另外我也添加了自动保存模型权重的代码：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> torch.optim <span class="keyword">import</span> AdamW</span><br><span class="line"><span class="keyword">from</span> tqdm.auto <span class="keyword">import</span> tqdm</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">train</span>(<span class="params">lr, epochs, model, train_dataloader, validation_dataloader</span>):</span><br><span class="line">    loss_fct = nn.CrossEntropyLoss()</span><br><span class="line">    optimizer = AdamW(model.parameters(), lr=lr)</span><br><span class="line"></span><br><span class="line">    train_losses, train_accs, val_losses, val_accs = [],[],[],[]</span><br><span class="line">    best_val_acc = <span class="number">0.0</span></span><br><span class="line">    </span><br><span class="line">    pbar = tqdm(total=epochs * <span class="built_in">len</span>(train_dataloader))</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> epoch <span class="keyword">in</span> <span class="built_in">range</span>(epochs):</span><br><span class="line">        model.train()</span><br><span class="line">        train_loss, train_correct = <span class="number">0</span>, <span class="number">0</span></span><br><span class="line">        <span class="keyword">for</span> batch <span class="keyword">in</span> train_dataloader:</span><br><span class="line">            inputs = &#123;</span><br><span class="line">                <span class="string">&quot;input_ids&quot;</span>: batch[<span class="string">&quot;input_ids&quot;</span>], </span><br><span class="line">                <span class="string">&quot;token_type_ids&quot;</span>: batch[<span class="string">&#x27;token_type_ids&#x27;</span>], </span><br><span class="line">                <span class="string">&quot;attention_mask&quot;</span>: batch[<span class="string">&quot;attention_mask&quot;</span>]</span><br><span class="line">            &#125;</span><br><span class="line">            outputs = model(**inputs)</span><br><span class="line">            batch_loss = loss_fct(outputs, batch[<span class="string">&quot;label&quot;</span>])</span><br><span class="line">            batch_loss.backward()</span><br><span class="line">            optimizer.step()</span><br><span class="line">            optimizer.zero_grad()</span><br><span class="line"></span><br><span class="line">            train_loss += batch_loss.item()</span><br><span class="line">            train_correct += (outputs.argmax(<span class="number">1</span>) == batch[<span class="string">&quot;label&quot;</span>]).<span class="built_in">sum</span>().item()</span><br><span class="line"></span><br><span class="line">            pbar.set_postfix(&#123;<span class="string">&#x27;lr&#x27;</span>:lr, <span class="string">&#x27;epoch&#x27;</span>: <span class="string">f&#x27;<span class="subst">&#123;epoch + <span class="number">1</span>&#125;</span>/<span class="subst">&#123;epochs&#125;</span>&#x27;</span>, <span class="string">&#x27;batch_loss&#x27;</span>: batch_loss.item(), <span class="string">&#x27;best_val_acc&#x27;</span>: <span class="string">f&#x27;<span class="subst">&#123;best_val_acc:<span class="number">.3</span>%&#125;</span>&#x27;</span> &#125;)</span><br><span class="line">            pbar.update(<span class="number">1</span>)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        model.<span class="built_in">eval</span>()</span><br><span class="line">        val_loss, val_correct = <span class="number">0</span>, <span class="number">0</span></span><br><span class="line">        <span class="keyword">with</span> torch.no_grad():</span><br><span class="line">            <span class="keyword">for</span> batch <span class="keyword">in</span> validation_dataloader:</span><br><span class="line">                inputs = &#123;</span><br><span class="line">                    <span class="string">&quot;input_ids&quot;</span>: batch[<span class="string">&quot;input_ids&quot;</span>], </span><br><span class="line">                    <span class="string">&quot;token_type_ids&quot;</span>: batch[<span class="string">&#x27;token_type_ids&#x27;</span>], </span><br><span class="line">                    <span class="string">&quot;attention_mask&quot;</span>: batch[<span class="string">&quot;attention_mask&quot;</span>]</span><br><span class="line">                &#125;</span><br><span class="line">                outputs = model(**inputs)</span><br><span class="line">                batch_loss = loss_fct(outputs, batch[<span class="string">&quot;label&quot;</span>])</span><br><span class="line">                </span><br><span class="line">                val_loss += batch_loss.item()</span><br><span class="line">                val_correct += (outputs.argmax(<span class="number">1</span>) == batch[<span class="string">&quot;label&quot;</span>]).<span class="built_in">sum</span>().item()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        train_losses.append( train_loss / <span class="built_in">len</span>(train_dataloader) )</span><br><span class="line">        train_accs.append( train_correct / <span class="built_in">len</span>(train_dataloader.dataset) )</span><br><span class="line">        val_losses.append( val_loss / <span class="built_in">len</span>(validation_dataloader) )</span><br><span class="line">        val_accs.append( val_correct / <span class="built_in">len</span>(validation_dataloader.dataset) )</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> val_accs[-<span class="number">1</span>] &gt; best_val_acc:</span><br><span class="line">            best_val_acc = val_accs[-<span class="number">1</span>]</span><br><span class="line">            torch.save(model.state_dict(), <span class="string">f&quot;model_lr_<span class="subst">&#123;lr&#125;</span>_epoch_<span class="subst">&#123;epoch+<span class="number">1</span>&#125;</span>_acc_<span class="subst">&#123;best_val_acc:<span class="number">.5</span>&#125;</span>.pt&quot;</span>)</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">return</span> train_losses, train_accs, val_losses, val_accs</span><br></pre></td></tr></table></figure>
+
+<p><a target="_blank" rel="noopener" href="https://ar5iv.labs.arxiv.org/html/1810.04805">原论文附录A.3</a>中建议的微调参数如下：</p>
+<ul>
+<li>Batch size: 16, 32</li>
+<li>Learning rate (Adam): 5e-5, 3e-5, 2e-5</li>
+<li>Number of epochs: 2, 3, 4</li>
+</ul>
+<p>当前设置的 Batch size 为16，为了对比不同超参数的效果，我使用3种学习率分别训练了10个epoch（模型权重会在每次训练后更新，所以使用新的超参数训练前需要重置模型参数或者重新实例化model）：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">lr_list = [<span class="number">5e-5</span>, <span class="number">3e-5</span>, <span class="number">2e-5</span>]</span><br><span class="line">train_losses_list, train_accs_list, val_losses_list, val_accs_list = [],[],[],[]</span><br><span class="line"><span class="keyword">for</span> lr <span class="keyword">in</span> lr_list:</span><br><span class="line">    model = BertClassifier(num_labels=<span class="built_in">len</span>(main_types))</span><br><span class="line">    train_losses, train_accs, val_losses, val_accs = train(lr=lr, epochs=<span class="number">10</span>, model=model, train_dataloader=train_dataloader, validation_dataloader=validation_dataloader)</span><br><span class="line">    train_losses_list.append(train_losses)</span><br><span class="line">    train_accs_list.append(train_accs)</span><br><span class="line">    val_losses_list.append(val_losses)</span><br><span class="line">    val_accs_list.append(val_accs)</span><br></pre></td></tr></table></figure>
+
+<p>用 Tesla T4 跑了约7个小时：</p>
+<img src="/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250216233809600.png" class="" title="image-20250216233809600">
+
+<p>可以通过绘图直观的看到训练过程和结果：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">print</span>(<span class="string">f&quot;<span class="subst">&#123;train_losses_list&#125;</span>, <span class="subst">&#123;train_accs_list&#125;</span>, <span class="subst">&#123;val_losses_list&#125;</span>, <span class="subst">&#123;val_accs_list&#125;</span>&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">plot_subplot</span>(<span class="params">ax, title, train_losses, train_accs, val_losses, val_accs</span>):</span><br><span class="line">    ax.plot(train_losses, label=<span class="string">&quot;train_losses&quot;</span>, linestyle=<span class="string">&#x27;--&#x27;</span>)</span><br><span class="line">    ax.plot(train_accs, label=<span class="string">f&quot;train_accs (max: <span class="subst">&#123;train_accs.index(<span class="built_in">max</span>(train_accs))&#125;</span>, <span class="subst">&#123;<span class="built_in">max</span>(train_accs):<span class="number">.3</span>%&#125;</span>)&quot;</span>, linestyle=<span class="string">&#x27;--&#x27;</span>)</span><br><span class="line">    ax.plot(val_losses, label=<span class="string">&quot;val_losses&quot;</span>)</span><br><span class="line">    ax.plot(val_accs, label=<span class="string">f&quot;val_accs (max: <span class="subst">&#123;val_accs.index(<span class="built_in">max</span>(val_accs))&#125;</span>, <span class="subst">&#123;<span class="built_in">max</span>(val_accs):<span class="number">.3</span>%&#125;</span>)&quot;</span>)</span><br><span class="line">    ax.legend(frameon=<span class="literal">False</span>)</span><br><span class="line">    ax.set_xlabel(<span class="string">&quot;Epoch&quot;</span>)</span><br><span class="line">    ax.set_title(title)</span><br><span class="line"></span><br><span class="line">fig, axes = plt.subplots(<span class="number">1</span>, <span class="number">3</span>, figsize=(<span class="number">18</span>, <span class="number">4</span>))</span><br><span class="line"><span class="keyword">for</span> idx, lr <span class="keyword">in</span> <span class="built_in">enumerate</span>(lr_list):</span><br><span class="line">    plot_subplot(</span><br><span class="line">        axes[idx], </span><br><span class="line">        <span class="string">f&quot;lr=<span class="subst">&#123;lr&#125;</span>&quot;</span>, </span><br><span class="line">        train_losses_list[idx], </span><br><span class="line">        train_accs_list[idx], </span><br><span class="line">        val_losses_list[idx], </span><br><span class="line">        val_accs_list[idx]</span><br><span class="line">    )</span><br><span class="line">plt.tight_layout()</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
+
+<img src="/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250216234106529.png" class="" title="image-20250216234106529">
+
+
+
+<p>以下是 Batch size 为32时的训练结果：</p>
+<img src="/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250216234220124.png" class="" title="image-20250216234220124">
+
+<img src="/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250216234302765.png" class="" title="image-20250216234302765">
+
+
+
+<p>整体结果都差不多，但是有一个比较违反直觉的现象，验证集 loss 上升时，准确率却保持稳定甚至上升，关于这个问题可以参考 <a target="_blank" rel="noopener" href="https://www.zhihu.com/question/318399418">https://www.zhihu.com/question/318399418</a> </p>
+<h2 id="加载和评估模型"><a href="#加载和评估模型" class="headerlink" title="加载和评估模型"></a>加载和评估模型</h2><p><code>torch.save(model.state_dict(), PATH)</code> 只会保存模型学习到的参数（即权重和偏差），所以仍需要模型的原始定义和实例来加载模型：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> torch.nn <span class="keyword">as</span> nn</span><br><span class="line"><span class="keyword">from</span> transformers <span class="keyword">import</span> BertModel</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">BertClassifier</span>(nn.Module):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, num_labels</span>):</span><br><span class="line">        <span class="built_in">super</span>(BertClassifier, <span class="variable language_">self</span>).__init__()</span><br><span class="line">        <span class="variable language_">self</span>.bert = BertModel.from_pretrained(<span class="string">&quot;google-bert/bert-base-uncased&quot;</span>)</span><br><span class="line">        <span class="variable language_">self</span>.dropout = nn.Dropout(<span class="variable language_">self</span>.bert.config.hidden_dropout_prob)</span><br><span class="line">        <span class="variable language_">self</span>.classifier = nn.Linear(<span class="variable language_">self</span>.bert.config.hidden_size, num_labels)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params">self, **inputs</span>):</span><br><span class="line">        outputs = <span class="variable language_">self</span>.bert(**inputs)</span><br><span class="line">        pooled_output = outputs.pooler_output</span><br><span class="line">        pooled_output = <span class="variable language_">self</span>.dropout(pooled_output)</span><br><span class="line">        logits = <span class="variable language_">self</span>.classifier(pooled_output)</span><br><span class="line">        <span class="keyword">return</span> logits</span><br><span class="line"></span><br><span class="line">model = BertClassifier(num_labels=<span class="built_in">len</span>(main_types))</span><br><span class="line">model.load_state_dict(torch.load(<span class="string">&#x27;./model_lr_5e-05_epoch_6_acc_0.60322.pt&#x27;</span>, weights_only=<span class="literal">True</span>, map_location=device))</span><br><span class="line">model.<span class="built_in">eval</span>()</span><br></pre></td></tr></table></figure>
+
+
+
+<p>Accuracy 是分类问题中最常用的指标（正确的预测数与总预测数的比值），但对于不平衡的数据集而言，它并不是一个好的指标（参考 <a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/147663370%EF%BC%89%E3%80%82%E6%89%80%E4%BB%A5%E6%88%91%E5%8F%88%E7%94%A8%E4%BA%86">https://zhuanlan.zhihu.com/p/147663370）。所以我又用了</a> F1-score 和混淆矩阵来评估模型：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> sklearn.metrics <span class="keyword">import</span> accuracy_score, f1_score, confusion_matrix</span><br><span class="line"><span class="keyword">import</span> matplotlib.pyplot <span class="keyword">as</span> plt</span><br><span class="line"><span class="keyword">import</span> seaborn <span class="keyword">as</span> sns</span><br><span class="line"><span class="keyword">from</span> tqdm.auto <span class="keyword">import</span> tqdm</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">evaluate</span>(<span class="params">model, dataloader</span>):</span><br><span class="line">    model.<span class="built_in">eval</span>()</span><br><span class="line">    all_preds = []</span><br><span class="line">    all_labels = []</span><br><span class="line">    <span class="keyword">with</span> torch.no_grad():</span><br><span class="line">        <span class="keyword">for</span> batch <span class="keyword">in</span> tqdm(dataloader):</span><br><span class="line">            inputs = &#123;</span><br><span class="line">                <span class="string">&quot;input_ids&quot;</span>: batch[<span class="string">&quot;input_ids&quot;</span>], </span><br><span class="line">                <span class="string">&quot;token_type_ids&quot;</span>: batch[<span class="string">&#x27;token_type_ids&#x27;</span>], </span><br><span class="line">                <span class="string">&quot;attention_mask&quot;</span>: batch[<span class="string">&quot;attention_mask&quot;</span>]</span><br><span class="line">            &#125;</span><br><span class="line">            outputs = model(**inputs)</span><br><span class="line">            preds = outputs.argmax(<span class="number">1</span>)</span><br><span class="line">            all_preds.extend(preds.cpu().numpy())</span><br><span class="line">            all_labels.extend(batch[<span class="string">&quot;label&quot;</span>].cpu().numpy())</span><br><span class="line"></span><br><span class="line">    accuracy = accuracy_score(all_labels, all_preds)</span><br><span class="line">    f1 = f1_score(all_labels, all_preds, average=<span class="string">&#x27;macro&#x27;</span>)</span><br><span class="line">    cm = confusion_matrix(all_labels, all_preds)</span><br><span class="line">    <span class="keyword">return</span> accuracy, f1, cm</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">plot_confusion_matrix</span>(<span class="params">title, cm, labels</span>):</span><br><span class="line">    plt.figure(figsize=(<span class="number">15</span>, <span class="number">10</span>))</span><br><span class="line">    sns.heatmap(cm, annot=<span class="literal">True</span>, fmt=<span class="string">&#x27;d&#x27;</span>, cmap=<span class="string">&#x27;Blues&#x27;</span>, xticklabels=labels, yticklabels=labels)</span><br><span class="line">    plt.xlabel(<span class="string">&#x27;Predicted Labels&#x27;</span>)</span><br><span class="line">    plt.ylabel(<span class="string">&#x27;True Labels&#x27;</span>)</span><br><span class="line">    plt.title(title)</span><br><span class="line">    plt.show()</span><br><span class="line"></span><br><span class="line">accuracy, f1, cm = evaluate(model, test_dataloader)</span><br><span class="line">plot_confusion_matrix(<span class="string">f&#x27;accuracy: <span class="subst">&#123;accuracy:<span class="number">.3</span>%&#125;</span>, f1: <span class="subst">&#123;f1:<span class="number">.5</span>&#125;</span>&#x27;</span>, cm, main_types)</span><br></pre></td></tr></table></figure>
+
+<img src="/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250217161928374.png" class="" title="image-20250217161928374">
+
+<p>从分数来看模型的表现并不是很好，但从混淆矩阵发现的一些分类错误说明分类标签的定义和选择是有一定问题的。例如其中最明显的错误是模型将16个类型为 <code>Cross-site Scripting (XSS) - Generic</code> 的数据分类为了 <code>Cross-site Scripting (XSS) - Stored</code> ，但我认为后者应该算前者的子集，这两个类型不应该并列存在。还有将12个类型为 <code>Violation of Secure Design Principles</code> 的数据分类为了 <code>Improper Authentication - Generic</code>，前者定义太过宽泛，后者其实也可以算前者子集。</p>
+<p>可以看看具体的数据：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> transformers <span class="keyword">import</span> BertTokenizer</span><br><span class="line"></span><br><span class="line">tokenizer = BertTokenizer.from_pretrained(<span class="string">&quot;google-bert/bert-base-uncased&quot;</span>)</span><br><span class="line"></span><br><span class="line">all_preds = []</span><br><span class="line">all_labels = []</span><br><span class="line">all_input_ids = []</span><br><span class="line"><span class="keyword">with</span> torch.no_grad():</span><br><span class="line">    <span class="keyword">for</span> batch <span class="keyword">in</span> test_dataloader:</span><br><span class="line">        inputs = &#123;</span><br><span class="line">            <span class="string">&quot;input_ids&quot;</span>: batch[<span class="string">&quot;input_ids&quot;</span>], </span><br><span class="line">            <span class="string">&quot;token_type_ids&quot;</span>: batch[<span class="string">&#x27;token_type_ids&#x27;</span>], </span><br><span class="line">            <span class="string">&quot;attention_mask&quot;</span>: batch[<span class="string">&quot;attention_mask&quot;</span>]</span><br><span class="line">        &#125;</span><br><span class="line">        outputs = model(**inputs)</span><br><span class="line">        preds = outputs.argmax(<span class="number">1</span>)</span><br><span class="line">        labels = batch[<span class="string">&quot;label&quot;</span>]</span><br><span class="line">        all_preds.extend(preds.tolist())</span><br><span class="line">        all_labels.extend(labels.tolist())</span><br><span class="line">        all_input_ids.extend(inputs[<span class="string">&quot;input_ids&quot;</span>])</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">get_datas</span>(<span class="params">true_label_str, pred_label_str</span>):</span><br><span class="line">    true_label = main_types.index(true_label_str)</span><br><span class="line">    pred_label = main_types.index(pred_label_str)</span><br><span class="line">    datas = []</span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="built_in">len</span>(all_labels)):</span><br><span class="line">        <span class="keyword">if</span> all_labels[i] == true_label <span class="keyword">and</span> all_preds[i] == pred_label:</span><br><span class="line">            datas.append(tokenizer.decode(all_input_ids[i]))</span><br><span class="line">    <span class="keyword">return</span> datas</span><br><span class="line">  </span><br><span class="line"><span class="keyword">for</span> data <span class="keyword">in</span> get_datas(<span class="string">&#x27;Cross-site Scripting (XSS) - Generic&#x27;</span>, <span class="string">&#x27;Cross-site Scripting (XSS) - Stored&#x27;</span>):</span><br><span class="line">    <span class="built_in">print</span>(data)</span><br></pre></td></tr></table></figure>
+
+<img src="/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250217185436522.png" class="" title="image-20250217185436522">
+
+<p>很多报告没有内容，只有标题，导致模型无法准确判断，另外有些关于 XSS 的报告标题中就有 “Stored XSS” 且没有报告内容，模型其实算是判断准确了。</p>
+<h2 id="处理数据重新训练"><a href="#处理数据重新训练" class="headerlink" title="处理数据重新训练"></a>处理数据重新训练</h2><p>首先我去除掉了只有标题没有内容的这类数据，然后 HackerOne 的漏洞报告其实是按 CWE 分类的，感觉 CWE 的类别太多了，所以我打算尝试以 OWASP Top 10 为标准重新给这些漏洞分类，截止写这篇笔记时  <strong>OWASP Top 10:2025</strong> 还没发布，只能参考 <strong>OWASP Top 10:2021</strong>。</p>
+<p>以下脚本可用于获取 OWASP 网页中 OWASP Top 10 分别包含的 CWE 名称并创建 CWE 到 OWASP Top 10 的字典：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">import</span> re</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">get_top10_name_and_link</span>():</span><br><span class="line">    res = requests.get(<span class="string">&quot;https://owasp.org/Top10/&quot;</span>).text</span><br><span class="line">    pattern = re.<span class="built_in">compile</span>(<span class="string">r&#x27;&lt;strong&gt;&lt;a href=&quot;(.*?)&quot;&gt;(.*?)&lt;/a&gt;&lt;/strong&gt;&#x27;</span>)</span><br><span class="line">    matches = pattern.findall(res)</span><br><span class="line">    result = []</span><br><span class="line">    <span class="keyword">for</span> link, name <span class="keyword">in</span> matches:</span><br><span class="line">        result.append(&#123;</span><br><span class="line">            <span class="string">&quot;link&quot;</span>:link.strip(),</span><br><span class="line">            <span class="string">&quot;name&quot;</span>:name.strip()</span><br><span class="line">        &#125;)</span><br><span class="line">    <span class="keyword">return</span> result</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">get_cwe</span>(<span class="params">link</span>):</span><br><span class="line">    url = <span class="string">&quot;https://owasp.org/Top10/&quot;</span>+link</span><br><span class="line">    res = requests.get(url).text</span><br><span class="line">    pattern = re.<span class="built_in">compile</span>(<span class="string">r&#x27;&lt;p&gt;&lt;a href=&quot;https://cwe.mitre.org/data/definitions/.*?&quot;&gt;(.*?) (.*?)&lt;/a&gt;&lt;/p&gt;&#x27;</span>)</span><br><span class="line">    matches = pattern.findall(res)</span><br><span class="line">    result = []</span><br><span class="line">    <span class="keyword">for</span> number, name <span class="keyword">in</span> matches:</span><br><span class="line">        result.append(&#123;</span><br><span class="line">            <span class="string">&quot;number&quot;</span>:number.strip(),</span><br><span class="line">            <span class="string">&quot;name&quot;</span>:name.strip()</span><br><span class="line">        &#125;)</span><br><span class="line">    <span class="keyword">return</span> result</span><br><span class="line"></span><br><span class="line">cwe_top10_dict = &#123;&#125;</span><br><span class="line">top10 = get_top10_name_and_link()</span><br><span class="line">top10_list = [item[<span class="string">&quot;name&quot;</span>] <span class="keyword">for</span> item <span class="keyword">in</span> top10]</span><br><span class="line"><span class="keyword">for</span> item <span class="keyword">in</span> top10:</span><br><span class="line">    cwe = get_cwe(item[<span class="string">&quot;link&quot;</span>])</span><br><span class="line">    <span class="keyword">for</span> c <span class="keyword">in</span> cwe:</span><br><span class="line">        cwe_top10_dict[c[<span class="string">&#x27;name&#x27;</span>]] = top10_list.index(item[<span class="string">&#x27;name&#x27;</span>])</span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(<span class="string">f&#x27;top10_list: <span class="subst">&#123;top10_list&#125;</span>&#x27;</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">f&#x27;cwe_top10_dict: <span class="subst">&#123;cwe_top10_dict&#125;</span>&#x27;</span>)</span><br></pre></td></tr></table></figure>
+
+<p>重新分类后发现大多数漏洞都没有归类到 OWASP Top 10 ，首先有可能是 OWASP 网页中 OWASP Top 10 分别包含的 CWE 列表并不全，其次有可能数据集中的 CWE 名称并不标准，而且后面我看<a target="_blank" rel="noopener" href="https://cwe.mitre.org/data/definitions/287.html">CWE官网</a>，发现这套分类标准真挺复杂的，每个 CWE 有不同的类型，有父项、子项、成员。</p>
+<img src="/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250217213627144.png" class="" title="image-20250217213627144">
+
+
+
+<p>然后我还是打算直接通过这些类别名称进行归并一下，比如所有不同类型的 XSS 都可以归为一类，SSRF 在原数据集中也有两个名称（<code>Server-Side Request Forgery (SSRF)</code> 和 <code>Server Side Request Forgery</code>），这也可以合并。</p>
+<p>这件事可以用大模型来做，试了下豆包效果还不错，但是会漏掉很多类型，需要自己归类到 Other：</p>
+<img src="/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250218131106672.png" class="" title="image-20250218131106672">
+
+<p>最终分类结果：</p>
+<img src="/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250218132606074.png" class="" title="image-20250218132606074">
+
+
+
+
+
+<p>这次直接使用了 transformers 库中封装好的 BertForSequenceClassification 模型，且在处理数据时把之前的 label 字段重命名为了 labels ，这是标准的命名，在后续训练时可以自动计算 loss，完整代码在：<a target="_blank" rel="noopener" href="https://github.com/l3yx/VulBERT/blob/main/train_v2.ipynb">https://github.com/l3yx/VulBERT/blob/main/train_v2.ipynb</a></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> transformers <span class="keyword">import</span> BertForSequenceClassification</span><br><span class="line"><span class="keyword">from</span> torch.optim <span class="keyword">import</span> AdamW</span><br><span class="line"><span class="keyword">from</span> tqdm.auto <span class="keyword">import</span> tqdm</span><br><span class="line"></span><br><span class="line">model = BertForSequenceClassification.from_pretrained(<span class="string">&quot;google-bert/bert-base-uncased&quot;</span>, num_labels=<span class="built_in">len</span>(vul_type))</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">train</span>(<span class="params">lr, epochs, model, train_dataloader, validation_dataloader</span>):</span><br><span class="line">    optimizer = AdamW(model.parameters(), lr=lr)</span><br><span class="line"></span><br><span class="line">    train_losses, train_accs, val_losses, val_accs = [],[],[],[]</span><br><span class="line">    best_val_acc = <span class="number">0.0</span></span><br><span class="line">    </span><br><span class="line">    pbar = tqdm(total=epochs * <span class="built_in">len</span>(train_dataloader))</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> epoch <span class="keyword">in</span> <span class="built_in">range</span>(epochs):</span><br><span class="line">        model.train()</span><br><span class="line">        train_loss, train_correct = <span class="number">0</span>, <span class="number">0</span></span><br><span class="line">        <span class="keyword">for</span> batch <span class="keyword">in</span> train_dataloader:</span><br><span class="line">            outputs = model(**batch)</span><br><span class="line">            batch_loss = outputs.loss</span><br><span class="line">            batch_loss.backward()</span><br><span class="line">            optimizer.step()</span><br><span class="line">            optimizer.zero_grad()</span><br><span class="line"></span><br><span class="line">            train_loss += batch_loss.item()</span><br><span class="line">            train_correct += (outputs.logits.argmax(<span class="number">1</span>) == batch[<span class="string">&quot;labels&quot;</span>]).<span class="built_in">sum</span>().item()</span><br><span class="line"></span><br><span class="line">            pbar.set_postfix(&#123;<span class="string">&#x27;lr&#x27;</span>:lr, <span class="string">&#x27;epoch&#x27;</span>: <span class="string">f&#x27;<span class="subst">&#123;epoch + <span class="number">1</span>&#125;</span>/<span class="subst">&#123;epochs&#125;</span>&#x27;</span>, <span class="string">&#x27;batch_loss&#x27;</span>: batch_loss.item(), <span class="string">&#x27;best_val_acc&#x27;</span>: <span class="string">f&#x27;<span class="subst">&#123;best_val_acc:<span class="number">.3</span>%&#125;</span>&#x27;</span> &#125;)</span><br><span class="line">            pbar.update(<span class="number">1</span>)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        model.<span class="built_in">eval</span>()</span><br><span class="line">        val_loss, val_correct = <span class="number">0</span>, <span class="number">0</span></span><br><span class="line">        <span class="keyword">with</span> torch.no_grad():</span><br><span class="line">            <span class="keyword">for</span> batch <span class="keyword">in</span> validation_dataloader:</span><br><span class="line">                outputs = model(**batch)</span><br><span class="line">                batch_loss = outputs.loss</span><br><span class="line">                </span><br><span class="line">                val_loss += batch_loss.item()</span><br><span class="line">                val_correct += (outputs.logits.argmax(<span class="number">1</span>) == batch[<span class="string">&quot;labels&quot;</span>]).<span class="built_in">sum</span>().item()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        train_losses.append( train_loss / <span class="built_in">len</span>(train_dataloader) )</span><br><span class="line">        train_accs.append( train_correct / <span class="built_in">len</span>(train_dataloader.dataset) )</span><br><span class="line">        val_losses.append( val_loss / <span class="built_in">len</span>(validation_dataloader) )</span><br><span class="line">        val_accs.append( val_correct / <span class="built_in">len</span>(validation_dataloader.dataset) )</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> val_accs[-<span class="number">1</span>] &gt; best_val_acc:</span><br><span class="line">            best_val_acc = val_accs[-<span class="number">1</span>]</span><br><span class="line">            torch.save(model.state_dict(), <span class="string">f&quot;model_lr_<span class="subst">&#123;lr&#125;</span>_epoch_<span class="subst">&#123;epoch+<span class="number">1</span>&#125;</span>_acc_<span class="subst">&#123;best_val_acc:<span class="number">.5</span>&#125;</span>.pt&quot;</span>)</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">return</span> train_losses, train_accs, val_losses, val_accs</span><br></pre></td></tr></table></figure>
+
+
+
+<p>结果为：</p>
+<img src="/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250218194035929.png" class="" title="image-20250218194035929">
+
+<img src="/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/image-20250218194046547.png" class="" title="image-20250218194046547">
+
+<p>看起来测试集中缺少了部分漏洞类型，另外从混淆矩阵中可以看出漏洞分类其实还是有点不合理，比如有16个 <code>Configuration and Design Issues</code> 被分为了 <code>Information Disclosure</code> ，这两种确实会有交错重叠，或许漏洞分类本身就应该是个多标签分类任务。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a target="_blank" rel="noopener" href="https://jalammar.github.io/illustrated-bert/">https://jalammar.github.io/illustrated-bert/</a></p>
+<p><a target="_blank" rel="noopener" href="https://ar5iv.labs.arxiv.org/html/1810.04805">https://ar5iv.labs.arxiv.org/html/1810.04805</a></p>
+<p><a target="_blank" rel="noopener" href="https://huggingface.co/learn/nlp-course/zh-CN/chapter3/4">https://huggingface.co/learn/nlp-course/zh-CN/chapter3/4</a></p>
+<p><a target="_blank" rel="noopener" href="https://pytorch.org/tutorials/intermediate/char_rnn_classification_tutorial.html">https://pytorch.org/tutorials/intermediate/char_rnn_classification_tutorial.html</a></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0/" rel="tag"># 深度学习</a>
+              <a href="/tags/NLP/" rel="tag"># NLP</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2025/01/05/%E6%B5%85%E6%9E%90%E5%9F%BA%E4%BA%8E%E9%9D%99%E6%80%81%E5%88%86%E6%9E%90%E7%9A%84Android%E5%BA%94%E7%94%A8%E6%BC%8F%E6%B4%9E%E6%89%AB%E6%8F%8F%E5%B7%A5%E5%85%B7/" rel="prev" title="浅析基于静态分析的Android应用漏洞扫描工具">
+                  <i class="fa fa-angle-left"></i> 浅析基于静态分析的Android应用漏洞扫描工具
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2025</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">淚笑</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">93k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">5:39</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js","integrity":"sha256-YbM1pG3wWnzhyYN49g5fPnen+2CKEFaZfopkkwSpNtY="}}</script>
+  <script src="/js/third-party/tags/mermaid.js"></script>
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>
