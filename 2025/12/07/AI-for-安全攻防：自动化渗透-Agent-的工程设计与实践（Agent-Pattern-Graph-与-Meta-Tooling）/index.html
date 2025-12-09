@@ -19,12 +19,12 @@
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"l3yx.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.21.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
-    <meta name="description" content="最近三个月一直在 AI 安全攻防方向进行探索。虽然时间不长，但个人对 AI 在攻防和通用领域有很多实践感悟。此文不会深入讲太过基础的 Agent 知识，只会提到一些我认为关键的知识点。重点是讲我在 AI for 攻防领域的探索与实践，以及衍生出的一些新的思考和工程理念。 文中很多概念都是基于我自己的理解，并不会摘抄公开的定义，所以也不一定正确，请大家辩证看待，不过为了增加文章的可信度，我先放出我在">
+    <meta name="description" content="原文：https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;jT4poWZ4Gfu3faXvul07HA  最近三个月一直在 AI 安全攻防方向进行探索。虽然时间不长，但个人对 AI 在攻防和通用领域有很多实践感悟。此文不会深入讲太过基础的 Agent 知识，只会提到一些我认为关键的知识点。重点是讲我在 AI for 攻防领域的探索与实践，以及衍生出的一些新的思考和工程理念。 文中很多概念都是基">
 <meta property="og:type" content="article">
 <meta property="og:title" content="AI for 安全攻防：自动化渗透 Agent 的工程设计与实践（Agent Pattern Graph 与 Meta-Tooling）">
 <meta property="og:url" content="https://l3yx.github.io/2025/12/07/AI-for-%E5%AE%89%E5%85%A8%E6%94%BB%E9%98%B2%EF%BC%9A%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B8%97%E9%80%8F-Agent-%E7%9A%84%E5%B7%A5%E7%A8%8B%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%AE%9E%E8%B7%B5%EF%BC%88Agent-Pattern-Graph-%E4%B8%8E-Meta-Tooling%EF%BC%89/index.html">
 <meta property="og:site_name" content="l3yx&#39;s blog">
-<meta property="og:description" content="最近三个月一直在 AI 安全攻防方向进行探索。虽然时间不长，但个人对 AI 在攻防和通用领域有很多实践感悟。此文不会深入讲太过基础的 Agent 知识，只会提到一些我认为关键的知识点。重点是讲我在 AI for 攻防领域的探索与实践，以及衍生出的一些新的思考和工程理念。 文中很多概念都是基于我自己的理解，并不会摘抄公开的定义，所以也不一定正确，请大家辩证看待，不过为了增加文章的可信度，我先放出我在">
+<meta property="og:description" content="原文：https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;jT4poWZ4Gfu3faXvul07HA  最近三个月一直在 AI 安全攻防方向进行探索。虽然时间不长，但个人对 AI 在攻防和通用领域有很多实践感悟。此文不会深入讲太过基础的 Agent 知识，只会提到一些我认为关键的知识点。重点是讲我在 AI for 攻防领域的探索与实践，以及衍生出的一些新的思考和工程理念。 文中很多概念都是基">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://l3yx.github.io/2025/12/07/AI-for-%E5%AE%89%E5%85%A8%E6%94%BB%E9%98%B2%EF%BC%9A%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B8%97%E9%80%8F-Agent-%E7%9A%84%E5%B7%A5%E7%A8%8B%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%AE%9E%E8%B7%B5%EF%BC%88Agent-Pattern-Graph-%E4%B8%8E-Meta-Tooling%EF%BC%89/p1.png">
 <meta property="og:image" content="https://l3yx.github.io/2025/12/07/AI-for-%E5%AE%89%E5%85%A8%E6%94%BB%E9%98%B2%EF%BC%9A%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B8%97%E9%80%8F-Agent-%E7%9A%84%E5%B7%A5%E7%A8%8B%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%AE%9E%E8%B7%B5%EF%BC%88Agent-Pattern-Graph-%E4%B8%8E-Meta-Tooling%EF%BC%89/p2.png">
@@ -245,7 +245,10 @@
     
     
     
-    <div class="post-body" itemprop="articleBody"><p>最近三个月一直在 AI 安全攻防方向进行探索。虽然时间不长，但个人对 AI 在攻防和通用领域有很多实践感悟。此文不会深入讲太过基础的 Agent 知识，只会提到一些我认为关键的知识点。重点是讲我在 AI for 攻防领域的探索与实践，以及衍生出的一些新的思考和工程理念。</p>
+    <div class="post-body" itemprop="articleBody"><blockquote>
+<p>原文：<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/jT4poWZ4Gfu3faXvul07HA">https://mp.weixin.qq.com/s/jT4poWZ4Gfu3faXvul07HA</a></p>
+</blockquote>
+<p>最近三个月一直在 AI 安全攻防方向进行探索。虽然时间不长，但个人对 AI 在攻防和通用领域有很多实践感悟。此文不会深入讲太过基础的 Agent 知识，只会提到一些我认为关键的知识点。重点是讲我在 AI for 攻防领域的探索与实践，以及衍生出的一些新的思考和工程理念。</p>
 <p>文中很多概念都是基于我自己的理解，并不会摘抄公开的定义，所以也不一定正确，请大家辩证看待，不过为了增加文章的可信度，我先放出我在 AI for 攻防领域的一点实践成果： <a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/frvi4x1t6-11Q3TUPQ21cA">《238支全球顶尖战队上演AI攻防巅峰对决，腾讯云黑客松-智能渗透挑战赛即将开启！》</a> ，<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/FeWpPnezFR8__VfMA3Ev5A">《Top20战队决出！@腾讯云黑客松智能渗透挑战赛》</a></p>
 <span id="more"></span>
 
