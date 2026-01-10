@@ -2,6 +2,15 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>https://l3yx.github.io/2026/01/08/IntentLang%EF%BC%9A%E4%BB%A5%E7%AC%AC%E4%B8%80%E6%80%A7%E5%8E%9F%E7%90%86%E4%B8%8E%E6%84%8F%E5%9B%BE%E5%B7%A5%E7%A8%8B%E9%87%8D%E5%BB%BA-AI-Agent/</loc>
+    
+    <lastmod>2026-01-08</lastmod>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
     <loc>https://l3yx.github.io/2025/12/07/AI-for-%E5%AE%89%E5%85%A8%E6%94%BB%E9%98%B2%EF%BC%9A%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B8%97%E9%80%8F-Agent-%E7%9A%84%E5%B7%A5%E7%A8%8B%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%AE%9E%E8%B7%B5%EF%BC%88Agent-Pattern-Graph-%E4%B8%8E-Meta-Tooling%EF%BC%89/</loc>
     
     <lastmod>2025-12-07</lastmod>
@@ -409,7 +418,7 @@
 
   <url>
     <loc>https://l3yx.github.io/</loc>
-    <lastmod>2025-12-09</lastmod>
+    <lastmod>2026-01-10</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
@@ -417,105 +426,112 @@
   
   <url>
     <loc>https://l3yx.github.io/tags/Web%E5%AE%89%E5%85%A8/</loc>
-    <lastmod>2025-12-09</lastmod>
+    <lastmod>2026-01-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://l3yx.github.io/tags/AI-for-Security/</loc>
-    <lastmod>2025-12-09</lastmod>
+    <lastmod>2026-01-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://l3yx.github.io/tags/Java/</loc>
-    <lastmod>2025-12-09</lastmod>
+    <lastmod>2026-01-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://l3yx.github.io/tags/%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/</loc>
-    <lastmod>2025-12-09</lastmod>
+    <lastmod>2026-01-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://l3yx.github.io/tags/%E9%9D%99%E6%80%81%E5%88%86%E6%9E%90/</loc>
-    <lastmod>2025-12-09</lastmod>
+    <lastmod>2026-01-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://l3yx.github.io/tags/CodeQL/</loc>
-    <lastmod>2025-12-09</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  
-  <url>
-    <loc>https://l3yx.github.io/tags/CTF/</loc>
-    <lastmod>2025-12-09</lastmod>
+    <lastmod>2026-01-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://l3yx.github.io/tags/Golang/</loc>
-    <lastmod>2025-12-09</lastmod>
+    <lastmod>2026-01-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://l3yx.github.io/tags/AI/</loc>
+    <lastmod>2026-01-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://l3yx.github.io/tags/CTF/</loc>
+    <lastmod>2026-01-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://l3yx.github.io/tags/%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0/</loc>
-    <lastmod>2025-12-09</lastmod>
+    <lastmod>2026-01-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://l3yx.github.io/tags/NLP/</loc>
-    <lastmod>2025-12-09</lastmod>
+    <lastmod>2026-01-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://l3yx.github.io/tags/%E5%8C%BA%E5%9D%97%E9%93%BE/</loc>
-    <lastmod>2025-12-09</lastmod>
+    <lastmod>2026-01-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://l3yx.github.io/tags/Solidity/</loc>
-    <lastmod>2025-12-09</lastmod>
+    <lastmod>2026-01-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://l3yx.github.io/tags/%E7%A7%BB%E5%8A%A8%E5%AE%89%E5%85%A8/</loc>
-    <lastmod>2025-12-09</lastmod>
+    <lastmod>2026-01-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://l3yx.github.io/tags/Android/</loc>
-    <lastmod>2025-12-09</lastmod>
+    <lastmod>2026-01-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://l3yx.github.io/tags/PHP/</loc>
-    <lastmod>2025-12-09</lastmod>
+    <lastmod>2026-01-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>

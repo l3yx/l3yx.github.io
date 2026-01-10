@@ -153,6 +153,9 @@
       <span class="links-of-author-item">
         <a href="mailto:1729888211@qq.com" title="E-Mail → mailto:1729888211@qq.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
       </span>
+      <span class="links-of-author-item">
+        <a href="https://x.com/leixiao_cn" title="Twitter → https:&#x2F;&#x2F;x.com&#x2F;leixiao_cn" rel="noopener me" target="_blank"><i class="fab fa-twitter fa-fw"></i>Twitter</a>
+      </span>
   </div>
 
         </div>
@@ -166,6 +169,105 @@
     </div>
 
     <div class="main-inner index posts-expand">
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://l3yx.github.io/2026/01/08/IntentLang%EF%BC%9A%E4%BB%A5%E7%AC%AC%E4%B8%80%E6%80%A7%E5%8E%9F%E7%90%86%E4%B8%8E%E6%84%8F%E5%9B%BE%E5%B7%A5%E7%A8%8B%E9%87%8D%E5%BB%BA-AI-Agent/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/resources/avatar.jpg">
+      <meta itemprop="name" content="淚笑">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="l3yx's blog">
+      <meta itemprop="description" content="学的越多，懂的越少">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | l3yx's blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/2026/01/08/IntentLang%EF%BC%9A%E4%BB%A5%E7%AC%AC%E4%B8%80%E6%80%A7%E5%8E%9F%E7%90%86%E4%B8%8E%E6%84%8F%E5%9B%BE%E5%B7%A5%E7%A8%8B%E9%87%8D%E5%BB%BA-AI-Agent/" class="post-title-link" itemprop="url">IntentLang：以第一性原理与意图工程重建 AI Agent</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-01-08 15:27:52" itemprop="dateCreated datePublished" datetime="2026-01-08T15:27:52+08:00">2026-01-08</time>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>8.8k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>32 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <blockquote>
+<p>原文：<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/iZ8fBTUzPWKz_K3ZVVreVA">https://mp.weixin.qq.com/s/iZ8fBTUzPWKz_K3ZVVreVA</a></p>
+<p>项目：<a target="_blank" rel="noopener" href="https://github.com/l3yx/intentlang">https://github.com/l3yx/intentlang</a></p>
+</blockquote>
+<img src="/2026/01/08/IntentLang%EF%BC%9A%E4%BB%A5%E7%AC%AC%E4%B8%80%E6%80%A7%E5%8E%9F%E7%90%86%E4%B8%8E%E6%84%8F%E5%9B%BE%E5%B7%A5%E7%A8%8B%E9%87%8D%E5%BB%BA-AI-Agent/image-20260108152451668.png" class="" title="image-20260108152451668">
+
+<p>​	一个月前，我发布了一篇文章：<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/jT4poWZ4Gfu3faXvul07HA">《AI for 安全攻防：自动化渗透 Agent 的工程设计与实践》</a>，记录了我在 AI for CyberSecurity 方向的探索，虽然成果还不错，但是当时的思考和设计比较匆忙，部分理论也没有得到实践。其中介绍的最重要的两个概念：APG（Agent Pattern Graph）和 Meta-Tooling （让 AI 输出完整意图代码而非原子工具调用），只有后者运用到了参赛腾讯 AI 渗透挑战赛的项目中，目前已经开源： <a target="_blank" rel="noopener" href="https://github.com/chainreactors/tinyctfer">https://github.com/chainreactors/tinyctfer</a> ，但该项目确实只是一个快速实现的雏形，急于开源也是为了响应赛事官方号召。</p>
+<p>​	当时我和同伴提出了意图工程（即人类如何准确表达意图，AI 如何更好的理解和执行意图，也可以拓展到 AI 如何表达它的意图和我们怎么执行并提供反馈），在腾讯沙龙现场路演的时候我们也预测过以后会出现一门 AI Native Programming Language ，让各领域专家可以以一种形式化的方式表达自己的意图，即形式化沉淀自己的专家经验或者 SOP，当然 APG 已经朝这个方向迈出了一步，但我们不认为 APG 是终态，我对意图工程的理解和建设也刚刚开始。</p>
+<p>​	在最近的这段时间里，我开始真正的思考和建设意图工程，也尝试回答我在意图工程中自己提出的问题，这篇文章以及文章标题中提到的 AI Agent 框架 IntentLang : <a target="_blank" rel="noopener" href="https://github.com/l3yx/intentlang">https://github.com/l3yx/intentlang</a> 就是答案，也正如标题所说，这是对当前主流 Agent 范式的一次彻底重构。MCP、Multi Agent 和 Function Calling 等设计都是非常优秀的工程实践，称它们为当今 AI Agent 生态的基石也不为过，但也正是这样，多数人将它们视为了唯一正解，但真就如此吗？</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2026/01/08/IntentLang%EF%BC%9A%E4%BB%A5%E7%AC%AC%E4%B8%80%E6%80%A7%E5%8E%9F%E7%90%86%E4%B8%8E%E6%84%8F%E5%9B%BE%E5%B7%A5%E7%A8%8B%E9%87%8D%E5%BB%BA-AI-Agent/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
 
     
 
@@ -1028,104 +1130,6 @@
 
 
 
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://l3yx.github.io/2023/09/28/Spring-Kafka-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E-CVE-2023-34040-%E5%88%86%E6%9E%90/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/resources/avatar.jpg">
-      <meta itemprop="name" content="淚笑">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="l3yx's blog">
-      <meta itemprop="description" content="学的越多，懂的越少">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="undefined | l3yx's blog">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/2023/09/28/Spring-Kafka-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E-CVE-2023-34040-%E5%88%86%E6%9E%90/" class="post-title-link" itemprop="url">Spring-Kafka 反序列化漏洞(CVE-2023-34040)分析</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">发表于</span>
-
-      <time title="创建时间：2023-09-28 11:45:34" itemprop="dateCreated datePublished" datetime="2023-09-28T11:45:34+08:00">2023-09-28</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2023-09-29 08:17:00" itemprop="dateModified" datetime="2023-09-29T08:17:00+08:00">2023-09-29</time>
-    </span>
-
-  
-    <span class="post-meta-break"></span>
-    <span class="post-meta-item" title="本文字数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-file-word"></i>
-      </span>
-      <span class="post-meta-item-text">本文字数：</span>
-      <span>1.4k</span>
-    </span>
-    <span class="post-meta-item" title="阅读时长">
-      <span class="post-meta-item-icon">
-        <i class="far fa-clock"></i>
-      </span>
-      <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>5 分钟</span>
-    </span>
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <p>当受影响版本的 Spring-Kafka Consumer 未对Record配置 ErrorHandlingDeserializer 并设置 checkDeserExWhenKeyNull 或 checkDeserExWhenValueNull 为 true 且攻击者可以发布 Kafka 消息时，将会存在Java反序列化漏洞。只需发布 key 或 value 为 null 的消息，且在相应的header中放入序列化数据，便可以任意反序列化</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2023/09/28/Spring-Kafka-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E-CVE-2023-34040-%E5%88%86%E6%9E%90/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
   <nav class="pagination">
     <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><span class="space">&hellip;</span><a class="page-number" href="/page/5/">5</a><a class="extend next" rel="next" title="下一页" aria-label="下一页" href="/page/2/"><i class="fa fa-angle-right"></i></a>
   </nav>
@@ -1138,7 +1142,7 @@
 
   <div class="copyright">
     &copy; 
-    <span itemprop="copyrightYear">2025</span>
+    <span itemprop="copyrightYear">2026</span>
     <span class="with-love">
       <i class="fa fa-heart"></i>
     </span>
@@ -1149,13 +1153,13 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">102k</span>
+    <span title="站点总字数">110k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">6:10</span>
+    <span title="站点阅读时长">6:42</span>
   </span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
