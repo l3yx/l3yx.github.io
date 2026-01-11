@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"l3yx.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.21.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="​	上一篇文章 《IntentLang：以第一性原理与意图工程重建 AI Agent》 刚发布没几天，就收到很多师傅的反馈说晦涩难懂。我重新审视了一下，确实文章直接以我个人的视角去描述了很多只有我自己在做 Agent 开发时遇到的痛点，另外我文中举的例子又太过简单，不足以描述我到底在用 IntentLang 解决什么样的问题。而且也用了 AI 进行润色，确实让文章比较抽象。 ​	另外就是大多数">
+<meta property="og:type" content="article">
+<meta property="og:title" content="为了创造 AI-native programming language, 我 hack 了 CPython 的 str">
+<meta property="og:url" content="https://l3yx.github.io/2026/01/11/%E4%B8%BA%E4%BA%86%E5%88%9B%E9%80%A0-AI-native-programming-language-%E6%88%91-hack-%E4%BA%86-CPython-%E7%9A%84-str/index.html">
+<meta property="og:site_name" content="l3yx&#39;s blog">
+<meta property="og:description" content="​	上一篇文章 《IntentLang：以第一性原理与意图工程重建 AI Agent》 刚发布没几天，就收到很多师傅的反馈说晦涩难懂。我重新审视了一下，确实文章直接以我个人的视角去描述了很多只有我自己在做 Agent 开发时遇到的痛点，另外我文中举的例子又太过简单，不足以描述我到底在用 IntentLang 解决什么样的问题。而且也用了 AI 进行润色，确实让文章比较抽象。 ​	另外就是大多数">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://l3yx.github.io/2026/01/11/%E4%B8%BA%E4%BA%86%E5%88%9B%E9%80%A0-AI-native-programming-language-%E6%88%91-hack-%E4%BA%86-CPython-%E7%9A%84-str/carbon.png">
+<meta property="og:image" content="https://l3yx.github.io/2026/01/11/%E4%B8%BA%E4%BA%86%E5%88%9B%E9%80%A0-AI-native-programming-language-%E6%88%91-hack-%E4%BA%86-CPython-%E7%9A%84-str/image-20260111145051934.png">
+<meta property="article:published_time" content="2026-01-11T02:31:41.000Z">
+<meta property="article:modified_time" content="2026-01-11T02:31:41.000Z">
+<meta property="article:author" content="淚笑">
+<meta property="article:tag" content="AI">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://l3yx.github.io/2026/01/11/%E4%B8%BA%E4%BA%86%E5%88%9B%E9%80%A0-AI-native-programming-language-%E6%88%91-hack-%E4%BA%86-CPython-%E7%9A%84-str/carbon.png">
+
+
+<link rel="canonical" href="https://l3yx.github.io/2026/01/11/%E4%B8%BA%E4%BA%86%E5%88%9B%E9%80%A0-AI-native-programming-language-%E6%88%91-hack-%E4%BA%86-CPython-%E7%9A%84-str/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://l3yx.github.io/2026/01/11/%E4%B8%BA%E4%BA%86%E5%88%9B%E9%80%A0-AI-native-programming-language-%E6%88%91-hack-%E4%BA%86-CPython-%E7%9A%84-str/","path":"2026/01/11/为了创造-AI-native-programming-language-我-hack-了-CPython-的-str/","title":"为了创造 AI-native programming language, 我 hack 了 CPython 的 str"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>为了创造 AI-native programming language, 我 hack 了 CPython 的 str | l3yx's blog</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">l3yx's blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Vibe-Coding-%E4%B8%8E-Intent-Coding"><span class="nav-number">1.</span> <span class="nav-text">Vibe Coding 与 Intent Coding</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Intent-Coding"><span class="nav-number">1.1.</span> <span class="nav-text">Intent Coding</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Intent-%E7%9A%84%E7%BC%93%E5%AD%98%E4%B8%8E%E5%A4%8D%E7%94%A8"><span class="nav-number">1.2.</span> <span class="nav-text">Intent 的缓存与复用</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%BB%91%E5%AE%A2%E7%9A%84%E8%AF%AD%E6%B3%95%E7%B3%96"><span class="nav-number">2.</span> <span class="nav-text">黑客的语法糖</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="淚笑"
+      src="/resources/avatar.jpg">
+  <p class="site-author-name" itemprop="name">淚笑</p>
+  <div class="site-description" itemprop="description">学的越多，懂的越少</div>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/l3yx" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;l3yx" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1729888211@qq.com" title="E-Mail → mailto:1729888211@qq.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://x.com/leixiao_cn" title="Twitter → https:&#x2F;&#x2F;x.com&#x2F;leixiao_cn" rel="noopener me" target="_blank"><i class="fab fa-twitter fa-fw"></i>Twitter</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://l3yx.github.io/2026/01/11/%E4%B8%BA%E4%BA%86%E5%88%9B%E9%80%A0-AI-native-programming-language-%E6%88%91-hack-%E4%BA%86-CPython-%E7%9A%84-str/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/resources/avatar.jpg">
+      <meta itemprop="name" content="淚笑">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="l3yx's blog">
+      <meta itemprop="description" content="学的越多，懂的越少">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="为了创造 AI-native programming language, 我 hack 了 CPython 的 str | l3yx's blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          为了创造 AI-native programming language, 我 hack 了 CPython 的 str
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-01-11 10:31:41" itemprop="dateCreated datePublished" datetime="2026-01-11T10:31:41+08:00">2026-01-11</time>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>1.8k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>6 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><img src="/2026/01/11/%E4%B8%BA%E4%BA%86%E5%88%9B%E9%80%A0-AI-native-programming-language-%E6%88%91-hack-%E4%BA%86-CPython-%E7%9A%84-str/carbon.png" class="" title="carbon">
+
+<p>​	上一篇文章 <a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/iZ8fBTUzPWKz_K3ZVVreVA">《IntentLang：以第一性原理与意图工程重建 AI Agent》</a> 刚发布没几天，就收到很多师傅的反馈说晦涩难懂。我重新审视了一下，确实文章直接以我个人的视角去描述了很多只有我自己在做 Agent 开发时遇到的痛点，另外我文中举的例子又太过简单，不足以描述我到底在用 IntentLang 解决什么样的问题。而且也用了 AI 进行润色，确实让文章比较抽象。</p>
+<p>​	另外就是大多数人其实不关注什么是 LLM 的原始推理结果，什么是模型厂商在此之上对外提供的 API 协议封装，支持工具调用的模型究竟和普通模型有什么不一样，Function Calling 到底是一种模型能力、协议约定还是运行时机制，让 LLM 看起来 “拥有记忆” 的本质究竟是什么，在应用层又该如何实现。</p>
+<p>​	但我还是不想放弃介绍 <a target="_blank" rel="noopener" href="https://github.com/l3yx/intentlang">IntentLang</a>，于是我想到了一个很酷，也很 Geek 和 Hacker 的方法：直接在语言层面 “hack” Python，让字符串本身成为一个可执行的 Intent，贯彻<strong>人类意图就是一等公民</strong>。</p>
+<p>​	而这么做之后，IntentLang 也似乎向 ANPL（AI-native programming language）又更近了一步。</p>
+<span id="more"></span>
+
+<h2 id="Vibe-Coding-与-Intent-Coding"><a href="#Vibe-Coding-与-Intent-Coding" class="headerlink" title="Vibe Coding 与 Intent Coding"></a>Vibe Coding 与 Intent Coding</h2><p>​	目前的 Vibe Coding 指的是开发者通过自然语言描述需求，驱动 AI 编程工具去生成代码，开发者只需要关注需求和方向，甚至可以不在意代码细节，专注于最终目标。</p>
+<h3 id="Intent-Coding"><a href="#Intent-Coding" class="headerlink" title="Intent Coding"></a>Intent Coding</h3><p>​	所以 Vibe Coding 是<strong>自然语言驱动 AI 进行编程</strong>，而 IntentLang 或者说 Intent Coding 是<strong>以 AI 为基础的自然语言编程</strong>。<strong>自然语言编程不是生成代码，而是直接成为代码</strong>。这篇文章我也不想再讲抽象的概念，直接给出代码示例：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> intentlang <span class="keyword">import</span> MagicIntent</span><br><span class="line">MagicIntent.hack_str()</span><br><span class="line"></span><br><span class="line">result = <span class="string">&quot;计算1到100的和&quot;</span>.o(<span class="built_in">int</span>)</span><br><span class="line"><span class="built_in">print</span>(result)</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">python3 test.py</span></span><br><span class="line">5050</span><br></pre></td></tr></table></figure>
+
+<p>​	是的，你没有看错，上述的代码是真实可运行的，你要做的仅仅是描述意图（自然语言的字符串就是意图），指定输出类型，然后就足够了，可以让开发者在 Python 世界里感受到 “言出法随”。</p>
+<p>​	而且不仅如此，你还可以处理已有数据：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> intentlang <span class="keyword">import</span> MagicIntent</span><br><span class="line">MagicIntent.hack_str()</span><br><span class="line"></span><br><span class="line">data = &#123;<span class="string">&quot;name&quot;</span>: <span class="string">&quot;leixiao&quot;</span>, <span class="string">&quot;age&quot;</span>: <span class="number">26</span>, <span class="string">&quot;city&quot;</span>: <span class="string">&quot;Hangzhou&quot;</span>&#125;</span><br><span class="line">result = <span class="string">&quot;转成一个结构清晰的表格&quot;</span>.i(data).o(<span class="built_in">str</span>)</span><br><span class="line"><span class="built_in">print</span>(result)</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">python3 test.py</span></span><br><span class="line">| Key | Value |</span><br><span class="line">|-----|-------|</span><br><span class="line">| name | leixiao |</span><br><span class="line">| age | 26 |</span><br><span class="line">| city | Hangzhou |</span><br></pre></td></tr></table></figure>
+
+<p>​	</p>
+<p>​	通过自然语言控制条件分支：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> intentlang <span class="keyword">import</span> MagicIntent</span><br><span class="line">MagicIntent.hack_str()</span><br><span class="line"></span><br><span class="line">login_data = &#123;<span class="string">&quot;login_failures&quot;</span>: <span class="number">12</span>&#125;</span><br><span class="line"><span class="keyword">if</span> <span class="string">&quot;这个用户是否应该被封禁？&quot;</span>.i(login_data).o(<span class="built_in">bool</span>).c(<span class="string">&quot;登陆失败次数超过10次的需要封建&quot;</span>).r(<span class="string">&#x27;先看一下登陆数据结构,不要猜测 key&#x27;</span>):</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;Yes&quot;</span>)</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;No&quot;</span>)</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">python3 test.py</span></span><br><span class="line">Yes</span><br></pre></td></tr></table></figure>
+
+<p>​	</p>
+<p>​	还可以无中生有：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> socket</span><br><span class="line"><span class="keyword">from</span> intentlang <span class="keyword">import</span> MagicIntent</span><br><span class="line">MagicIntent.hack_str()</span><br><span class="line"></span><br><span class="line">sock: socket.socket = <span class="string">&quot;创造一个 socket 对象,并向 example.com 发起 GET 请求&quot;</span>.o(socket.socket).r(<span class="string">&quot;不要读取数据,不要关闭 socket&quot;</span>)</span><br><span class="line"><span class="built_in">print</span>(sock)</span><br><span class="line"><span class="built_in">print</span>(sock.recv(<span class="number">15</span>).decode())</span><br><span class="line">sock.close()</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">python3 test.py</span></span><br><span class="line">&lt;socket.socket fd=10, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=(&#x27;192.168.1.6&#x27;, 58427), raddr=(&#x27;104.18.27.120&#x27;, 80)&gt;</span><br><span class="line">HTTP/1.1 200 OK</span><br></pre></td></tr></table></figure>
+
+<p>​	</p>
+<p>​	接力操作复杂对象：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> socket</span><br><span class="line"><span class="keyword">from</span> intentlang <span class="keyword">import</span> MagicIntent</span><br><span class="line">MagicIntent.hack_str()</span><br><span class="line"></span><br><span class="line">sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)</span><br><span class="line">sock.connect((<span class="string">&#x27;example.com&#x27;</span>, <span class="number">80</span>))</span><br><span class="line">request = <span class="string">b&quot;GET / HTTP/1.1\r\nHost: example.com\r\n\r\n&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="string">&quot;用 socket 对象发送这段数据请求, 不需要读取&quot;</span>.i(&#123;<span class="string">&#x27;sock&#x27;</span>: sock, <span class="string">&#x27;request&#x27;</span>: request&#125;)()</span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(sock.recv(<span class="number">15</span>).decode())</span><br><span class="line">sock.close()</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">python3 test.py</span></span><br><span class="line">HTTP/1.1 200 OK</span><br></pre></td></tr></table></figure>
+
+<p>​	</p>
+<p>​	最后再来做个算法题吧：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> intentlang <span class="keyword">import</span> MagicIntent</span><br><span class="line">MagicIntent.hack_str()</span><br><span class="line"></span><br><span class="line">s = <span class="string">&quot;abcabcbb&quot;</span></span><br><span class="line">length = <span class="string">&quot;找出其中不含有重复字符的最长子串的长度&quot;</span>.i(s).o(<span class="built_in">int</span>)</span><br><span class="line"><span class="built_in">print</span>(length)</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">python3 test.py</span></span><br><span class="line">3</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="Intent-的缓存与复用"><a href="#Intent-的缓存与复用" class="headerlink" title="Intent 的缓存与复用"></a>Intent 的缓存与复用</h3><p>​	前文的例子中，其实大多数意图都是固定的逻辑，也就是说意图被 AI 推理执行后，意图的执行过程是可以缓存的，下次再次执行同样的意图无需再次经过 AI 推理，直接复用上一次 AI 生成的代码即可。在 <code>MagicIntent</code> 中可以用 <code>MagicIntent.hack_str(cache=True)</code> 语句设置。</p>
+<p>​	以算法的代码为例，会在当前目录下的 <code>.intent_cache</code> 目录生成缓存文件：</p>
+<img src="/2026/01/11/%E4%B8%BA%E4%BA%86%E5%88%9B%E9%80%A0-AI-native-programming-language-%E6%88%91-hack-%E4%BA%86-CPython-%E7%9A%84-str/image-20260111145051934.png" class="" title="image-20260111145051934">
+
+<p>​	而且代码逻辑与输入的数据是解耦的，所以可以随意更换数据，之前的缓存代码依然可复用：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> intentlang <span class="keyword">import</span> MagicIntent</span><br><span class="line">MagicIntent.hack_str(cache=<span class="literal">True</span>)</span><br><span class="line"></span><br><span class="line">s = <span class="string">&quot;abcabcbb&quot;</span></span><br><span class="line">length = <span class="string">&quot;找出其中不含有重复字符的最长子串的长度&quot;</span>.i(s).o(<span class="built_in">int</span>)</span><br><span class="line"><span class="built_in">print</span>(length)</span><br><span class="line"></span><br><span class="line">s = <span class="string">&quot;bbbbb&quot;</span></span><br><span class="line">length = <span class="string">&quot;找出其中不含有重复字符的最长子串的长度&quot;</span>.i(s).o(<span class="built_in">int</span>)</span><br><span class="line"><span class="built_in">print</span>(length)</span><br><span class="line"></span><br><span class="line">s = <span class="string">&quot;pwwkew&quot;</span></span><br><span class="line">length = <span class="string">&quot;找出其中不含有重复字符的最长子串的长度&quot;</span>.i(s).o(<span class="built_in">int</span>)</span><br><span class="line"><span class="built_in">print</span>(length)</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">python3 test.py</span></span><br><span class="line">3</span><br><span class="line">1</span><br><span class="line">3</span><br></pre></td></tr></table></figure>
+
+
+
+<p>​	<code>MagicIntent.hack_str(cache=True)</code>  会控制所有魔法意图（由 Python 字符串直接书写的意图）的缓存行为，如果要差异化控制每一个意图的缓存行为，或者有异步调用的需求，还是建议用 IntentLang 的 <code>Intent</code> 类，具体使用方法可以参考仓库 README： <a target="_blank" rel="noopener" href="https://github.com/l3yx/intentlang#compilation-and-execution">https://github.com/l3yx/intentlang#compilation-and-execution</a> 。</p>
+<h2 id="黑客的语法糖"><a href="#黑客的语法糖" class="headerlink" title="黑客的语法糖"></a>黑客的语法糖</h2><blockquote>
+<p>A Geek Idea, Implemented in a Hacker Way.</p>
+</blockquote>
+<p>​	其实以上把自然语言字符串本身变成一个可计算对象只算是 IntentLang 的一个 “语法糖”，以下两段代码是等价的：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> intentlang <span class="keyword">import</span> MagicIntent</span><br><span class="line">MagicIntent.hack_str()</span><br><span class="line"></span><br><span class="line">result = <span class="string">&quot;计算1到100的和&quot;</span>.o(<span class="built_in">int</span>)</span><br><span class="line"><span class="built_in">print</span>(result)</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> intentlang <span class="keyword">import</span> Intent</span><br><span class="line"></span><br><span class="line">intent = Intent().goal(<span class="string">&quot;计算1到100的和&quot;</span>).output(result=(<span class="built_in">int</span>, <span class="string">&quot;&quot;</span>))</span><br><span class="line">result = intent.run_sync().output.result</span><br><span class="line"><span class="built_in">print</span>(result)</span><br></pre></td></tr></table></figure>
+
+<p>​	但后者远没有前者 Cool，也会被质疑 “这和其他 Agent 框架有什么区别？”。</p>
+<p>​	然后这一小节本来还想讲一下我是如何 “hack” CPython 的 str 的，但想了下其实有了 AI 之后也没必要，大概提几个关键点吧：</p>
+<ul>
+<li>我在代码层，修改了 CPython 类型对象的内部结构，为 str 插入了自定义的几个方法</li>
+<li>在字符串上调用 <code>.i() .o() .c() ...</code> 这些方法其实是在构造一个 <code>MagicIntent</code>  对象</li>
+<li><code>MagicIntent</code> 相当于一个 “Value Proxy”，本身不保存值，保存的是 <code>Intent</code> 对象</li>
+<li>为 <code>MagicIntent</code> 重载了如 <code>__str__</code>， <code>__float__</code> ，<code>__add__</code>，<code>__getattr__</code> 等魔术方法</li>
+<li>在代码中进行任何对 MagicIntent 的观察和计算的行为，都会最终触发 <code>Intent.compile(...).run_sync()</code></li>
+</ul>
+<p>​	完整的关键代码如下，如果对细节原理感兴趣的话可以拿这段代码问一下 AI ：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> ctypes</span><br><span class="line"><span class="keyword">import</span> gc</span><br><span class="line"><span class="keyword">from</span> typing <span class="keyword">import</span> <span class="type">Type</span>, <span class="type">Callable</span>, <span class="type">Tuple</span>, <span class="type">Any</span></span><br><span class="line"><span class="keyword">from</span> intentlang <span class="keyword">import</span> Intent</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">MagicIntent</span>:</span><br><span class="line">    _max_iterations: <span class="built_in">int</span> = <span class="number">30</span></span><br><span class="line">    _cache: <span class="built_in">bool</span> = <span class="literal">False</span></span><br><span class="line">    _record: <span class="built_in">bool</span> = <span class="literal">True</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, goal: <span class="built_in">str</span></span>):</span><br><span class="line">        <span class="variable language_">self</span>.intent = Intent().goal(goal)</span><br><span class="line">        <span class="variable language_">self</span>._result: <span class="type">Any</span> = <span class="literal">None</span></span><br><span class="line">        <span class="variable language_">self</span>._executed: <span class="built_in">bool</span> = <span class="literal">False</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">o</span>(<span class="params">self, <span class="built_in">type</span>: <span class="type">Type</span></span>) -&gt; <span class="string">&quot;MagicIntent&quot;</span>:</span><br><span class="line">        <span class="variable language_">self</span>.intent.output(result=(<span class="built_in">type</span>, <span class="string">&quot;&quot;</span>))</span><br><span class="line">        <span class="keyword">return</span> <span class="variable language_">self</span></span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__call__</span>(<span class="params">self</span>) -&gt; <span class="type">Any</span>:</span><br><span class="line">        <span class="keyword">if</span> <span class="keyword">not</span> <span class="variable language_">self</span>._executed:</span><br><span class="line">            <span class="keyword">if</span> <span class="keyword">not</span> <span class="variable language_">self</span>.intent._output:</span><br><span class="line">                <span class="variable language_">self</span>.intent.output(result=(<span class="built_in">bool</span>, <span class="string">&quot;success&quot;</span>))</span><br><span class="line">            <span class="variable language_">self</span>._result = <span class="variable language_">self</span>.intent.<span class="built_in">compile</span>(</span><br><span class="line">                max_iterations=MagicIntent._max_iterations,</span><br><span class="line">                cache=MagicIntent._cache,</span><br><span class="line">                record=MagicIntent._record</span><br><span class="line">            ).run_sync().output.result</span><br><span class="line">            <span class="variable language_">self</span>._executed = <span class="literal">True</span></span><br><span class="line">        <span class="keyword">return</span> <span class="variable language_">self</span>._result</span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__bool__</span>(<span class="params">self</span>) -&gt; <span class="built_in">bool</span>:</span><br><span class="line">        <span class="keyword">return</span> <span class="built_in">bool</span>(<span class="variable language_">self</span>())</span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__int__</span>(<span class="params">self</span>) -&gt; <span class="built_in">int</span>:</span><br><span class="line">        <span class="keyword">return</span> <span class="built_in">int</span>(<span class="variable language_">self</span>())</span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line"><span class="meta">    @classmethod</span></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">hack_str</span>(<span class="params">cls, max_iterations: <span class="built_in">int</span> = <span class="number">30</span>, cache: <span class="built_in">bool</span> = <span class="literal">False</span>, record: <span class="built_in">bool</span> = <span class="literal">True</span></span>):</span><br><span class="line">        cls._max_iterations = max_iterations</span><br><span class="line">        cls._cache = cache</span><br><span class="line">        cls._record = record</span><br><span class="line"></span><br><span class="line">        <span class="keyword">def</span> <span class="title function_">o</span>(<span class="params">self, p</span>) -&gt; <span class="string">&quot;MagicIntent&quot;</span>:</span><br><span class="line">            magic_intent = cls(<span class="variable language_">self</span>)</span><br><span class="line">            magic_intent.o(p)</span><br><span class="line">            <span class="keyword">return</span> magic_intent</span><br><span class="line"></span><br><span class="line">        <span class="keyword">def</span> <span class="title function_">i</span>(<span class="params">self, p</span>) -&gt; <span class="string">&quot;MagicIntent&quot;</span>:</span><br><span class="line">            magic_intent = cls(<span class="variable language_">self</span>)</span><br><span class="line">            magic_intent.i(p)</span><br><span class="line">            <span class="keyword">return</span> magic_intent</span><br><span class="line"></span><br><span class="line">        ...</span><br><span class="line"></span><br><span class="line">        referents = gc.get_referents(<span class="built_in">str</span>.__dict__)</span><br><span class="line">        real_dict = <span class="built_in">next</span>(obj <span class="keyword">for</span> obj <span class="keyword">in</span> referents <span class="keyword">if</span> <span class="built_in">isinstance</span>(obj, <span class="built_in">dict</span>))</span><br><span class="line">        real_dict[<span class="string">&#x27;o&#x27;</span>] = o</span><br><span class="line">        real_dict[<span class="string">&#x27;i&#x27;</span>] = i</span><br><span class="line">        ...</span><br><span class="line">        ctypes.pythonapi.PyType_Modified(ctypes.py_object(<span class="built_in">str</span>))</span><br></pre></td></tr></table></figure>
+
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/AI/" rel="tag"># AI</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2026/01/08/IntentLang%EF%BC%9A%E4%BB%A5%E7%AC%AC%E4%B8%80%E6%80%A7%E5%8E%9F%E7%90%86%E4%B8%8E%E6%84%8F%E5%9B%BE%E5%B7%A5%E7%A8%8B%E9%87%8D%E5%BB%BA-AI-Agent/" rel="prev" title="IntentLang：以第一性原理与意图工程重建 AI Agent">
+                  <i class="fa fa-angle-left"></i> IntentLang：以第一性原理与意图工程重建 AI Agent
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">淚笑</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">112k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">6:48</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js","integrity":"sha256-YbM1pG3wWnzhyYN49g5fPnen+2CKEFaZfopkkwSpNtY="}}</script>
+  <script src="/js/third-party/tags/mermaid.js"></script>
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>
