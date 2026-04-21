@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"l3yx.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.21.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="原文：https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;DlpEH7bVr0xi0VawPJs3XA  ​	标题 “最强” 只是为了吸引阅读和 SEO，对于渗透测试这个场景来说，Agent 的稳定性、可控性、成本、速度、探索广度和深度都是重要考量指标，很难定义什么是最强 Agent。 ​	我开发的 AI 渗透系统只是在腾讯这次比赛（汇聚清华、北大、复旦、绿盟、长亭、移动、电信等共计 610支">
+<meta property="og:type" content="article">
+<meta property="og:title" content="国内最强 AI 渗透测试 Agent —— TCH·腾讯云黑客松第二届智能渗透挑战赛 唯一 AK 战队复盘">
+<meta property="og:url" content="https://l3yx.github.io/2026/04/21/%E5%9B%BD%E5%86%85%E6%9C%80%E5%BC%BA-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E2%80%94%E2%80%94-TCH%C2%B7%E8%85%BE%E8%AE%AF%E4%BA%91%E9%BB%91%E5%AE%A2%E6%9D%BE%E7%AC%AC%E4%BA%8C%E5%B1%8A%E6%99%BA%E8%83%BD%E6%B8%97%E9%80%8F%E6%8C%91%E6%88%98%E8%B5%9B-%E5%94%AF%E4%B8%80-AK-%E6%88%98%E9%98%9F%E5%A4%8D%E7%9B%98/index.html">
+<meta property="og:site_name" content="l3yx&#39;s blog">
+<meta property="og:description" content="原文：https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;DlpEH7bVr0xi0VawPJs3XA  ​	标题 “最强” 只是为了吸引阅读和 SEO，对于渗透测试这个场景来说，Agent 的稳定性、可控性、成本、速度、探索广度和深度都是重要考量指标，很难定义什么是最强 Agent。 ​	我开发的 AI 渗透系统只是在腾讯这次比赛（汇聚清华、北大、复旦、绿盟、长亭、移动、电信等共计 610支">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://l3yx.github.io/2026/04/21/%E5%9B%BD%E5%86%85%E6%9C%80%E5%BC%BA-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E2%80%94%E2%80%94-TCH%C2%B7%E8%85%BE%E8%AE%AF%E4%BA%91%E9%BB%91%E5%AE%A2%E6%9D%BE%E7%AC%AC%E4%BA%8C%E5%B1%8A%E6%99%BA%E8%83%BD%E6%B8%97%E9%80%8F%E6%8C%91%E6%88%98%E8%B5%9B-%E5%94%AF%E4%B8%80-AK-%E6%88%98%E9%98%9F%E5%A4%8D%E7%9B%98/image-20260419020703050.png">
+<meta property="og:image" content="https://l3yx.github.io/2026/04/21/%E5%9B%BD%E5%86%85%E6%9C%80%E5%BC%BA-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E2%80%94%E2%80%94-TCH%C2%B7%E8%85%BE%E8%AE%AF%E4%BA%91%E9%BB%91%E5%AE%A2%E6%9D%BE%E7%AC%AC%E4%BA%8C%E5%B1%8A%E6%99%BA%E8%83%BD%E6%B8%97%E9%80%8F%E6%8C%91%E6%88%98%E8%B5%9B-%E5%94%AF%E4%B8%80-AK-%E6%88%98%E9%98%9F%E5%A4%8D%E7%9B%98/c3c963734263dedc6062c39c545d8d27.jpg">
+<meta property="og:image" content="https://l3yx.github.io/2026/04/21/%E5%9B%BD%E5%86%85%E6%9C%80%E5%BC%BA-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E2%80%94%E2%80%94-TCH%C2%B7%E8%85%BE%E8%AE%AF%E4%BA%91%E9%BB%91%E5%AE%A2%E6%9D%BE%E7%AC%AC%E4%BA%8C%E5%B1%8A%E6%99%BA%E8%83%BD%E6%B8%97%E9%80%8F%E6%8C%91%E6%88%98%E8%B5%9B-%E5%94%AF%E4%B8%80-AK-%E6%88%98%E9%98%9F%E5%A4%8D%E7%9B%98/image-20260419014632739.png">
+<meta property="og:image" content="https://l3yx.github.io/2026/04/21/%E5%9B%BD%E5%86%85%E6%9C%80%E5%BC%BA-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E2%80%94%E2%80%94-TCH%C2%B7%E8%85%BE%E8%AE%AF%E4%BA%91%E9%BB%91%E5%AE%A2%E6%9D%BE%E7%AC%AC%E4%BA%8C%E5%B1%8A%E6%99%BA%E8%83%BD%E6%B8%97%E9%80%8F%E6%8C%91%E6%88%98%E8%B5%9B-%E5%94%AF%E4%B8%80-AK-%E6%88%98%E9%98%9F%E5%A4%8D%E7%9B%98/image-20260419030834547.png">
+<meta property="og:image" content="https://l3yx.github.io/2026/04/21/%E5%9B%BD%E5%86%85%E6%9C%80%E5%BC%BA-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E2%80%94%E2%80%94-TCH%C2%B7%E8%85%BE%E8%AE%AF%E4%BA%91%E9%BB%91%E5%AE%A2%E6%9D%BE%E7%AC%AC%E4%BA%8C%E5%B1%8A%E6%99%BA%E8%83%BD%E6%B8%97%E9%80%8F%E6%8C%91%E6%88%98%E8%B5%9B-%E5%94%AF%E4%B8%80-AK-%E6%88%98%E9%98%9F%E5%A4%8D%E7%9B%98/image-20260419031051135.png">
+<meta property="og:image" content="https://l3yx.github.io/2026/04/21/%E5%9B%BD%E5%86%85%E6%9C%80%E5%BC%BA-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E2%80%94%E2%80%94-TCH%C2%B7%E8%85%BE%E8%AE%AF%E4%BA%91%E9%BB%91%E5%AE%A2%E6%9D%BE%E7%AC%AC%E4%BA%8C%E5%B1%8A%E6%99%BA%E8%83%BD%E6%B8%97%E9%80%8F%E6%8C%91%E6%88%98%E8%B5%9B-%E5%94%AF%E4%B8%80-AK-%E6%88%98%E9%98%9F%E5%A4%8D%E7%9B%98/image-20260419034717433.png">
+<meta property="og:image" content="https://l3yx.github.io/2026/04/21/%E5%9B%BD%E5%86%85%E6%9C%80%E5%BC%BA-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E2%80%94%E2%80%94-TCH%C2%B7%E8%85%BE%E8%AE%AF%E4%BA%91%E9%BB%91%E5%AE%A2%E6%9D%BE%E7%AC%AC%E4%BA%8C%E5%B1%8A%E6%99%BA%E8%83%BD%E6%B8%97%E9%80%8F%E6%8C%91%E6%88%98%E8%B5%9B-%E5%94%AF%E4%B8%80-AK-%E6%88%98%E9%98%9F%E5%A4%8D%E7%9B%98/image-20260419101506671.png">
+<meta property="og:image" content="https://l3yx.github.io/2026/04/21/%E5%9B%BD%E5%86%85%E6%9C%80%E5%BC%BA-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E2%80%94%E2%80%94-TCH%C2%B7%E8%85%BE%E8%AE%AF%E4%BA%91%E9%BB%91%E5%AE%A2%E6%9D%BE%E7%AC%AC%E4%BA%8C%E5%B1%8A%E6%99%BA%E8%83%BD%E6%B8%97%E9%80%8F%E6%8C%91%E6%88%98%E8%B5%9B-%E5%94%AF%E4%B8%80-AK-%E6%88%98%E9%98%9F%E5%A4%8D%E7%9B%98/image-20260419102530819.png">
+<meta property="og:image" content="https://l3yx.github.io/2026/04/21/%E5%9B%BD%E5%86%85%E6%9C%80%E5%BC%BA-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E2%80%94%E2%80%94-TCH%C2%B7%E8%85%BE%E8%AE%AF%E4%BA%91%E9%BB%91%E5%AE%A2%E6%9D%BE%E7%AC%AC%E4%BA%8C%E5%B1%8A%E6%99%BA%E8%83%BD%E6%B8%97%E9%80%8F%E6%8C%91%E6%88%98%E8%B5%9B-%E5%94%AF%E4%B8%80-AK-%E6%88%98%E9%98%9F%E5%A4%8D%E7%9B%98/image-20260419102456428.png">
+<meta property="article:published_time" content="2026-04-21T15:37:27.000Z">
+<meta property="article:modified_time" content="2026-04-21T15:37:27.000Z">
+<meta property="article:author" content="淚笑">
+<meta property="article:tag" content="Web安全">
+<meta property="article:tag" content="AI for Security">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://l3yx.github.io/2026/04/21/%E5%9B%BD%E5%86%85%E6%9C%80%E5%BC%BA-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E2%80%94%E2%80%94-TCH%C2%B7%E8%85%BE%E8%AE%AF%E4%BA%91%E9%BB%91%E5%AE%A2%E6%9D%BE%E7%AC%AC%E4%BA%8C%E5%B1%8A%E6%99%BA%E8%83%BD%E6%B8%97%E9%80%8F%E6%8C%91%E6%88%98%E8%B5%9B-%E5%94%AF%E4%B8%80-AK-%E6%88%98%E9%98%9F%E5%A4%8D%E7%9B%98/image-20260419020703050.png">
+
+
+<link rel="canonical" href="https://l3yx.github.io/2026/04/21/%E5%9B%BD%E5%86%85%E6%9C%80%E5%BC%BA-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E2%80%94%E2%80%94-TCH%C2%B7%E8%85%BE%E8%AE%AF%E4%BA%91%E9%BB%91%E5%AE%A2%E6%9D%BE%E7%AC%AC%E4%BA%8C%E5%B1%8A%E6%99%BA%E8%83%BD%E6%B8%97%E9%80%8F%E6%8C%91%E6%88%98%E8%B5%9B-%E5%94%AF%E4%B8%80-AK-%E6%88%98%E9%98%9F%E5%A4%8D%E7%9B%98/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://l3yx.github.io/2026/04/21/%E5%9B%BD%E5%86%85%E6%9C%80%E5%BC%BA-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E2%80%94%E2%80%94-TCH%C2%B7%E8%85%BE%E8%AE%AF%E4%BA%91%E9%BB%91%E5%AE%A2%E6%9D%BE%E7%AC%AC%E4%BA%8C%E5%B1%8A%E6%99%BA%E8%83%BD%E6%B8%97%E9%80%8F%E6%8C%91%E6%88%98%E8%B5%9B-%E5%94%AF%E4%B8%80-AK-%E6%88%98%E9%98%9F%E5%A4%8D%E7%9B%98/","path":"2026/04/21/国内最强-AI-渗透测试-Agent-——-TCH·腾讯云黑客松第二届智能渗透挑战赛-唯一-AK-战队复盘/","title":"国内最强 AI 渗透测试 Agent —— TCH·腾讯云黑客松第二届智能渗透挑战赛 唯一 AK 战队复盘"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>国内最强 AI 渗透测试 Agent —— TCH·腾讯云黑客松第二届智能渗透挑战赛 唯一 AK 战队复盘 | l3yx's blog</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">l3yx's blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#TCH%C2%B7%E8%85%BE%E8%AE%AF%E4%BA%91%E9%BB%91%E5%AE%A2%E6%9D%BE%E6%99%BA%E8%83%BD%E6%B8%97%E9%80%8F%E6%8C%91%E6%88%98%E8%B5%9B"><span class="nav-number">1.</span> <span class="nav-text">TCH·腾讯云黑客松智能渗透挑战赛</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%B5%9B%E5%88%B6%E5%92%8C%E7%BB%93%E6%9E%9C"><span class="nav-number">2.</span> <span class="nav-text">赛制和结果</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%B5%9B%E5%89%8D%E5%87%86%E5%A4%87%E5%92%8C%E6%88%98%E9%98%9F%E6%83%85%E5%86%B5"><span class="nav-number">3.</span> <span class="nav-text">赛前准备和战队情况</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%AF%94%E8%B5%9B%E6%88%90%E6%9C%AC%E5%92%8C%E8%A1%A8%E7%8E%B0%E6%95%B0%E6%8D%AE"><span class="nav-number">4.</span> <span class="nav-text">比赛成本和表现数据</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B3%BB%E7%BB%9F%E6%9E%B6%E6%9E%84%E4%B8%8E%E8%AE%BE%E8%AE%A1%E8%A6%81%E7%82%B9"><span class="nav-number">5.</span> <span class="nav-text">系统架构与设计要点</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%98%AF%E5%90%A6%E5%BC%80%E6%BA%90"><span class="nav-number">6.</span> <span class="nav-text">是否开源</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%86%99%E5%9C%A8%E6%9C%80%E5%90%8E"><span class="nav-number">7.</span> <span class="nav-text">写在最后</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="淚笑"
+      src="/resources/avatar.jpg">
+  <p class="site-author-name" itemprop="name">淚笑</p>
+  <div class="site-description" itemprop="description">学的越多，懂的越少</div>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/l3yx" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;l3yx" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1729888211@qq.com" title="E-Mail → mailto:1729888211@qq.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://x.com/leixiao_cn" title="Twitter → https:&#x2F;&#x2F;x.com&#x2F;leixiao_cn" rel="noopener me" target="_blank"><i class="fab fa-twitter fa-fw"></i>Twitter</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://l3yx.github.io/2026/04/21/%E5%9B%BD%E5%86%85%E6%9C%80%E5%BC%BA-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E2%80%94%E2%80%94-TCH%C2%B7%E8%85%BE%E8%AE%AF%E4%BA%91%E9%BB%91%E5%AE%A2%E6%9D%BE%E7%AC%AC%E4%BA%8C%E5%B1%8A%E6%99%BA%E8%83%BD%E6%B8%97%E9%80%8F%E6%8C%91%E6%88%98%E8%B5%9B-%E5%94%AF%E4%B8%80-AK-%E6%88%98%E9%98%9F%E5%A4%8D%E7%9B%98/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/resources/avatar.jpg">
+      <meta itemprop="name" content="淚笑">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="l3yx's blog">
+      <meta itemprop="description" content="学的越多，懂的越少">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="国内最强 AI 渗透测试 Agent —— TCH·腾讯云黑客松第二届智能渗透挑战赛 唯一 AK 战队复盘 | l3yx's blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          国内最强 AI 渗透测试 Agent —— TCH·腾讯云黑客松第二届智能渗透挑战赛 唯一 AK 战队复盘
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-04-21 23:37:27" itemprop="dateCreated datePublished" datetime="2026-04-21T23:37:27+08:00">2026-04-21</time>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>3k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>11 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><blockquote>
+<p>原文：<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/DlpEH7bVr0xi0VawPJs3XA">https://mp.weixin.qq.com/s/DlpEH7bVr0xi0VawPJs3XA</a></p>
+</blockquote>
+<p>​	标题 “最强” 只是为了吸引阅读和 SEO，对于渗透测试这个场景来说，Agent 的稳定性、可控性、成本、速度、探索广度和深度都是重要考量指标，很难定义什么是最强 Agent。</p>
+<p>​	我开发的 AI 渗透系统只是在腾讯这次比赛（汇聚清华、北大、复旦、绿盟、长亭、移动、电信等共计 610支战队、1345 名选手）中<strong>解题数量最多且唯一 AK</strong>（All-Killed，通过所有挑战） 赛题，并非各方面的绝对最优，各位大佬轻喷。</p>
+<span id="more"></span>
+
+<h2 id="TCH·腾讯云黑客松智能渗透挑战赛"><a href="#TCH·腾讯云黑客松智能渗透挑战赛" class="headerlink" title="TCH·腾讯云黑客松智能渗透挑战赛"></a>TCH·腾讯云黑客松智能渗透挑战赛</h2><p>​	腾讯云黑客松智能渗透挑战赛是由腾讯云鼎实验室与腾讯安全众测平台联合发起的国内首个以 AI 智能体为核心攻防主体的渗透测试赛事。全程禁止人工直接介入靶场操作，要求参赛者构建以大语言模型（LLM）为核心的自主渗透智能体，在隔离云环境中独立完成从信息收集、漏洞分析到攻击利用的完整渗透链路。</p>
+<p>​	第一届赛事就吸引了全球 238 支战队、518 名选手参赛，覆盖清华、复旦、西交、广州大学等国内顶尖高校与阿里、京东、华为、长亭、绿盟、安恒等头部安全企业与科研机构。第二届扩展至 610 支战队、1345 名选手，吸引了更多相关领域的单位和个人关注。该比赛的排名一定程度上反映了国内在 AI 自动化渗透方向上的真实技术梯队，头部选手也几乎代表了这个方向目前国内能看到的最高水位。</p>
+<p>赛事官方地址：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://zc.tencent.com/hackathon">https://zc.tencent.com/hackathon</a> </li>
+<li><a target="_blank" rel="noopener" href="https://challenge.zc.tencent.com/">https://challenge.zc.tencent.com/</a></li>
+</ul>
+<p>官方历史文章：</p>
+<ul>
+<li>第一届<ul>
+<li><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/iwpuJVp03vcrUWG1fKDugg">AI驱动安全未来 | 🤖腾讯云黑客松-智能渗透挑战赛开战！</a></li>
+<li><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/3qN-eX4oi4eunk8mVEQQCQ">238支全球顶尖战队上演AI攻防巅峰对决，腾讯云黑客松-智能渗透挑战赛即将开启！</a></li>
+<li><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/Y6ZM4J56SKY-mgqiBukL2A">全球顶尖战队鏖战5日，国内首创AI智能渗透挑战赛战况升级！</a></li>
+<li><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/FeWpPnezFR8__VfMA3Ev5A">Top20战队决出！@腾讯云黑客松智能渗透挑战赛</a></li>
+</ul>
+</li>
+<li>第二届<ul>
+<li><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/XE7gs9HDV7Oc-7J7cSkrrQ">铸刃止戈，以智御危｜第二届腾讯云黑客松智能渗透挑战赛等你来战！</a></li>
+<li><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/pthR-XXmxFoJhOveKNuXig">610支战队集结！第二届腾讯云黑客松-智能渗透挑战赛报名收官！</a></li>
+<li><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/txuRQPj7_cNJZrkxCei2CA">线上十强出炉，决赛战火燃起！腾讯云黑客松智能渗透挑战赛决战在即！</a></li>
+</ul>
+</li>
+</ul>
+<h2 id="赛制和结果"><a href="#赛制和结果" class="headerlink" title="赛制和结果"></a>赛制和结果</h2><p>​	去年的第一届黑客松智能渗透挑战赛中，赛题来自 <a target="_blank" rel="noopener" href="https://github.com/xbow-engineering/validation-benchmarks">xbow-engineering&#x2F;validation-benchmarks</a> ，为公开的基准测试，偏向 CTF WEB 类型的题目，赛制是每天的赛段随机抽取一批题目，选手的 Agent 在赛段内自主答题，赛段结束后，题目不再重复使用，题目按难易程度有不同分数，最终按分数进行排名。</p>
+<p>​	第二届是官方自行命题，对于选手来说是纯黑盒，而且将题目分为了四个赛区，分别对应了现实世界中的 <strong>SRC 及通用漏洞挖掘</strong>、<strong>典型 CVE 及 AI 基础设施漏洞利用</strong>、<strong>多层内网渗透与权限维持</strong>、<strong>基础域渗透</strong>。赛题一次性全部放出，但需要选手在上一个赛区中解题数量达到一定要求才可以进入下一赛区进行解题。而且有着非常残酷的动态计分规则，这个规则之下，意味着前期失误容错率非常低，一旦开局解题速度落后了，就再也没有机会在分数上超过前面的队伍：</p>
+<img src="/2026/04/21/%E5%9B%BD%E5%86%85%E6%9C%80%E5%BC%BA-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E2%80%94%E2%80%94-TCH%C2%B7%E8%85%BE%E8%AE%AF%E4%BA%91%E9%BB%91%E5%AE%A2%E6%9D%BE%E7%AC%AC%E4%BA%8C%E5%B1%8A%E6%99%BA%E8%83%BD%E6%B8%97%E9%80%8F%E6%8C%91%E6%88%98%E8%B5%9B-%E5%94%AF%E4%B8%80-AK-%E6%88%98%E9%98%9F%E5%A4%8D%E7%9B%98/image-20260419020703050.png" class="" title="image-20260419020703050">
+
+<p>​	我在第一届比赛时的战队名称是 <strong>Antix</strong>（当时队友 <strong>M09ic</strong>）。这次比赛战队名是 <strong>Bytex</strong>，很巧都是第四名。但这次比赛我和 M09ic 使用了完全不一样的方案，各自分别参赛，他也取得了很不错的成绩（第七名 For Future）。</p>
+<p>​	另外因为我在比赛开局时确实有配置失误和并发不足的问题，所以在这次的动态积分规则下，即使我是全场唯一 AK 赛题的队伍，也依旧只能排到第四名。	</p>
+<p>第二届的最终榜单如下：</p>
+<img src="/2026/04/21/%E5%9B%BD%E5%86%85%E6%9C%80%E5%BC%BA-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E2%80%94%E2%80%94-TCH%C2%B7%E8%85%BE%E8%AE%AF%E4%BA%91%E9%BB%91%E5%AE%A2%E6%9D%BE%E7%AC%AC%E4%BA%8C%E5%B1%8A%E6%99%BA%E8%83%BD%E6%B8%97%E9%80%8F%E6%8C%91%E6%88%98%E8%B5%9B-%E5%94%AF%E4%B8%80-AK-%E6%88%98%E9%98%9F%E5%A4%8D%E7%9B%98/c3c963734263dedc6062c39c545d8d27.jpg" class="" title="c3c963734263dedc6062c39c545d8d27">
+
+<img src="/2026/04/21/%E5%9B%BD%E5%86%85%E6%9C%80%E5%BC%BA-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E2%80%94%E2%80%94-TCH%C2%B7%E8%85%BE%E8%AE%AF%E4%BA%91%E9%BB%91%E5%AE%A2%E6%9D%BE%E7%AC%AC%E4%BA%8C%E5%B1%8A%E6%99%BA%E8%83%BD%E6%B8%97%E9%80%8F%E6%8C%91%E6%88%98%E8%B5%9B-%E5%94%AF%E4%B8%80-AK-%E6%88%98%E9%98%9F%E5%A4%8D%E7%9B%98/image-20260419014632739.png" class="" title="image-20260419014632739">
+
+
+
+<h2 id="赛前准备和战队情况"><a href="#赛前准备和战队情况" class="headerlink" title="赛前准备和战队情况"></a>赛前准备和战队情况</h2><p>​	这届比赛我是个人 SOLO，特意想尝试单挑刷榜。赛前准备依旧非常匆忙，虽然使用的架构其实已经构思很久，但迟迟没有时间落地，赛前的倒数第二个周末，我才真正开始着手设计和 coding，整个设计和开发过程都是个人的业余时间。借助 Claude Code 和 CodeX 完成开发工作，代码量约 1w 行。</p>
+<p>​	直到比赛当天的凌晨四点左右，才第一次线上调通整个系统。所以对于这套系统的任何理论与设计都没有经过测试和调整（简单测试过几道 CTF 题目），几乎全靠我的经验和直觉。这次比赛算是我的 Agent 诞生后的第一次性能测试。</p>
+<p>​	但我还是对自己的设计有充分的信心，即使对于多层内网渗透这种复杂场景，我依然认为无需测试也一定可以做到，这和我的设计理念有关，我坚信 “<strong>Less Is More</strong>“。没有专门为内网渗透、代理搭建独立设计一个 Agent 功能或者 MCP、Skill 之类的，反之我是设计了一个足够简单，足够通用，足够完善的环境，Agent 可以自由的完成任何事情，这块详细设计我会在腾讯线下决赛路演的时候分享，到时资料也会同步在本公众号「<strong>淚笑的赛博日记-起零衍迹实验室</strong>」更新。</p>
+<h2 id="比赛成本和表现数据"><a href="#比赛成本和表现数据" class="headerlink" title="比赛成本和表现数据"></a>比赛成本和表现数据</h2><p>​	我一开始是奔着前三的目标去的，所以我全程只使用最贵最好的两个模型：claude opus 和 gpt，但没人能保证一定可以夺得名次，而排名 10 名以后意味着全部自费承担，这个选择本身也是一种博弈。</p>
+<p>在全程使用 opus 和 gpt 且不停歇打了5天比赛后，我的成本是 7692 元人民币（包括每晚赛后的总结复盘）：</p>
+<img src="/2026/04/21/%E5%9B%BD%E5%86%85%E6%9C%80%E5%BC%BA-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E2%80%94%E2%80%94-TCH%C2%B7%E8%85%BE%E8%AE%AF%E4%BA%91%E9%BB%91%E5%AE%A2%E6%9D%BE%E7%AC%AC%E4%BA%8C%E5%B1%8A%E6%99%BA%E8%83%BD%E6%B8%97%E9%80%8F%E6%8C%91%E6%88%98%E8%B5%9B-%E5%94%AF%E4%B8%80-AK-%E6%88%98%E9%98%9F%E5%A4%8D%E7%9B%98/image-20260419030834547.png" class="" title="image-20260419030834547">
+
+<p>总共消耗 10.9 亿 tokens：</p>
+<img src="/2026/04/21/%E5%9B%BD%E5%86%85%E6%9C%80%E5%BC%BA-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E2%80%94%E2%80%94-TCH%C2%B7%E8%85%BE%E8%AE%AF%E4%BA%91%E9%BB%91%E5%AE%A2%E6%9D%BE%E7%AC%AC%E4%BA%8C%E5%B1%8A%E6%99%BA%E8%83%BD%E6%B8%97%E9%80%8F%E6%8C%91%E6%88%98%E8%B5%9B-%E5%94%AF%E4%B8%80-AK-%E6%88%98%E9%98%9F%E5%A4%8D%E7%9B%98/image-20260419031051135.png" class="" title="image-20260419031051135">
+
+<p>每日 flag 获取数量，token 消耗和成本如下：</p>
+<img src="/2026/04/21/%E5%9B%BD%E5%86%85%E6%9C%80%E5%BC%BA-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E2%80%94%E2%80%94-TCH%C2%B7%E8%85%BE%E8%AE%AF%E4%BA%91%E9%BB%91%E5%AE%A2%E6%9D%BE%E7%AC%AC%E4%BA%8C%E5%B1%8A%E6%99%BA%E8%83%BD%E6%B8%97%E9%80%8F%E6%8C%91%E6%88%98%E8%B5%9B-%E5%94%AF%E4%B8%80-AK-%E6%88%98%E9%98%9F%E5%A4%8D%E7%9B%98/image-20260419034717433.png" class="" title="image-20260419034717433">
+
+<p>​	可以看到有明显的边际收益递减情况，而且也反映出我的策略选择：</p>
+<ul>
+<li>第一天和第二天主要是用 opus 模型，token 单价较高</li>
+<li>第三天开始主要是用 gpt 模型，单价降低</li>
+<li>第一天和第二天比较保守，并发较低，尤其第一天，解开一个 flag 平均仅需 52 元人民币或者 6.6 百万 tokens</li>
+<li>第三天最为激进，并发调的最高，总成本最高，但解开一个 flag 平均需要 284 元人民币或者 4 千万 tokens</li>
+<li>第四天没有解出 flag ，但还是付出了相当高的成本</li>
+<li>第四天晚上针对前几日的日志进行了彻底复盘和人工分析，为我的系统注入了一些人类意图，才最终在第五天 AK，这些 flag 代表的题目也一定程度上凸显了当前 Agent 能力的不足</li>
+</ul>
+<h2 id="系统架构与设计要点"><a href="#系统架构与设计要点" class="headerlink" title="系统架构与设计要点"></a>系统架构与设计要点</h2><p>比赛时所用的系统整体架构如下：</p>
+<img src="/2026/04/21/%E5%9B%BD%E5%86%85%E6%9C%80%E5%BC%BA-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E2%80%94%E2%80%94-TCH%C2%B7%E8%85%BE%E8%AE%AF%E4%BA%91%E9%BB%91%E5%AE%A2%E6%9D%BE%E7%AC%AC%E4%BA%8C%E5%B1%8A%E6%99%BA%E8%83%BD%E6%B8%97%E9%80%8F%E6%8C%91%E6%88%98%E8%B5%9B-%E5%94%AF%E4%B8%80-AK-%E6%88%98%E9%98%9F%E5%A4%8D%E7%9B%98/image-20260419101506671.png" class="" title="image-20260419101506671">
+
+<p>​	其中 <code>Cairn Server</code> 和 <code>Dispatcher</code> 是该系统中的核心设计，是一套 <strong>黑板架构</strong>+ <strong>DAG图</strong> 驱动的通用问题解决引擎与 Agent Worker 协作协议实现。这里虽然提到 “协作”，但和传统的多 Agent 架构完全不同，并且我是十分反对设定类似 “信息收集 Agent”、”Web漏洞利用 Agent”、”后渗透 Agent” 这种多 Agent 架构的。</p>
+<p>前端看起来是这样子的：</p>
+<img src="/2026/04/21/%E5%9B%BD%E5%86%85%E6%9C%80%E5%BC%BA-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E2%80%94%E2%80%94-TCH%C2%B7%E8%85%BE%E8%AE%AF%E4%BA%91%E9%BB%91%E5%AE%A2%E6%9D%BE%E7%AC%AC%E4%BA%8C%E5%B1%8A%E6%99%BA%E8%83%BD%E6%B8%97%E9%80%8F%E6%8C%91%E6%88%98%E8%B5%9B-%E5%94%AF%E4%B8%80-AK-%E6%88%98%E9%98%9F%E5%A4%8D%E7%9B%98/image-20260419102530819.png" class="" title="image-20260419102530819">
+
+<img src="/2026/04/21/%E5%9B%BD%E5%86%85%E6%9C%80%E5%BC%BA-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E2%80%94%E2%80%94-TCH%C2%B7%E8%85%BE%E8%AE%AF%E4%BA%91%E9%BB%91%E5%AE%A2%E6%9D%BE%E7%AC%AC%E4%BA%8C%E5%B1%8A%E6%99%BA%E8%83%BD%E6%B8%97%E9%80%8F%E6%8C%91%E6%88%98%E8%B5%9B-%E5%94%AF%E4%B8%80-AK-%E6%88%98%E9%98%9F%E5%A4%8D%E7%9B%98/image-20260419102456428.png" class="" title="image-20260419102456428">
+
+<p>​	然后其实 Cairn（我暂时为我的项目起名为 Cairn &#x2F; 衍迹，目前还没想到更合适的名字，后面可能会改）一开始的的设计目标就没有局限在自动化渗透测试，而是自动化解决任何有明确起始点与明确达成标准的这一类问题。而让 Cairn 能够做渗透测试的适配非常简单，即像前文的架构图中所画，为 Cairn 配备一个装满工具的 Kali 容器即可。</p>
+<p>关于 Cairn 的设计我认为完全值得再写一篇文章进行分析，此文我只再做一些我设计的核心总结：</p>
+<ul>
+<li><strong>Less Is More</strong></li>
+<li>Claude Code 和 Codex 是我的最小调度单位，在这套系统中我将其称之为 Agent Worker，未来可以扩展更多自定义的轻量 Agent</li>
+<li>同样的目标和效果下，优秀的架构一定是更简单的，复杂留给工程实现</li>
+<li>拒绝打补丁式的迭代系统，系统一开始设计的时候就需要找到问题最本质的抽象</li>
+<li>反对传统多 Agent 架构，反对 Agent 之间的低效信息交换方式。不要为了多 Agent 而多 Agent</li>
+<li>传统多 Agent 架构问题不在于数量，在于分工设计</li>
+<li>反对用传统 RAG 提供知识库功能，但漏洞 PoC 是需要的</li>
+<li>通识类的 Skill 完全没必要，比如各类漏洞利用方法，渗透测试流程，只会锁死 Agent 上限，拉低效果</li>
+<li>Cairn 只有一个 Skill，还是为比赛专门适配的，即 flag 提交 Skill。除此之外没有任何 Skill、MCP 和 RAG 知识库。不显式定义任何渗透测试流程的阶段和子 Agent</li>
+</ul>
+<h2 id="是否开源"><a href="#是否开源" class="headerlink" title="是否开源"></a>是否开源</h2><p>​	我个人是十分推崇开源分享精神的，我愿意开源也应该开源，但目前我还没有空出时间整理代码。另一方面，这套系统从设计理念到工程实现，确实有不少我认为值得讨论甚至被验证的点。如果只是停留在比赛成绩层面，其实信息密度很低；真正有价值的是背后的抽象方式、取舍逻辑，以及一些 “反直觉但有效” 的设计决策。这些内容如果能够在更大的范围内被复现、质疑、改进，意义会更大。</p>
+<p>​	所以我的计划是：先以文章、分享、腾讯线下决赛答辩为主，先把设计思想讲清楚，然后我也会同步对代码进行一次系统性整理。同时，我也会参考社区的反馈。如果确实有足够多的人对这套系统感兴趣，愿意一起讨论甚至参与演进，那我会更倾向于尽快推进开源。</p>
+<p>如果各位大佬愿意参与共建，一起推进 AI 自动化攻防的建设，欢迎先点赞和 follow，代码会在开源组织 「<strong>起零衍迹 Oritera</strong>」公开：</p>
+<p><a target="_blank" rel="noopener" href="https://github.com/oritera/Cairn">https://github.com/oritera/Cairn</a></p>
+<h2 id="写在最后"><a href="#写在最后" class="headerlink" title="写在最后"></a>写在最后</h2><p>​	「<strong>起零衍迹 &#x2F; Oritera</strong>」是一个专注于 AI 应用与 Agent 工程前沿探索的开源组织，我们致力于技术开源与社区共建。安全攻防是我们深耕的方向之一。</p>
+<p>​	欢迎关注本公众号「<strong>淚笑的赛博日记-起零衍迹实验室</strong>」，回复 “<strong>起零衍迹</strong>“ 加入起零衍迹 AI 社区参与最前沿的 AI 应用与 Agent 工程技术讨论，我们有任何最新动态和研究成果也将在群内优先发布。</p>
+<p>​	各位如果对本次比赛和 Cairn 有任何疑问可以在公众号下留言，我会统一回答并且整理部分问题在腾讯线下答辩时演讲。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Web%E5%AE%89%E5%85%A8/" rel="tag"># Web安全</a>
+              <a href="/tags/AI-for-Security/" rel="tag"># AI for Security</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2026/01/11/%E4%B8%BA%E4%BA%86%E5%88%9B%E9%80%A0-AI-native-programming-language-%E6%88%91-hack-%E4%BA%86-CPython-%E7%9A%84-str/" rel="prev" title="为了创造 AI-native programming language, 我 hack 了 CPython 的 str">
+                  <i class="fa fa-angle-left"></i> 为了创造 AI-native programming language, 我 hack 了 CPython 的 str
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">淚笑</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">115k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">6:59</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js","integrity":"sha256-YbM1pG3wWnzhyYN49g5fPnen+2CKEFaZfopkkwSpNtY="}}</script>
+  <script src="/js/third-party/tags/mermaid.js"></script>
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>
