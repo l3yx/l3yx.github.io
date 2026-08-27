@@ -178,6 +178,101 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://l3yx.github.io/2026/08/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/resources/avatar.jpg">
+      <meta itemprop="name" content="淚笑">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="l3yx's blog">
+      <meta itemprop="description" content="学的越多，懂的越少">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | l3yx's blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/2026/08/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/" class="post-title-link" itemprop="url">两届TCH之后 —— AI 渗透测试 Agent 的 Harness 工程演进、防御与我的思考</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-08-27 21:22:29" itemprop="dateCreated datePublished" datetime="2026-08-27T21:22:29+08:00">2026-08-27</time>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>6.5k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>24 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <blockquote>
+<p>原文：<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/pbieEet9VCR5iLhjViokIA">https://mp.weixin.qq.com/s/pbieEet9VCR5iLhjViokIA</a></p>
+</blockquote>
+<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>​	半年前，我借腾讯云黑客松智能渗透挑战赛的契机，写过一篇 AI for 安全攻防的文章：<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/jT4poWZ4Gfu3faXvul07HA">https://mp.weixin.qq.com/s/jT4poWZ4Gfu3faXvul07HA</a> 。但模型能力和 Agent 工程发展非常之快。现在回头看，那篇文章不少想法已经显得不够成熟，很多设计放到今天需要重新审视。</p>
+<p>​	这篇文章不是否定过去，也无法给出某种未来的标准答案。我更想借两届智能渗透挑战赛的经历，重新梳理，同时也分享一下自己对几个问题的理解：AI 在自动化攻击中进化到了何种地步、我们到底应该如何设计 Agent 工程、面对 AI 在攻击场景的高速发展，防御又该如何跟进。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2026/08/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
     <link itemprop="mainEntityOfPage" href="https://l3yx.github.io/2026/04/21/%E5%9B%BD%E5%86%85%E6%9C%80%E5%BC%BA-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E2%80%94%E2%80%94-TCH%C2%B7%E8%85%BE%E8%AE%AF%E4%BA%91%E9%BB%91%E5%AE%A2%E6%9D%BE%E7%AC%AC%E4%BA%8C%E5%B1%8A%E6%99%BA%E8%83%BD%E6%B8%97%E9%80%8F%E6%8C%91%E6%88%98%E8%B5%9B-%E5%94%AF%E4%B8%80-AK-%E6%88%98%E9%98%9F%E5%A4%8D%E7%9B%98/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1032,98 +1127,6 @@
 
 
 
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://l3yx.github.io/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/resources/avatar.jpg">
-      <meta itemprop="name" content="淚笑">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="l3yx's blog">
-      <meta itemprop="description" content="学的越多，懂的越少">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="undefined | l3yx's blog">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/" class="post-title-link" itemprop="url">Confluence环境搭建及漏洞分析</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">发表于</span>
-      
-
-      <time title="创建时间：2024-01-28 11:48:00 / 修改时间：11:58:00" itemprop="dateCreated datePublished" datetime="2024-01-28T11:48:00+08:00">2024-01-28</time>
-    </span>
-
-  
-    <span class="post-meta-break"></span>
-    <span class="post-meta-item" title="本文字数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-file-word"></i>
-      </span>
-      <span class="post-meta-item-text">本文字数：</span>
-      <span>2.4k</span>
-    </span>
-    <span class="post-meta-item" title="阅读时长">
-      <span class="post-meta-item-icon">
-        <i class="far fa-clock"></i>
-      </span>
-      <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>9 分钟</span>
-    </span>
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <p>这篇笔记是一个多月前写的，本来是想分析漏洞 CVE-2023-22522，但当时关于该漏洞的信息太少，最后也没分析出该漏洞原貌。笔记只留下一些环境搭建的方法和分析思路，另外还有一个不太算漏洞的漏洞，官方给了$300。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2024/01/28/Confluence%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA%E5%8F%8A%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
   <nav class="pagination">
     <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><span class="space">&hellip;</span><a class="page-number" href="/page/5/">5</a><a class="extend next" rel="next" title="下一页" aria-label="下一页" href="/page/2/"><i class="fa fa-angle-right"></i></a>
   </nav>
@@ -1147,13 +1150,13 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">115k</span>
+    <span title="站点总字数">122k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">6:59</span>
+    <span title="站点阅读时长">7:23</span>
   </span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
