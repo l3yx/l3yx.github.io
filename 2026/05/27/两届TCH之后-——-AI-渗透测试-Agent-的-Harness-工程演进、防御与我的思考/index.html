@@ -22,33 +22,33 @@
     <meta name="description" content="原文：https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;pbieEet9VCR5iLhjViokIA  前言​	半年前，我借腾讯云黑客松智能渗透挑战赛的契机，写过一篇 AI for 安全攻防的文章：https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;jT4poWZ4Gfu3faXvul07HA 。但模型能力和 Agent 工程发展非常之快。现在回头看，那篇文章不少想法已经显得不够成熟，很多">
 <meta property="og:type" content="article">
 <meta property="og:title" content="两届TCH之后 —— AI 渗透测试 Agent 的 Harness 工程演进、防御与我的思考">
-<meta property="og:url" content="https://l3yx.github.io/2026/08/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/index.html">
+<meta property="og:url" content="https://l3yx.github.io/2026/05/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/index.html">
 <meta property="og:site_name" content="l3yx&#39;s blog">
 <meta property="og:description" content="原文：https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;pbieEet9VCR5iLhjViokIA  前言​	半年前，我借腾讯云黑客松智能渗透挑战赛的契机，写过一篇 AI for 安全攻防的文章：https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;jT4poWZ4Gfu3faXvul07HA 。但模型能力和 Agent 工程发展非常之快。现在回头看，那篇文章不少想法已经显得不够成熟，很多">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://l3yx.github.io/2026/08/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/IMG_1921.JPG">
-<meta property="og:image" content="https://l3yx.github.io/2026/08/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/640.png">
-<meta property="og:image" content="https://l3yx.github.io/2026/08/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/image-20260419014632739.png">
-<meta property="og:image" content="https://l3yx.github.io/2026/08/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/750.PNG">
-<meta property="og:image" content="https://l3yx.github.io/2026/08/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/ChatGPT%20Image%202026%E5%B9%B45%E6%9C%8826%E6%97%A5%2023_27_36.png">
-<meta property="og:image" content="https://l3yx.github.io/2026/08/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/screencapture-claude-ai-chat-13857c49-0a4a-4e4b-bc3e-6cafe92e2d5f-2026-05-26-09_53_40.png">
-<meta property="og:image" content="https://l3yx.github.io/2026/08/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/screencapture-chatgpt-c-6a14fb80-c058-8324-b1d7-b147de684e20-2026-05-26-09_54_15.png">
-<meta property="og:image" content="https://l3yx.github.io/2026/08/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/screencapture-chat-deepseek-a-chat-s-d7e08044-457a-43a0-b5e7-f773fc755d4c-2026-05-26-09_54_51.png">
-<meta property="og:image" content="https://l3yx.github.io/2026/08/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/ChatGPT_Image_0.png">
-<meta property="article:published_time" content="2026-08-27T13:22:29.000Z">
-<meta property="article:modified_time" content="2026-08-27T13:22:29.000Z">
+<meta property="og:image" content="https://l3yx.github.io/2026/05/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/IMG_1921.JPG">
+<meta property="og:image" content="https://l3yx.github.io/2026/05/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/640.png">
+<meta property="og:image" content="https://l3yx.github.io/2026/05/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/image-20260419014632739.png">
+<meta property="og:image" content="https://l3yx.github.io/2026/05/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/750.PNG">
+<meta property="og:image" content="https://l3yx.github.io/2026/05/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/ChatGPT%20Image%202026%E5%B9%B45%E6%9C%8826%E6%97%A5%2023_27_36.png">
+<meta property="og:image" content="https://l3yx.github.io/2026/05/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/screencapture-claude-ai-chat-13857c49-0a4a-4e4b-bc3e-6cafe92e2d5f-2026-05-26-09_53_40.png">
+<meta property="og:image" content="https://l3yx.github.io/2026/05/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/screencapture-chatgpt-c-6a14fb80-c058-8324-b1d7-b147de684e20-2026-05-26-09_54_15.png">
+<meta property="og:image" content="https://l3yx.github.io/2026/05/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/screencapture-chat-deepseek-a-chat-s-d7e08044-457a-43a0-b5e7-f773fc755d4c-2026-05-26-09_54_51.png">
+<meta property="og:image" content="https://l3yx.github.io/2026/05/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/ChatGPT_Image_0.png">
+<meta property="article:published_time" content="2026-05-26T16:17:00.000Z">
+<meta property="article:modified_time" content="2026-05-26T16:17:00.000Z">
 <meta property="article:author" content="淚笑">
 <meta property="article:tag" content="Web安全">
 <meta property="article:tag" content="AI for Security">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://l3yx.github.io/2026/08/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/IMG_1921.JPG">
+<meta name="twitter:image" content="https://l3yx.github.io/2026/05/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/IMG_1921.JPG">
 
 
-<link rel="canonical" href="https://l3yx.github.io/2026/08/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/">
+<link rel="canonical" href="https://l3yx.github.io/2026/05/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/">
 
 
 
-<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://l3yx.github.io/2026/08/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/","path":"2026/08/27/两届TCH之后-——-AI-渗透测试-Agent-的-Harness-工程演进、防御与我的思考/","title":"两届TCH之后 —— AI 渗透测试 Agent 的 Harness 工程演进、防御与我的思考"}</script>
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://l3yx.github.io/2026/05/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/","path":"2026/05/27/两届TCH之后-——-AI-渗透测试-Agent-的-Harness-工程演进、防御与我的思考/","title":"两届TCH之后 —— AI 渗透测试 Agent 的 Harness 工程演进、防御与我的思考"}</script>
 
 <script class="next-config" data-name="calendar" type="application/json">""</script>
 <title>两届TCH之后 —— AI 渗透测试 Agent 的 Harness 工程演进、防御与我的思考 | l3yx's blog</title>
@@ -194,7 +194,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://l3yx.github.io/2026/08/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/">
+    <link itemprop="mainEntityOfPage" href="https://l3yx.github.io/2026/05/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/resources/avatar.jpg">
@@ -223,7 +223,7 @@
       </span>
       <span class="post-meta-item-text">发表于</span>
 
-      <time title="创建时间：2026-08-27 21:22:29" itemprop="dateCreated datePublished" datetime="2026-08-27T21:22:29+08:00">2026-08-27</time>
+      <time title="创建时间：2026-05-27 00:17:00" itemprop="dateCreated datePublished" datetime="2026-05-27T00:17:00+08:00">2026-05-27</time>
     </span>
 
   
@@ -257,24 +257,24 @@
 <p>​	这篇文章不是否定过去，也无法给出某种未来的标准答案。我更想借两届智能渗透挑战赛的经历，重新梳理，同时也分享一下自己对几个问题的理解：AI 在自动化攻击中进化到了何种地步、我们到底应该如何设计 Agent 工程、面对 AI 在攻击场景的高速发展，防御又该如何跟进。</p>
 <span id="more"></span>
 
-<h2 id="第二届TCH智能渗透挑战赛结果"><a href="#第二届TCH智能渗透挑战赛结果" class="headerlink" title="第二届TCH智能渗透挑战赛结果"></a>第二届TCH智能渗透挑战赛结果</h2><img src="/2026/08/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/IMG_1921.JPG" class="" title="IMG_1921">
+<h2 id="第二届TCH智能渗透挑战赛结果"><a href="#第二届TCH智能渗透挑战赛结果" class="headerlink" title="第二届TCH智能渗透挑战赛结果"></a>第二届TCH智能渗透挑战赛结果</h2><img src="/2026/05/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/IMG_1921.JPG" class="" title="IMG_1921">
 
 <p>​	关于比赛的介绍和线上赛的复盘以及我线下路演的 PPT 可以参考这两篇文章：<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/DlpEH7bVr0xi0VawPJs3XA">https://mp.weixin.qq.com/s/DlpEH7bVr0xi0VawPJs3XA</a> 、<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/2rEqFLvkxvYWM3gW170C2w">https://mp.weixin.qq.com/s/2rEqFLvkxvYWM3gW170C2w</a> 。</p>
 <p>​	我最终总成绩是全国第三（Bytex 战队）：<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/0qqRpdfNsgAUXuqqVjZ8gA">https://mp.weixin.qq.com/s/0qqRpdfNsgAUXuqqVjZ8gA</a> ，是一二三等奖战队中唯一的个人 SOLO 参赛选手，也是全国所有战队中唯一解决所有题目的选手（排名不是第一是因为题目有一血加成等，我前期的解题速度稍微落后）。我参赛的作品 Cairn 也已经开源：<a target="_blank" rel="noopener" href="https://github.com/oritera/Cairn">https://github.com/oritera/Cairn</a> 。</p>
-<img src="/2026/08/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/640.png" class="" title="图片">
+<img src="/2026/05/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/640.png" class="" title="图片">
 
 <p>​	线上赛排名以及解题数详情（总共 54 道）：</p>
-<img src="/2026/08/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/image-20260419014632739.png" class="" title="image-20260419014632739">
+<img src="/2026/05/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/image-20260419014632739.png" class="" title="image-20260419014632739">
 
 <p>​	我在之前的复盘文章里还是比较详细的分享了我使用的模型，消耗的 Token，以及总费用。当时我以为我的成本可能是相对较高的。但让我意外的是，当腾讯官方发布了详细的模型使用报告后，才发现我可能是前十里 Token 消耗最少的，而且是前十战队里唯一一个 LLM 消息数仅有数十万级的（其他都是百万级）。</p>
-<img src="/2026/08/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/750.PNG" class="" width="750">
+<img src="/2026/05/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/750.PNG" class="" width="750">
 
 
 
 <h2 id="AI-自动化渗透已经到来，问题转向-Agent-工程"><a href="#AI-自动化渗透已经到来，问题转向-Agent-工程" class="headerlink" title="AI 自动化渗透已经到来，问题转向 Agent 工程"></a>AI 自动化渗透已经到来，问题转向 Agent 工程</h2><p>​	我觉得这两届比赛举办得很专业，也相当具有代表性。其中选手展现出来的思路和进展，几乎可以代表目前国内 AI 自动化渗透方向能公开看到的最高水平。作为两届比赛的深度亲历者，我可以很自信地说：真正的 AI 自动化渗透已经到来了。	</p>
 <p>​	模型能力早已满足且还在快速发展，很多关键技术难题也已经有了可行解法，拼图基本已经聚齐了。只是“到来”不代表“成熟”，市面上目前还不存在一个可以拿来直接无人值守、跑在任意企业真实环境里的完美 AI 渗透产品，开源项目里更没有。很多头部选手的作品放到真实环境里也会面临巨大的不确定性。</p>
 <p>​	所以我们目前的问题早就不是能不能做到，而是怎么在效果好的同时做到稳定和可控。</p>
-<h3 id="状态、行动、控制：两届比赛里的-Agent-工程本质"><a href="#状态、行动、控制：两届比赛里的-Agent-工程本质" class="headerlink" title="状态、行动、控制：两届比赛里的 Agent 工程本质"></a>状态、行动、控制：两届比赛里的 Agent 工程本质</h3><img src="/2026/08/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/ChatGPT%20Image%202026%E5%B9%B45%E6%9C%8826%E6%97%A5%2023_27_36.png" class="" title="ChatGPT Image 2026年5月26日 23_27_36">
+<h3 id="状态、行动、控制：两届比赛里的-Agent-工程本质"><a href="#状态、行动、控制：两届比赛里的-Agent-工程本质" class="headerlink" title="状态、行动、控制：两届比赛里的 Agent 工程本质"></a>状态、行动、控制：两届比赛里的 Agent 工程本质</h3><img src="/2026/05/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/ChatGPT%20Image%202026%E5%B9%B45%E6%9C%8826%E6%97%A5%2023_27_36.png" class="" title="ChatGPT Image 2026年5月26日 23_27_36">
 
 <p>​	第一届 TCH 的赛题来自公开 Benchmark（ <a target="_blank" rel="noopener" href="https://github.com/xbow-engineering/validation-benchmarks">https://github.com/xbow-engineering/validation-benchmarks</a> ），偏传统 CTF Web 场景，核心命题是“Agent 能不能稳定地跑通单题解题闭环”。第二届 TCH 告别单点解题，直接跨越到自动化众测及通用漏洞挖掘、典型 CVE 及 AI 基础设施漏洞利用、多层内网渗透与权限维持、基础域渗透等实战场景。核心命题也从“能不能跑通单题”变成了“能不能在长链路、多阶段、强不确定的环境中持续推进并最终收敛”。</p>
 <p>​	从各队决赛 PPT 的实际架构来看，两届比赛里很多方案表面差异很大：有的做上下文清洗，有的做任务图和因果图，有的做共享笔记本，有的做 C2 和工具网关，有的做 Observer 和状态机。但如果把这些设计放回 Agent 的工作循环里看，它们其实都在补同一个闭环：如何让一个概率模型接入真实世界后，稳定地完成 <strong>状态 → 决策 → 行动 → 反馈 → 新状态</strong> 的循环。围绕这个闭环，所有方案其实都可以拆成三层：状态层、行动层、控制层。</p>
@@ -320,13 +320,13 @@
 </blockquote>
 <p>​	没有绝对的最好的方案，但可以有最喜欢的方案。我也想知道 AI 会怎么看待这些方案，所以把两届的全部 PPT 都转写成了文字稿让 AI 评价，以下是 Claude、ChatGPT、DeepSeek 的回答：</p>
 <p><a target="_blank" rel="noopener" href="https://claude.ai/share/ae0274d3-b51f-4abc-8d51-7b6fa17c8ea9">https://claude.ai/share/ae0274d3-b51f-4abc-8d51-7b6fa17c8ea9</a></p>
-<img src="/2026/08/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/screencapture-claude-ai-chat-13857c49-0a4a-4e4b-bc3e-6cafe92e2d5f-2026-05-26-09_53_40.png" class="" title="screencapture-claude-ai-chat-13857c49-0a4a-4e4b-bc3e-6cafe92e2d5f-2026-05-26-09_53_40">
+<img src="/2026/05/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/screencapture-claude-ai-chat-13857c49-0a4a-4e4b-bc3e-6cafe92e2d5f-2026-05-26-09_53_40.png" class="" title="screencapture-claude-ai-chat-13857c49-0a4a-4e4b-bc3e-6cafe92e2d5f-2026-05-26-09_53_40">
 
 <p><a target="_blank" rel="noopener" href="https://chatgpt.com/share/6a14fc93-dda4-8322-af71-2d78b61b0141">https://chatgpt.com/share/6a14fc93-dda4-8322-af71-2d78b61b0141</a></p>
-<img src="/2026/08/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/screencapture-chatgpt-c-6a14fb80-c058-8324-b1d7-b147de684e20-2026-05-26-09_54_15.png" class="" title="screencapture-chatgpt-c-6a14fb80-c058-8324-b1d7-b147de684e20-2026-05-26-09_54_15">
+<img src="/2026/05/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/screencapture-chatgpt-c-6a14fb80-c058-8324-b1d7-b147de684e20-2026-05-26-09_54_15.png" class="" title="screencapture-chatgpt-c-6a14fb80-c058-8324-b1d7-b147de684e20-2026-05-26-09_54_15">
 
 <p><a target="_blank" rel="noopener" href="https://chat.deepseek.com/share/lex1x4ofqvzr1g2cwn">https://chat.deepseek.com/share/lex1x4ofqvzr1g2cwn</a></p>
-<img src="/2026/08/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/screencapture-chat-deepseek-a-chat-s-d7e08044-457a-43a0-b5e7-f773fc755d4c-2026-05-26-09_54_51.png" class="" title="screencapture-chat-deepseek-a-chat-s-d7e08044-457a-43a0-b5e7-f773fc755d4c-2026-05-26-09_54_51">
+<img src="/2026/05/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/screencapture-chat-deepseek-a-chat-s-d7e08044-457a-43a0-b5e7-f773fc755d4c-2026-05-26-09_54_51.png" class="" title="screencapture-chat-deepseek-a-chat-s-d7e08044-457a-43a0-b5e7-f773fc755d4c-2026-05-26-09_54_51">
 
 <p>​	它们几乎都会选择我（第一届 Antix 战队、第二届 Bytex 战队，Cairn 系统）的方案。</p>
 <h2 id="在-AI-的冲击下如何做好防御"><a href="#在-AI-的冲击下如何做好防御" class="headerlink" title="在 AI 的冲击下如何做好防御"></a>在 AI 的冲击下如何做好防御</h2><p>​	我工作至今几乎都是一直做攻击方面的探索和建设，但做攻击的过程中，对防御体系的了解也必不可少，也在大厂内部进行过很长时间的直接对抗，所以我想从一个攻击者的视角斗胆谈一下防御侧在 AI 时代下如何进一步建设。我暂时想到了可行度较高的四个推进方向。</p>
@@ -341,7 +341,7 @@
 <p>​	所以内部的蓝紫军绝对不能像旧时代一样只依靠人力去做风险识别和演练，而是也要建设自己的 AI 攻击能力。</p>
 <p>​	<strong>四、建设风险来临时的快速响应能力</strong></p>
 <p>​	防御是建设一个面，攻击是打击一个点，所以防御确实难做。我们很难说内部提前能够检测出外部攻击者可以发现的所有风险。但我们可以建设快速响应能力。比如外界突然爆发一个新的 0day，但我们拿到的信息很少，只有简单描述和简单的修复止血措施。过去从漏洞公告到影响评估、PoC 验证、修复方案，可能要数小时甚至数天。但以后大量这种漏洞很可能都是 AI 发现的，那我们理论上完全可以建设对等的能力——漏洞的复现、PoC 生成、真实影响程度分析、修复方案输出。外界一爆漏洞信息，内部立刻就能清楚的分析出来。前面讲的那些 AI 渗透能力，反过来用在防御侧，技术上完全可行。</p>
-<h2 id="技术从业者如何适应-AI-时代"><a href="#技术从业者如何适应-AI-时代" class="headerlink" title="技术从业者如何适应 AI 时代"></a>技术从业者如何适应 AI 时代</h2><img src="/2026/08/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/ChatGPT_Image_0.png" class="" title="ChatGPT_Image_0">
+<h2 id="技术从业者如何适应-AI-时代"><a href="#技术从业者如何适应-AI-时代" class="headerlink" title="技术从业者如何适应 AI 时代"></a>技术从业者如何适应 AI 时代</h2><img src="/2026/05/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/ChatGPT_Image_0.png" class="" title="ChatGPT_Image_0">
 
 <h3 id="AI-是放大器，也是一面镜子"><a href="#AI-是放大器，也是一面镜子" class="headerlink" title="AI 是放大器，也是一面镜子"></a>AI 是放大器，也是一面镜子</h3><p>​	AI 确实极大地提高了个人的生产效率，尤其是编程领域，任何人都可以进行 vibe coding。</p>
 <p>​	你可以用 AI 来写代码，也可以用 AI 来讨论想法、验证思路、推演方案。但我认为你自己得先有判断力。AI 的设计逻辑决定了它天然倾向于迎合你，而且它可能无法识别也不会主动告诉你你的想法存在根本性的缺陷。你的方向如果本来就错了，它只会让你更快地错下去。很多人以为自己在用 AI 思考，实际上只是在让 AI 帮自己捧哏。</p>
