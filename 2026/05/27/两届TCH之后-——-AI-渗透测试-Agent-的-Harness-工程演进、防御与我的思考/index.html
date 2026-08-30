@@ -19,12 +19,12 @@
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"l3yx.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.21.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
-    <meta name="description" content="原文：https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;pbieEet9VCR5iLhjViokIA  前言​	半年前，我借腾讯云黑客松智能渗透挑战赛的契机，写过一篇 AI for 安全攻防的文章：https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;jT4poWZ4Gfu3faXvul07HA 。但模型能力和 Agent 工程发展非常之快。现在回头看，那篇文章不少想法已经显得不够成熟，很多">
+    <meta name="description" content="原文：https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;pbieEet9VCR5iLhjViokIA  ​	半年前，我借腾讯云黑客松智能渗透挑战赛的契机，写过一篇 AI for 安全攻防的文章：https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;jT4poWZ4Gfu3faXvul07HA 。但模型能力和 Agent 工程发展非常之快。现在回头看，那篇文章不少想法已经显得不够成熟，很多设计">
 <meta property="og:type" content="article">
 <meta property="og:title" content="两届TCH之后 —— AI 渗透测试 Agent 的 Harness 工程演进、防御与我的思考">
 <meta property="og:url" content="https://l3yx.github.io/2026/05/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/index.html">
 <meta property="og:site_name" content="l3yx&#39;s blog">
-<meta property="og:description" content="原文：https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;pbieEet9VCR5iLhjViokIA  前言​	半年前，我借腾讯云黑客松智能渗透挑战赛的契机，写过一篇 AI for 安全攻防的文章：https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;jT4poWZ4Gfu3faXvul07HA 。但模型能力和 Agent 工程发展非常之快。现在回头看，那篇文章不少想法已经显得不够成熟，很多">
+<meta property="og:description" content="原文：https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;pbieEet9VCR5iLhjViokIA  ​	半年前，我借腾讯云黑客松智能渗透挑战赛的契机，写过一篇 AI for 安全攻防的文章：https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;jT4poWZ4Gfu3faXvul07HA 。但模型能力和 Agent 工程发展非常之快。现在回头看，那篇文章不少想法已经显得不够成熟，很多设计">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://l3yx.github.io/2026/05/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/IMG_1921.JPG">
 <meta property="og:image" content="https://l3yx.github.io/2026/05/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/640.png">
@@ -150,7 +150,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%AC%AC%E4%BA%8C%E5%B1%8ATCH%E6%99%BA%E8%83%BD%E6%B8%97%E9%80%8F%E6%8C%91%E6%88%98%E8%B5%9B%E7%BB%93%E6%9E%9C"><span class="nav-number">2.</span> <span class="nav-text">第二届TCH智能渗透挑战赛结果</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#AI-%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B8%97%E9%80%8F%E5%B7%B2%E7%BB%8F%E5%88%B0%E6%9D%A5%EF%BC%8C%E9%97%AE%E9%A2%98%E8%BD%AC%E5%90%91-Agent-%E5%B7%A5%E7%A8%8B"><span class="nav-number">3.</span> <span class="nav-text">AI 自动化渗透已经到来，问题转向 Agent 工程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%8A%B6%E6%80%81%E3%80%81%E8%A1%8C%E5%8A%A8%E3%80%81%E6%8E%A7%E5%88%B6%EF%BC%9A%E4%B8%A4%E5%B1%8A%E6%AF%94%E8%B5%9B%E9%87%8C%E7%9A%84-Agent-%E5%B7%A5%E7%A8%8B%E6%9C%AC%E8%B4%A8"><span class="nav-number">3.1.</span> <span class="nav-text">状态、行动、控制：两届比赛里的 Agent 工程本质</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Harness-%E4%B8%AD%E6%8E%A7%E5%88%B6%E7%9A%84%E6%9C%AC%E8%B4%A8%E6%98%AF%E4%BB%80%E4%B9%88"><span class="nav-number">3.2.</span> <span class="nav-text">Harness 中控制的本质是什么</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%87%8D%E6%96%B0%E8%AE%A4%E8%AF%86-Multi-Agent-%E6%9E%B6%E6%9E%84"><span class="nav-number">3.3.</span> <span class="nav-text">重新认识 Multi-Agent 架构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B7%A5%E7%A8%8B%E5%8F%96%E8%88%8D"><span class="nav-number">3.4.</span> <span class="nav-text">工程取舍</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9C%A8-AI-%E7%9A%84%E5%86%B2%E5%87%BB%E4%B8%8B%E5%A6%82%E4%BD%95%E5%81%9A%E5%A5%BD%E9%98%B2%E5%BE%A1"><span class="nav-number">4.</span> <span class="nav-text">在 AI 的冲击下如何做好防御</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8A%80%E6%9C%AF%E4%BB%8E%E4%B8%9A%E8%80%85%E5%A6%82%E4%BD%95%E9%80%82%E5%BA%94-AI-%E6%97%B6%E4%BB%A3"><span class="nav-number">5.</span> <span class="nav-text">技术从业者如何适应 AI 时代</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#AI-%E6%98%AF%E6%94%BE%E5%A4%A7%E5%99%A8%EF%BC%8C%E4%B9%9F%E6%98%AF%E4%B8%80%E9%9D%A2%E9%95%9C%E5%AD%90"><span class="nav-number">5.1.</span> <span class="nav-text">AI 是放大器，也是一面镜子</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%9B%AE%E5%89%8D-AI-%E6%97%B6%E4%BB%A3%E4%B8%8B%E6%9C%80%E5%BC%BA%E7%9A%84%E4%B8%80%E7%B1%BB%E4%BA%BA"><span class="nav-number">5.2.</span> <span class="nav-text">目前 AI 时代下最强的一类人</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9C%80%E5%90%8E"><span class="nav-number">6.</span> <span class="nav-text">最后</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%AC%AC%E4%BA%8C%E5%B1%8ATCH%E6%99%BA%E8%83%BD%E6%B8%97%E9%80%8F%E6%8C%91%E6%88%98%E8%B5%9B%E7%BB%93%E6%9E%9C"><span class="nav-number">1.</span> <span class="nav-text">第二届TCH智能渗透挑战赛结果</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#AI-%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B8%97%E9%80%8F%E5%B7%B2%E7%BB%8F%E5%88%B0%E6%9D%A5%EF%BC%8C%E9%97%AE%E9%A2%98%E8%BD%AC%E5%90%91-Agent-%E5%B7%A5%E7%A8%8B"><span class="nav-number">2.</span> <span class="nav-text">AI 自动化渗透已经到来，问题转向 Agent 工程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%8A%B6%E6%80%81%E3%80%81%E8%A1%8C%E5%8A%A8%E3%80%81%E6%8E%A7%E5%88%B6%EF%BC%9A%E4%B8%A4%E5%B1%8A%E6%AF%94%E8%B5%9B%E9%87%8C%E7%9A%84-Agent-%E5%B7%A5%E7%A8%8B%E6%9C%AC%E8%B4%A8"><span class="nav-number">2.1.</span> <span class="nav-text">状态、行动、控制：两届比赛里的 Agent 工程本质</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Harness-%E4%B8%AD%E6%8E%A7%E5%88%B6%E7%9A%84%E6%9C%AC%E8%B4%A8%E6%98%AF%E4%BB%80%E4%B9%88"><span class="nav-number">2.2.</span> <span class="nav-text">Harness 中控制的本质是什么</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%87%8D%E6%96%B0%E8%AE%A4%E8%AF%86-Multi-Agent-%E6%9E%B6%E6%9E%84"><span class="nav-number">2.3.</span> <span class="nav-text">重新认识 Multi-Agent 架构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B7%A5%E7%A8%8B%E5%8F%96%E8%88%8D"><span class="nav-number">2.4.</span> <span class="nav-text">工程取舍</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9C%A8-AI-%E7%9A%84%E5%86%B2%E5%87%BB%E4%B8%8B%E5%A6%82%E4%BD%95%E5%81%9A%E5%A5%BD%E9%98%B2%E5%BE%A1"><span class="nav-number">3.</span> <span class="nav-text">在 AI 的冲击下如何做好防御</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8A%80%E6%9C%AF%E4%BB%8E%E4%B8%9A%E8%80%85%E5%A6%82%E4%BD%95%E9%80%82%E5%BA%94-AI-%E6%97%B6%E4%BB%A3"><span class="nav-number">4.</span> <span class="nav-text">技术从业者如何适应 AI 时代</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#AI-%E6%98%AF%E6%94%BE%E5%A4%A7%E5%99%A8%EF%BC%8C%E4%B9%9F%E6%98%AF%E4%B8%80%E9%9D%A2%E9%95%9C%E5%AD%90"><span class="nav-number">4.1.</span> <span class="nav-text">AI 是放大器，也是一面镜子</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%9B%AE%E5%89%8D-AI-%E6%97%B6%E4%BB%A3%E4%B8%8B%E6%9C%80%E5%BC%BA%E7%9A%84%E4%B8%80%E7%B1%BB%E4%BA%BA"><span class="nav-number">4.2.</span> <span class="nav-text">目前 AI 时代下最强的一类人</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9C%80%E5%90%8E"><span class="nav-number">5.</span> <span class="nav-text">最后</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -253,7 +253,7 @@
     <div class="post-body" itemprop="articleBody"><blockquote>
 <p>原文：<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/pbieEet9VCR5iLhjViokIA">https://mp.weixin.qq.com/s/pbieEet9VCR5iLhjViokIA</a></p>
 </blockquote>
-<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>​	半年前，我借腾讯云黑客松智能渗透挑战赛的契机，写过一篇 AI for 安全攻防的文章：<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/jT4poWZ4Gfu3faXvul07HA">https://mp.weixin.qq.com/s/jT4poWZ4Gfu3faXvul07HA</a> 。但模型能力和 Agent 工程发展非常之快。现在回头看，那篇文章不少想法已经显得不够成熟，很多设计放到今天需要重新审视。</p>
+<p>​	半年前，我借腾讯云黑客松智能渗透挑战赛的契机，写过一篇 AI for 安全攻防的文章：<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/jT4poWZ4Gfu3faXvul07HA">https://mp.weixin.qq.com/s/jT4poWZ4Gfu3faXvul07HA</a> 。但模型能力和 Agent 工程发展非常之快。现在回头看，那篇文章不少想法已经显得不够成熟，很多设计放到今天需要重新审视。</p>
 <p>​	这篇文章不是否定过去，也无法给出某种未来的标准答案。我更想借两届智能渗透挑战赛的经历，重新梳理，同时也分享一下自己对几个问题的理解：AI 在自动化攻击中进化到了何种地步、我们到底应该如何设计 Agent 工程、面对 AI 在攻击场景的高速发展，防御又该如何跟进。</p>
 <span id="more"></span>
 
@@ -377,6 +377,9 @@
                 </a>
             </div>
             <div class="post-nav-item">
+                <a href="/2026/08/30/AI-%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B8%97%E9%80%8F%E6%9E%B6%E6%9E%84-Cairn-%E6%BB%A1%E5%88%86%E7%99%BB%E9%A1%B6-TsecBench-Cybench-%E2%80%94%E2%80%94-%E4%BC%97%E4%BA%BA%E5%90%91%E5%B7%A6%EF%BC%8C%E6%88%91%E5%81%8F%E5%90%91%E5%8F%B3/" rel="next" title="AI 自动化渗透架构 Cairn 满分登顶 TsecBench Cybench —— 众人向左，我偏向右">
+                  AI 自动化渗透架构 Cairn 满分登顶 TsecBench Cybench —— 众人向左，我偏向右 <i class="fa fa-angle-right"></i>
+                </a>
             </div>
           </div>
     </footer>
@@ -407,13 +410,13 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">122k</span>
+    <span title="站点总字数">124k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">7:23</span>
+    <span title="站点阅读时长">7:30</span>
   </span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动

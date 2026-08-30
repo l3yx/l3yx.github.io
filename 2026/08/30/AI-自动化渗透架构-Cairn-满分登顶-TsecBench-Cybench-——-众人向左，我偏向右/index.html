@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"l3yx.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.21.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="原文：https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;ZzKF_0MOb0cak9izhHqCUQ  ​	TsecBench 是腾讯安全云鼎实验室推出的智能攻防 AI 评测平台。Cairn_Y 是基于 Cairn 架构改进的 AI 自动化渗透引擎，以满分登顶 Cybench 评测基准第一，同时以绝对高分优势登顶 Tsecbench v1 第一，XBOW Validation Benchma">
+<meta property="og:type" content="article">
+<meta property="og:title" content="AI 自动化渗透架构 Cairn 满分登顶 TsecBench Cybench —— 众人向左，我偏向右">
+<meta property="og:url" content="https://l3yx.github.io/2026/08/30/AI-%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B8%97%E9%80%8F%E6%9E%B6%E6%9E%84-Cairn-%E6%BB%A1%E5%88%86%E7%99%BB%E9%A1%B6-TsecBench-Cybench-%E2%80%94%E2%80%94-%E4%BC%97%E4%BA%BA%E5%90%91%E5%B7%A6%EF%BC%8C%E6%88%91%E5%81%8F%E5%90%91%E5%8F%B3/index.html">
+<meta property="og:site_name" content="l3yx&#39;s blog">
+<meta property="og:description" content="原文：https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;ZzKF_0MOb0cak9izhHqCUQ  ​	TsecBench 是腾讯安全云鼎实验室推出的智能攻防 AI 评测平台。Cairn_Y 是基于 Cairn 架构改进的 AI 自动化渗透引擎，以满分登顶 Cybench 评测基准第一，同时以绝对高分优势登顶 Tsecbench v1 第一，XBOW Validation Benchma">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://l3yx.github.io/2026/08/30/AI-%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B8%97%E9%80%8F%E6%9E%B6%E6%9E%84-Cairn-%E6%BB%A1%E5%88%86%E7%99%BB%E9%A1%B6-TsecBench-Cybench-%E2%80%94%E2%80%94-%E4%BC%97%E4%BA%BA%E5%90%91%E5%B7%A6%EF%BC%8C%E6%88%91%E5%81%8F%E5%90%91%E5%8F%B3/image-20260827224930974.png">
+<meta property="og:image" content="https://l3yx.github.io/2026/08/30/AI-%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B8%97%E9%80%8F%E6%9E%B6%E6%9E%84-Cairn-%E6%BB%A1%E5%88%86%E7%99%BB%E9%A1%B6-TsecBench-Cybench-%E2%80%94%E2%80%94-%E4%BC%97%E4%BA%BA%E5%90%91%E5%B7%A6%EF%BC%8C%E6%88%91%E5%81%8F%E5%90%91%E5%8F%B3/image-20260827224652300.png">
+<meta property="og:image" content="https://l3yx.github.io/2026/08/30/AI-%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B8%97%E9%80%8F%E6%9E%B6%E6%9E%84-Cairn-%E6%BB%A1%E5%88%86%E7%99%BB%E9%A1%B6-TsecBench-Cybench-%E2%80%94%E2%80%94-%E4%BC%97%E4%BA%BA%E5%90%91%E5%B7%A6%EF%BC%8C%E6%88%91%E5%81%8F%E5%90%91%E5%8F%B3/image-20260827225053773.png">
+<meta property="og:image" content="https://l3yx.github.io/2026/08/30/AI-%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B8%97%E9%80%8F%E6%9E%B6%E6%9E%84-Cairn-%E6%BB%A1%E5%88%86%E7%99%BB%E9%A1%B6-TsecBench-Cybench-%E2%80%94%E2%80%94-%E4%BC%97%E4%BA%BA%E5%90%91%E5%B7%A6%EF%BC%8C%E6%88%91%E5%81%8F%E5%90%91%E5%8F%B3/image-20260828013823287.png">
+<meta property="article:published_time" content="2026-08-30T06:51:21.000Z">
+<meta property="article:modified_time" content="2026-08-30T06:51:21.000Z">
+<meta property="article:author" content="淚笑">
+<meta property="article:tag" content="Web安全">
+<meta property="article:tag" content="AI for Security">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://l3yx.github.io/2026/08/30/AI-%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B8%97%E9%80%8F%E6%9E%B6%E6%9E%84-Cairn-%E6%BB%A1%E5%88%86%E7%99%BB%E9%A1%B6-TsecBench-Cybench-%E2%80%94%E2%80%94-%E4%BC%97%E4%BA%BA%E5%90%91%E5%B7%A6%EF%BC%8C%E6%88%91%E5%81%8F%E5%90%91%E5%8F%B3/image-20260827224930974.png">
+
+
+<link rel="canonical" href="https://l3yx.github.io/2026/08/30/AI-%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B8%97%E9%80%8F%E6%9E%B6%E6%9E%84-Cairn-%E6%BB%A1%E5%88%86%E7%99%BB%E9%A1%B6-TsecBench-Cybench-%E2%80%94%E2%80%94-%E4%BC%97%E4%BA%BA%E5%90%91%E5%B7%A6%EF%BC%8C%E6%88%91%E5%81%8F%E5%90%91%E5%8F%B3/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://l3yx.github.io/2026/08/30/AI-%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B8%97%E9%80%8F%E6%9E%B6%E6%9E%84-Cairn-%E6%BB%A1%E5%88%86%E7%99%BB%E9%A1%B6-TsecBench-Cybench-%E2%80%94%E2%80%94-%E4%BC%97%E4%BA%BA%E5%90%91%E5%B7%A6%EF%BC%8C%E6%88%91%E5%81%8F%E5%90%91%E5%8F%B3/","path":"2026/08/30/AI-自动化渗透架构-Cairn-满分登顶-TsecBench-Cybench-——-众人向左，我偏向右/","title":"AI 自动化渗透架构 Cairn 满分登顶 TsecBench Cybench —— 众人向左，我偏向右"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>AI 自动化渗透架构 Cairn 满分登顶 TsecBench Cybench —— 众人向左，我偏向右 | l3yx's blog</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">l3yx's blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%8E-Cairn-%E6%9E%B6%E6%9E%84%E8%AF%B4%E8%B5%B7"><span class="nav-number">1.</span> <span class="nav-text">从 Cairn 架构说起</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Cairn-Y-%E6%96%B9%E6%A1%88"><span class="nav-number">2.</span> <span class="nav-text">Cairn_Y 方案</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#FGS-%E5%9B%BE%EF%BC%9A%E5%A4%96%E5%8C%96%E7%9A%84%E8%AE%B0%E5%BF%86%E4%B8%8E%E4%B8%96%E7%95%8C%E7%8A%B6%E6%80%81%E6%8F%8F%E8%BF%B0"><span class="nav-number">2.1.</span> <span class="nav-text">FGS 图：外化的记忆与世界状态描述</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Decide-Execute%EF%BC%9A%E6%9E%81%E7%AE%80%E7%9A%84%E8%BF%90%E8%BD%AC%E6%96%B9%E5%BC%8F"><span class="nav-number">2.2.</span> <span class="nav-text">Decide &amp; Execute：极简的运转方式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Finding%EF%BC%9A%E6%90%9C%E7%B4%A2%E8%BF%87%E7%A8%8B%E7%9A%84%E7%BB%93%E6%9E%84%E5%8C%96%E4%BA%A7%E7%89%A9"><span class="nav-number">2.3.</span> <span class="nav-text">Finding：搜索过程的结构化产物</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B7%A5%E7%A8%8B%E9%80%89%E5%9E%8B"><span class="nav-number">2.4.</span> <span class="nav-text">工程选型</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9C%80%E5%90%8E"><span class="nav-number">3.</span> <span class="nav-text">最后</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="淚笑"
+      src="/resources/avatar.jpg">
+  <p class="site-author-name" itemprop="name">淚笑</p>
+  <div class="site-description" itemprop="description">学的越多，懂的越少</div>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/l3yx" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;l3yx" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1729888211@qq.com" title="E-Mail → mailto:1729888211@qq.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://x.com/le1xia0" title="Twitter → https:&#x2F;&#x2F;x.com&#x2F;le1xia0" rel="noopener me" target="_blank"><i class="fab fa-twitter fa-fw"></i>Twitter</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://l3yx.github.io/2026/08/30/AI-%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B8%97%E9%80%8F%E6%9E%B6%E6%9E%84-Cairn-%E6%BB%A1%E5%88%86%E7%99%BB%E9%A1%B6-TsecBench-Cybench-%E2%80%94%E2%80%94-%E4%BC%97%E4%BA%BA%E5%90%91%E5%B7%A6%EF%BC%8C%E6%88%91%E5%81%8F%E5%90%91%E5%8F%B3/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/resources/avatar.jpg">
+      <meta itemprop="name" content="淚笑">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="l3yx's blog">
+      <meta itemprop="description" content="学的越多，懂的越少">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="AI 自动化渗透架构 Cairn 满分登顶 TsecBench Cybench —— 众人向左，我偏向右 | l3yx's blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          AI 自动化渗透架构 Cairn 满分登顶 TsecBench Cybench —— 众人向左，我偏向右
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-08-30 14:51:21" itemprop="dateCreated datePublished" datetime="2026-08-30T14:51:21+08:00">2026-08-30</time>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>1.9k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>7 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><blockquote>
+<p>原文：<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/ZzKF_0MOb0cak9izhHqCUQ">https://mp.weixin.qq.com/s/ZzKF_0MOb0cak9izhHqCUQ</a></p>
+</blockquote>
+<p>​	<a target="_blank" rel="noopener" href="https://tsecbench.zc.tencent.com/#top">TsecBench</a> 是腾讯安全云鼎实验室推出的智能攻防 AI 评测平台。Cairn_Y 是基于 <a target="_blank" rel="noopener" href="https://github.com/oritera/Cairn">Cairn</a> 架构改进的 AI 自动化渗透引擎，以满分登顶 <a target="_blank" rel="noopener" href="https://tsecbench.zc.tencent.com/benchmark/select">Cybench</a> 评测基准第一，同时以绝对高分优势登顶 Tsecbench v1 第一，XBOW Validation Benchmarks 第一。</p>
+<p>​	Cairn_Y 没有针对靶场赛题定向优化提示词，更不会内嵌答案或携带跨轮记忆，只在 Harness 工程上做迭代改进。TsecBench 平台的榜单也公开全部 llm 记录，提供作弊举报功能，所有成绩接受大家严格监督检查。</p>
+<span id="more"></span>
+
+<img src="/2026/08/30/AI-%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B8%97%E9%80%8F%E6%9E%B6%E6%9E%84-Cairn-%E6%BB%A1%E5%88%86%E7%99%BB%E9%A1%B6-TsecBench-Cybench-%E2%80%94%E2%80%94-%E4%BC%97%E4%BA%BA%E5%90%91%E5%B7%A6%EF%BC%8C%E6%88%91%E5%81%8F%E5%90%91%E5%8F%B3/image-20260827224930974.png" class="" title="image-20260827224930974">
+
+<img src="/2026/08/30/AI-%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B8%97%E9%80%8F%E6%9E%B6%E6%9E%84-Cairn-%E6%BB%A1%E5%88%86%E7%99%BB%E9%A1%B6-TsecBench-Cybench-%E2%80%94%E2%80%94-%E4%BC%97%E4%BA%BA%E5%90%91%E5%B7%A6%EF%BC%8C%E6%88%91%E5%81%8F%E5%90%91%E5%8F%B3/image-20260827224652300.png" class="" title="image-20260827224652300">
+
+<img src="/2026/08/30/AI-%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B8%97%E9%80%8F%E6%9E%B6%E6%9E%84-Cairn-%E6%BB%A1%E5%88%86%E7%99%BB%E9%A1%B6-TsecBench-Cybench-%E2%80%94%E2%80%94-%E4%BC%97%E4%BA%BA%E5%90%91%E5%B7%A6%EF%BC%8C%E6%88%91%E5%81%8F%E5%90%91%E5%8F%B3/image-20260827225053773.png" class="" title="image-20260827225053773">
+
+
+
+<h2 id="从-Cairn-架构说起"><a href="#从-Cairn-架构说起" class="headerlink" title="从 Cairn 架构说起"></a>从 Cairn 架构说起</h2><p>​	<a target="_blank" rel="noopener" href="https://github.com/oritera/Cairn">Cairn</a> 是我参加腾讯第二届 TCH 智能渗透挑战赛的作品，详细信息可以参考<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/DlpEH7bVr0xi0VawPJs3XA">《国内最强 AI 渗透测试 Agent —— TCH·腾讯云黑客松第二届智能渗透挑战赛 唯一 AK 战队复盘》</a> 和 <a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/2rEqFLvkxvYWM3gW170C2w">《无径之径：Cairn AI 从渗透测试到通用问题的求解》</a> 。</p>
+<p>​	我当时在 Cairn 中首先创新地提出了包括<strong>意图工程</strong>、<strong>黑板架构</strong>、<strong>间接协调</strong>、<strong>Fact-Intent</strong> DAG 图、<strong>状态空间搜索</strong>等概念，并且贯彻 <strong>Less Is More</strong>、<strong>极简</strong>、减少约束释放模型能力等理念，还有 0 Skill、0 RAG、0 MCP、反对以具体任务角色为主的多 Agent 架构、不预设任何渗透攻击流程等一系列在当时非常反直觉甚至可以说离经叛道的设计。</p>
+<p>​	虽然 Cairn 在当时与大众的 Agent 设计走了完全相反的道路，但其比赛成绩反而可以说明架构领先性，此外腾讯也基于 TSecBench 统一评测体系，联合各大高校对国内外代表性智能渗透 Agent 开展了公开测试。<a target="_blank" rel="noopener" href="https://tsecbench.zc.tencent.com/#leaderboard">测试结果</a>中，Cairn 依然是任务成功率最高的 Harness 工程之一：</p>
+<img src="/2026/08/30/AI-%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B8%97%E9%80%8F%E6%9E%B6%E6%9E%84-Cairn-%E6%BB%A1%E5%88%86%E7%99%BB%E9%A1%B6-TsecBench-Cybench-%E2%80%94%E2%80%94-%E4%BC%97%E4%BA%BA%E5%90%91%E5%B7%A6%EF%BC%8C%E6%88%91%E5%81%8F%E5%90%91%E5%8F%B3/image-20260828013823287.png" class="" title="image-20260828013823287">
+
+<p>​	另外在公开评测榜单和其他相关比赛中，我们也观察到靠前的智能体提示词中高频出现了 <strong>Fact</strong>、<strong>Intent</strong> 等关键术语、Cairn DAG 的数据结构或其他类似的 Cairn 的黑板。社区也出现了大量基于 Cairn 二开，或者基于 Cairn 理念设计的 AI 渗透智能体。</p>
+<p>​	Cairn 项目本身目前没有较快的迭代是因为我对 Cairn 的定位不是一个功能完备的渗透测试项目，而是当时我对极简主义，黑板架构，Fact-Intent 图的理解与运用的一次工程实践。</p>
+<h2 id="Cairn-Y-方案"><a href="#Cairn-Y-方案" class="headerlink" title="Cairn_Y 方案"></a>Cairn_Y 方案</h2><p>​	虽然最近没有正式更新过代码或写过技术文章，但我在原本的 Cairn 架构之上还是做了很多工作才有了现在的 Cairn_Y，Cairn_Y 的设计依旧非常克制，依旧贯彻 <strong>Less Is More</strong>。</p>
+<p>​	这几个月里我也经常关注开源社区中智能渗透 Agent 的发展，看了很多迭代改进的方案，比如 “跨题学习”、“幻觉门控”、“数百工具集成”，也看了很多完全不一样的渗透 Agent 的设计，比如 “多类专业 Subagent”，“数十内置 Security Skill”。</p>
+<p>​	Cairn_Y 的改进方向与这些方案完全没有关系。</p>
+<h3 id="FGS-图：外化的记忆与世界状态描述"><a href="#FGS-图：外化的记忆与世界状态描述" class="headerlink" title="FGS 图：外化的记忆与世界状态描述"></a>FGS 图：外化的记忆与世界状态描述</h3><p>​	与 Cairn 一样，依旧把渗透测试这类任务建模为<strong>面向目标的状态空间搜索</strong>，把搜索过程的全部状态外化成一张只追加的图。Cairn_Y 中图的结构有了变化与正式名称： <strong>FGS 图</strong> （Fact-Goal-Step Grpah）。</p>
+<ul>
+<li><strong>Fact</strong> 描述当前已经确认的事实，即当前的世界状态。</li>
+<li><strong>Goal</strong> 描述项目的完成条件，即搜索的终止条件。也存在可以动态增删的 <strong>Sub Goal</strong>。</li>
+<li><strong>Step</strong> 描述下一步要做什么，如何从已有事实产生新的事实，是推动世界状态演化的因果过程。</li>
+</ul>
+<h3 id="Decide-Execute：极简的运转方式"><a href="#Decide-Execute：极简的运转方式" class="headerlink" title="Decide &amp; Execute：极简的运转方式"></a>Decide &amp; Execute：极简的运转方式</h3><p>​	系统的运行只有 <strong>Decide</strong> 和 <strong>Execute</strong> 两类活动，二者是独立的运行过程，而非固定角色的 SubAgent，也可以理解为同一个运行器被注入了不同的提示词与工具。</p>
+<ul>
+<li><strong>Decide</strong> 只拥有查看和操作 <strong>FGS 图</strong> 的 Tool，在一个任务开始时或者图上信息有增加或者变化时被触发，串行执行，作用就是分析当前任务的状态，对图上 <strong>Step</strong> 进行评估，进行 Step 的添加、废弃或者优先级调整。也可以提出和删除  <strong>Sub Goal</strong>，帮助整体任务可以阶段性的平稳推进。每次触发都从干净上下文重新起一次运行，不携带记忆。</li>
+<li><strong>Execute</strong> 拥有查看 <strong>FGS 图</strong> 的权限，和所有可以对 “世界状态” 产生变化的 Tool，比如 <code>read</code>、<code>bash</code>、<code>edit</code>、<code>write</code> 等，还有最重要的提交 <strong>Fact</strong> 的 Tool <code>submit_fact</code>。</li>
+</ul>
+<p>​	两类活动的本质其实都是注入了不同 Tool 和 Prompt 的 Agent Loop，但都没有独立的跨会话记忆机制，<strong>FGS图</strong> 就是他们共同的、外化的记忆。</p>
+<h3 id="Finding：搜索过程的结构化产物"><a href="#Finding：搜索过程的结构化产物" class="headerlink" title="Finding：搜索过程的结构化产物"></a>Finding：搜索过程的结构化产物</h3><p>​	<strong>Finding</strong> 是 Cairn_Y 引入的一个很重要的概念。因为我觉得无论是渗透测试、代码审计，还是 CTF，都是一种搜索过程，CTF 这种任务很单纯，搜索的产物和最终的 <strong>Goal</strong> 是一样的，即 Flag，但渗透测试和代码审计所需要的产物更多是搜索过程中发现的漏洞，而不是像 “完成所有功能点测试与漏洞挖掘” 这种最终 <strong>Goal</strong>。</p>
+<p>​	所以对于这种关注搜索过程中的产物的任务，我引入了 <strong>Finding</strong> 的概念，理论也很完备 —— 搜索过程当然既有终点也有搜索过程发现的东西。<strong>Finding</strong> 也是可以动态定义的，对于漏洞挖掘类的任务，<strong>Finding</strong> 定义自然就是安全漏洞。</p>
+<h3 id="工程选型"><a href="#工程选型" class="headerlink" title="工程选型"></a>工程选型</h3><ul>
+<li>Cairn_Y 的 Agent Loop 已不再使用 Claude Code 或者 CodeX 这类完善的 Agent 或者 SDK，目前是基于 PI 的库，也仅用到了 PI 的 Agent Loop 功能。值得一提的是我不是因为觉得 PI 更强大，反而是因为 PI 更简陋，更容易完全被我控制。在后续的的迭代改进中，我应该会选择完全自写 Agent Loop。</li>
+<li>技术栈我已经从 Cairn 的 Python 切换到了 Node，因为我发现不管是 Claude Code 还是 Codex 或者 PI，都是 Node 的生态。但后续我更倾向用 Go 或 Rust 写更轻量的版本。</li>
+<li>整个 Cairn_Y 的内置提示词非常短，而且不和安全类任务耦合，它依然是和 Cairn 一样，是一种通用的任务解决引擎。</li>
+</ul>
+<h2 id="最后"><a href="#最后" class="headerlink" title="最后"></a>最后</h2><p>​	这篇文章是我手写的，没用 AI 生成和辅助，在当前这个浮躁的时代太多 AI 生成的通篇废话文学了，我希望输出的是一些个人真实实践经验和见解，也希望公众号推送里少出现一些纯 AI 文。</p>
+<p>​	Tsecbench v1 共 63 题，74 个 flag，在半年前的 TCH 比赛中想要全解需要 7000 元左右成本，目前的 Cairn_Y 最低只需要不到 50 元，而且依旧有较大优化空间。我最近也在一直研究本地模型的方案。以后一个网站的渗透测试成本可能也就几毛钱。不久的未来，网络安全攻防的成本结构和规则将被彻底颠覆。</p>
+<p>​	在一段时间的开发和实践后，我感受是大多数看起来很厉害很有道理的 Agent 架构设计其实并没有用，甚至会起反效果，真正厉害的是模型，不是外层臃肿的 Agent 架构，也不是那一堆冗余的 Skill。	</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Web%E5%AE%89%E5%85%A8/" rel="tag"># Web安全</a>
+              <a href="/tags/AI-for-Security/" rel="tag"># AI for Security</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2026/05/27/%E4%B8%A4%E5%B1%8ATCH%E4%B9%8B%E5%90%8E-%E2%80%94%E2%80%94-AI-%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95-Agent-%E7%9A%84-Harness-%E5%B7%A5%E7%A8%8B%E6%BC%94%E8%BF%9B%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/" rel="prev" title="两届TCH之后 —— AI 渗透测试 Agent 的 Harness 工程演进、防御与我的思考">
+                  <i class="fa fa-angle-left"></i> 两届TCH之后 —— AI 渗透测试 Agent 的 Harness 工程演进、防御与我的思考
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">淚笑</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">124k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">7:30</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js","integrity":"sha256-YbM1pG3wWnzhyYN49g5fPnen+2CKEFaZfopkkwSpNtY="}}</script>
+  <script src="/js/third-party/tags/mermaid.js"></script>
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>
